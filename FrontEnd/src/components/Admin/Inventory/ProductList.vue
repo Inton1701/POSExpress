@@ -13,12 +13,12 @@
         </div>
         <ul class="table-top-head">
           <li>
-            <a data-bs-toggle="tooltip" data-bs-placement="top" title="Pdf" type="button" @click="exportPDFAlert();" ><img src="/assets/img/icons/pdf.svg"
-                alt="img" /></a>
+            <a data-bs-toggle="tooltip" data-bs-placement="top" title="Pdf" type="button"
+              @click="exportPDFAlert();"><img src="/assets/img/icons/pdf.svg" alt="img" /></a>
           </li>
           <li>
-            <a type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Excel" @click="exportCSVAlert();" ><img src="/assets/img/icons/excel.svg"
-                alt="img" /></a>
+            <a type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Excel"
+              @click="exportCSVAlert();"><img src="/assets/img/icons/excel.svg" alt="img" /></a>
           </li>
           <li>
             <a data-bs-toggle="tooltip" data-bs-placement="top" title="Print"><i data-feather="printer"
@@ -42,10 +42,8 @@
               data-feather="download" class="me-2"></i>Import Product</a>
         </div>
       </div>
-
       <div class="card table-list-card">
         <div class="card-body">
-
           <div class="table-responsive">
             <table class="table">
               <thead>
@@ -53,40 +51,49 @@
                   <th>SKU</th>
                   <th>Product</th>
                   <th>Category</th>
-                  <th>Brand</th>
                   <th>Price</th>
-                  <th>Unit</th>
-                  <th>Qty</th>
+                  <th>Status</th>
+                  <th>Created On</th>
+                  <th>Updated On</th>
+
                   <th class="no-sort">Action</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="products.length <= 0">
-                     <td colspan="8">No products available</td>
+                  <td colspan="8">No products available</td>
                 </tr>
-                <tr v-for="product in products" v-bind:key="product.id">
-                  <td>{{ product.id }}</td>
+                <tr v-for="product in products" :key="product._id">
+                  <td>{{ product.sku }}</td>
                   <td>
                     <div class="productimgname">
                       <a href="javascript:void(0);" class="product-img stock-img">
-                        <img :src="product.image || '/assets/img/products/stock-img-01.png'" alt="product" />
+                        <img v-if="product.image" :src="product.image" alt="/img/icons/no-image-icon.png" />
                       </a>
-                      <a href="javascript:void(0);">{{ product.product }}</a>
+                      <a href="javascript:void(0);">{{ product.name }}</a>
                     </div>
                   </td>
                   <td>{{ product.category }}</td>
-                  <td>{{ product.brand }}</td>
                   <td>{{ product.price.toFixed(2) }}</td>
-                  <td>{{ product.unit }}</td>
-                  <td>{{ product.qty }}</td>
+                  <td>
+                    <span :class="{
+                      'badge': true,
+                      'badge-linesuccess': product.status === 'active',
+                      'badge-linedanger': product.status === 'inactive'
+                    }">
+                      {{ product.status }}
+                    </span>
+                  </td>
+                  <td>{{ new Date(product.createdAt).toLocaleString() }}</td>
+                  <td>{{ new Date(product.updatedAt).toLocaleString() }}</td>
                   <td class="action-table-data">
                     <div class="edit-delete-action">
-                      <router-link class="me-2 edit-icon p-2" to="product-details">
+                      <router-link class="me-2 edit-icon p-2"  :to="{ name: 'ProductDetails', params: { id: product._id } }">
                         <i data-feather="eye" class="feather-eye"></i>
                       </router-link>
-                      <router-link to="edit-product" class="me-2 p-2" >
+                      <router-link to="edit-product" class="me-2 p-2">
                         <i data-feather="edit" class="feather-edit"></i>
-                    </router-link>
+                      </router-link>
                       <a class="confirm-text p-2" href="javascript:void(0);" @click="deleteAlert()">
                         <i data-feather="trash-2" class="feather-trash-2"></i>
                       </a>
@@ -110,12 +117,7 @@
               <div class="page-title">
                 <h4>Import Product</h4>
               </div>
-              <button
-                type="button"
-                class="close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              >
+              <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
@@ -147,11 +149,7 @@
                 </div>
                 <div class="col-lg-12">
                   <div class="modal-footer-btn">
-                    <button
-                      type="button"
-                      class="btn btn-cancel me-2"
-                      data-bs-dismiss="modal"
-                    >
+                    <button type="button" class="btn btn-cancel me-2" data-bs-dismiss="modal">
                       Cancel
                     </button>
                     <button type="button" @click="printJSON();" class="btn btn-submit">
@@ -167,19 +165,18 @@
     </div>
   </div>
 </template>
+
 <script>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-
-import 'select2'; 
+import axios from 'axios';
+import 'select2';
 import feather from 'feather-icons';
 import ClipLoader from 'vue-spinner/src/ClipLoader.vue';
-import 'datatables.net-bs5'
+import 'datatables.net-bs5';
 import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
 import Swal from 'sweetalert2';
-
 import Sidebar from '/src/components/Admin/Sidebar.vue';
 import Navbar from '/src/components/Admin/Navbar.vue';
-
 
 export default {
   components: {
@@ -187,66 +184,52 @@ export default {
     Navbar,
     ClipLoader,
   },
-  data() {
-    return {
-      jsonData: null,
-    }
-  },
   setup() {
-    const products = ref([]); 
+    const products = ref([]);
     const loading = ref(true);
-    const select = ref(null); 
+    const select = ref(null);
     const table = ref(null);
-    // Dummy product list
-    const prodList = [
-      { id: 1, product: 'Wireless Mouse', category: 'Electronics', brand: 'Logitech', price: 25.99, unit: 'piece', qty: 100 },
-      { id: 2, product: 'Bluetooth Headphones', category: 'Electronics', brand: 'Sony', price: 89.99, unit: 'piece', qty: 50 },
-      { id: 3, product: 'Running Shoes', category: 'Footwear', brand: 'Nike', price: 120.0, unit: 'pair', qty: 200 },
-      { id: 4, product: 'Organic Coffee Beans', category: 'Groceries', brand: 'Starbucks', price: 15.99, unit: 'bag', qty: 300 },
-      { id: 5, product: 'Notebook', category: 'Stationery', brand: 'Moleskine', price: 10.0, unit: 'piece', qty: 500 }
-    ];
 
+    // Function to get products from the API
     const getProductList = async () => {
-      loading.value = true; // Start loading
+      loading.value = true;
       try {
-        // Assign prodList to products
-        products.value = prodList; 
-        console.log(products.value); // Log to check if products are correctly assigned
+        const response = await axios.get('http://localhost:5000/api/products_list'); // Update with actual API endpoint
+        products.value = response.data.productList; // Update based on your API response structure
+        console.log(products.value); // For debugging
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching products:', error);
       } finally {
-        loading.value = false; // Set loading to false after the operation
+        loading.value = false;
       }
     };
 
     onMounted(async () => {
-      try{
-       await getProductList();
-       await $(select.value).select2(); 
-       await feather.replace(); 
-       await $('.table').DataTable();
-      }catch (error) {
+      try {
+        await getProductList();
+        await $(select.value).select2();
+        await feather.replace();
+        await $('.table').DataTable();
+      } catch (error) {
         console.log(error);
       }
     });
 
     onBeforeUnmount(() => {
-      $(select.value).select2('destroy'); // Clean up Select2 instance
+      $(select.value).select2('destroy');
     });
 
     return {
       products,
       loading,
       select,
-   
-  
     };
   },
   methods: {
     async deleteAlert() {
       const { value: result } = await Swal.fire({
         title: 'Delete Products',
-        text: 'You won\'t be able to revert this!',
+        text: "You won't be able to revert this!",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
@@ -255,75 +238,45 @@ export default {
       });
 
       if (result) {
-        Swal.fire(
-          'Deleted!',
-          'Your file has been deleted.',
-          'success'
-        );
+        Swal.fire('Deleted!', 'Your file has been deleted.', 'success');
       } else {
-        Swal.fire(
-          'Cancelled',
-          'Your file is safe :)',
-          'error'
-        );
+        Swal.fire('Cancelled', 'Your file is safe :)', 'error');
       }
     },
     async exportCSVAlert() {
-    console.log("Export alert triggered", this.products); // Debug: Check the content of products
-    const result = await this.$showAlert({
-      title: 'Export Products',
-      text: 'Do you want to export products to CSV?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Export'
-    });
+      console.log("Export alert triggered", this.products); // Debug
+      const result = await this.$showAlert({
+        title: 'Export Products',
+        text: 'Do you want to export products to CSV?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Export'
+      });
 
-    if (result.isConfirmed) {
-      console.log("Export confirmed, data:", this.products); // Debug: Check data before exporting
-      await this.$exportToCSV(this.products, 'products');
-    }
-   },
+      if (result.isConfirmed) {
+        console.log("Export confirmed, data:", this.products); // Debug
+        await this.$exportToCSV(this.products, 'products');
+      }
+    },
     async exportPDFAlert() {
-    console.log("Export alert triggered", this.products); // Debug: Check the content of products
-    const result = await this.$showAlert({
-      title: 'Export Products',
-      text: 'Do you want to export products to PDF?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Export'
-    });
+      console.log("Export alert triggered", this.products); // Debug
+      const result = await this.$showAlert({
+        title: 'Export Products',
+        text: 'Do you want to export products to PDF?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Export'
+      });
 
-    if (result.isConfirmed) {
-      console.log("Export confirmed, data:", this.products); // Debug: Check data before exporting
-      await this.$exportToPDF('Product List',this.products, 'products');
-    }
-   },
-   async uploadCSV(event){
-    const file = event.target.files[0];
-    if(file){
-      try{
-        this.jsonData = await this.$csvToJson(file);
-        console.log("CSV data:", this.jsonData); // Debug: Check the content of CSV data
-      }catch(error){
-        console.error(error);
+      if (result.isConfirmed) {
+        console.log("Export confirmed, data:", this.products); // Debug
+        await this.$exportToPDF('Product List', this.products, 'products');
       }
     }
-   },
-   async printJSON(){
-    if(this.jsonData !== null){
-      console.log("JSON data:", this.jsonData); // Fo test
-    }else{
-      console.log("No JSON data available"); 
-    }
-   
-   } 
-}
-
-  
+  }
 };
-
 </script>

@@ -7,11 +7,12 @@ import { exportToCSV } from './utils/exportCSV';
 import { exportToPDF } from './utils/exportPDF';
 import { showAlert } from '@/utils/alertService';
 import { csvToJson } from '@/utils/importJSON';
+
 import 'select2';
 
-const app = createApp(App);  // Initialize `app` here
+const app = createApp(App);
 
-// Now, you can safely assign global properties
+
 app.config.globalProperties.$exportToCSV = exportToCSV;
 app.config.globalProperties.$exportToPDF = exportToPDF;
 app.config.globalProperties.$showAlert = showAlert;

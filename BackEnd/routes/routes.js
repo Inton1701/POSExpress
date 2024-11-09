@@ -1,21 +1,32 @@
 const express = require("express");
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/uploads'); // Specify upload directory
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname)); // Append timestamp to avoid name conflicts
+    },
+});
 
+const upload = multer({ storage });
 //Controllers
 const category  = require("../controllers/categoryController");
 const variant = require("../controllers/variantController");
-const dashboard = require("../controllers/dashboardController");
+// const dashboard = require("../controllers/dashboardController");
 const product = require("../controllers/productController");
 const discount = require("../controllers/discountController");
 const brand = require("../controllers/brandController"); 
 const unit = require("../controllers/unitController"); 
+const gdrive = require('../controllers/gdriveController');
 
-
-
+router.route("/api/export").post(gdrive.exportData);
 //Routes
 // category routes
 router.route("/api/get_category_list").get(category.getAllCategories);
-router.route("/api/api/get_category_list").post(category.addCategory);
+router.route("/api/add_category").post(category.addCategory);
 router.route("/api/get_category/:id").get(category.getCategory);
 router.route("/api/edit_category/:id").put(category.editCategory);
 router.route("/api/delete_category/:id").delete(category.deleteCategory);
@@ -31,17 +42,17 @@ router.route("/api/variants/:id").delete(variant.deleteVariant);
 
 
 // Dashboard routes
-router.route("/api/dashboard/monitor_stock").post((req, res) => dashboard.monitorStock(req.io)); 
-router.route("/api/dashboard/summary").get(dashboard.getDashboardSummary);
-router.route("/api/dashboard/sales_report/:period").get(dashboard.getSalesReport);
+// router.route("/api/dashboard/monitor_stock").post((req, res) => dashboard.monitorStock(req.io)); 
+// router.route("/api/dashboard/summary").get(dashboard.getDashboardSummary);
+// router.route("/api/dashboard/sales_report/:period").get(dashboard.getSalesReport);
 
 
 // Product routes
-router.route("/api/products").get(product.getAllProducts);
-router.route("/api/products").post(product.addProduct); 
-router.route("/api/products/:id").get(product.getProduct); 
-router.route("/api/products/:id").put(product.editProduct); 
-router.route("/api/products/:id").delete(product.deleteProduct);
+router.route("/api/products_list").get(product.getAllProducts);
+router.route("/api/add_products").post(upload.single('image'),  product.addProduct); 
+router.route("/api/get_product/:id").get(product.getProduct); 
+router.route("/api/edit_products/:id").put(product.editProduct); 
+router.route("/api/delete_product/:id").delete(product.deleteProduct);
 
 // Discount routes
 router.route("/api/discounts").get(discount.getAllDiscounts); 

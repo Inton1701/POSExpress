@@ -1,388 +1,116 @@
-<template>
-    <Navbar/>
-
-     <div class="page-wrapper notes-page-wrapper">
-        <div class="content">
-          <div class="page-header">
-            <div class="add-item d-flex">
-              <div class="page-title">
-                <h4>Print Barcode</h4>
-                <h6>Manage your barcodes</h6>
-              </div>
-            </div>
-            <div class="d-flex align-items-center">
-              <ul class="table-top-head">
-                <li>
-                  <a
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"
-                    title="Refresh"
-                    ><i data-feather="rotate-ccw" class="feather-rotate-ccw"></i
-                  ></a>
-                </li>
-                <li>
-                  <a
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"
-                    title="Collapse"
-                    id="collapse-header"
-                    ><i data-feather="chevron-up" class="feather-chevron-up"></i
-                  ></a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div class="barcode-content-list">
-            <form>
-              <div class="row">
-                <div class="col-lg-6 col-12">
-                  <div class="row seacrh-barcode-item">
-                    <div class="col-sm-6 mb-3 seacrh-barcode-item-one">
-                      <label class="form-label">Warehouse</label>
-                      <select class="select">
-                        <option>Choose</option>
-                        <option>Manufacture</option>
-                        <option>Transport</option>
-                        <option>Customs</option>
-                      </select>
-                    </div>
-                    <div class="col-sm-6 mb-3 seacrh-barcode-item-one">
-                      <label class="form-label">Select Store</label>
-                      <select class="select">
-                        <option>Choose</option>
-                        <option>Online</option>
-                        <option>Offline</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-lg-6">
-                  <div class="input-blocks search-form seacrh-barcode-item">
-                    <div class="searchInput">
-                      <label class="form-label">Product</label>
-                      <input
-                        type="text"
-                        class="form-control"
-                        placeholder="Search Product by Codename"
-                      />
-                      <div class="resultBox"></div>
-                      <div class="icon"><i class="fas fa-search"></i></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </form>
-            <div class="col-lg-12">
-              <div class="modal-body-table search-modal-header">
-                <div class="table-responsive">
-                  <table class="table datanew">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>SKU</th>
-                        <th>Code</th>
-                        <th>Qty</th>
-                        <th class="text-center no-sort">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                     
-                      <tr>
-                        <td>
-                          <div class="productimgname">
-                            <a
-                              href="javascript:void(0);"
-                              class="product-img stock-img"
-                            >
-                              <img
-                                src="/assets/img/products/stock-img-03.png"
-                                alt="product"
-                              />
-                            </a>
-                            <a href="javascript:void(0);"
-                              >Apple Series 5 Watch</a
-                            >
-                          </div>
-                        </td>
-                        <td>PT003</td>
-                        <td>TEUIU7</td>
-                        <td>
-                          <div class="product-quantity">
-                            <span class="quantity-btn"
-                              ><i
-                                data-feather="minus-circle"
-                                class="feather-search"
-                              ></i
-                            ></span>
-                            <input
-                              type="text"
-                              class="quntity-input"
-                              value="4"
-                            />
-                            <span class="quantity-btn"
-                              >+<i
-                                data-feather="plus-circle"
-                                class="plus-circle"
-                              ></i
-                            ></span>
-                          </div>
-                        </td>
-                        <td class="action-table-data justify-content-center">
-                          <div class="edit-delete-action">
-                            <a
-                              class="barcode-delete-icon confirm-text"
-                              href="javascript:void(0);"
-                            >
-                              <i
-                                data-feather="trash-2"
-                                class="feather-trash-2"
-                              ></i>
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-            <div class="paper-search-size">
-              <div class="row align-items-center">
-                <div class="col-lg-6">
-                  <form class="mb-0">
-                    <label class="form-label">Paper Size</label>
-                    <select class="select">
-                      <option>Choose</option>
-                      <option>Recent1</option>
-                      <option>Recent2</option>
-                    </select>
-                  </form>
-                </div>
-                <div class="col-lg-6 pt-3">
-                  <div class="row">
-                    <div class="col-sm-4">
-                      <div class="search-toggle-list">
-                        <p>Show Store Name</p>
-                        <div class="input-blocks m-0">
-                          <div
-                            class="status-toggle modal-status d-flex justify-content-between align-items-center"
-                          >
-                            <input
-                              type="checkbox"
-                              id="user7"
-                              class="check"
-                              checked
-                            />
-                            <label for="user7" class="checktoggle mb-0">
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-sm-4">
-                      <div class="search-toggle-list">
-                        <p>Show Product Name</p>
-                        <div class="input-blocks m-0">
-                          <div
-                            class="status-toggle modal-status d-flex justify-content-between align-items-center"
-                          >
-                            <input
-                              type="checkbox"
-                              id="user8"
-                              class="check"
-                              checked
-                            />
-                            <label for="user8" class="checktoggle mb-0">
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-sm-4">
-                      <div class="search-toggle-list">
-                        <p>Show Price</p>
-                        <div class="input-blocks m-0">
-                          <div
-                            class="status-toggle modal-status d-flex justify-content-between align-items-center"
-                          >
-                            <input
-                              type="checkbox"
-                              id="user9"
-                              class="check"
-                              checked
-                            />
-                            <label for="user9" class="checktoggle mb-0">
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="search-barcode-button">
-              <a
-                href="javascript:void(0);"
-                class="btn btn-submit me-2"
-                data-bs-toggle="modal"
-                data-bs-target="#prints-barcode"
-              >
-                <span><i class="fas fa-eye me-2"></i></span>
-                Generate Barcode</a
-              >
-              <a href="javascript:void(0);" class="btn btn-cancel me-2">
-                <span><i class="fas fa-power-off me-2"></i></span>
-                Reset Barcode</a
-              >
-              <a href="javascript:void(0);" class="btn btn-cancel close-btn">
-                <span><i class="fas fa-print me-2"></i></span>
-                Print Barcode</a
-              >
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-    <div class="modal fade" id="prints-barcode">
-      <div class="modal-dialog modal-dialog-centered stock-adjust-modal">
-        <div class="modal-content">
-          <div class="page-wrapper-new p-0">
-            <div class="content">
-              <div class="modal-header border-0 custom-modal-header">
-                <div class="page-title">
-                  <h4>Barcode</h4>
-                </div>
-                <button
-                  type="button"
-                  class="close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                >
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div class="modal-body custom-modal-body">
-                <div class="d-flex justify-content-end">
-                  <a
-                    href="javascript:void(0);"
-                    class="btn btn-cancel close-btn"
-                  >
-                    <span><i class="fas fa-print me-2"></i></span>
-                    Print Barcode</a
-                  >
-                </div>
-                <div class="barcode-scan-header">
-                  <h5>Nike Jordan</h5>
-                </div>
-                <div class="row">
-                  <div class="col-sm-4">
-                    <div class="barcode-scanner-link text-center">
-                      <h6>Grocery Alpha</h6>
-                      <p>Nike Jordan</p>
-                      <p>Price: $400</p>
-                      <div class="barscaner-img">
-                        <img
-                          src="assets/img/barcode/barcode-01.png"
-                          alt="Barcode"
-                          class="img-fluid"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="barcode-scan-header">
-                  <h5>Apple Series 5 Watch</h5>
-                </div>
-                <div class="row">
-                  <div class="col-sm-4">
-                    <div class="barcode-scanner-link text-center">
-                      <h6>Grocery Alpha</h6>
-                      <p>Apple Series 5 Watch</p>
-                      <p>Price: $300</p>
-                      <div class="barscaner-img">
-                        <img
-                          src="assets/img/barcode/barcode-02.png"
-                          alt="Barcode"
-                          class="img-fluid"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-sm-4">
-                    <div class="barcode-scanner-link text-center">
-                      <h6>Grocery Alpha</h6>
-                      <p>Apple Series 5 Watch</p>
-                      <p>Price: $300</p>
-                      <div class="barscaner-img">
-                        <img
-                          src="assets/img/barcode/barcode-02.png"
-                          alt="Barcode"
-                          class="img-fluid"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-sm-4">
-                    <div class="barcode-scanner-link text-center">
-                      <h6>Grocery Alpha</h6>
-                      <p>Apple Series 5 Watch</p>
-                      <p>Price: $300</p>
-                      <div class="barscaner-img">
-                        <img
-                          src="assets/img/barcode/barcode-02.png"
-                          alt="Barcode"
-                          class="img-fluid"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-</template>
 <script>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-
-import 'select2'; 
-import feather from 'feather-icons'
-import 'datatables.net-bs5'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
-
-import Sidebar from '/src/components/Admin/Sidebar.vue';
-import Navbar from '/src/components/Admin/Navbar.vue';
-
+import JsBarcode from 'jsbarcode';
+import { onMounted, watch, ref } from 'vue';
 
 export default {
-  components: {
-    Sidebar,
-    Navbar,
+  props: {
+    sku: {
+      type: String,
+      default: '' // Ensure a default value to avoid undefined
+    }
   },
-  setup() {
-    const select = ref('.select'); 
-    onMounted(async () => {
-        try{
-            await $(select.value).select2();
-            await feather.replace();
-            await $('.table').DataTable();
-        }catch(error){
-            console.log(error);
-        }
+  setup(props) {
+    const svgRef = ref(null);
+    const errorMessage = ref(''); // Ref to store error message
+    const fallbackSku = '0000000000000'; // Default SKU for fallback barcode
 
-    });
-    onBeforeUnmount(() => {
-      $(select.value).select2('destroy');
-    });
-    return {
-      select
+
+    const calculateEAN13Checksum = (sku) => {
+      const digits = sku.split('').map(Number);
+      let sum = 0;
+
+      for (let i = 0; i < 12; i++) {
+        sum += (i % 2 === 0 ? digits[i] : digits[i] * 3);
+      }
+
+
+      const checksum = (10 - (sum % 10)) % 10;
+      return checksum;
     };
-  },
+
+    const generateBarcode = (sku) => {
+      // Check if SKU exists and is a string with a length property
+      if (!sku || typeof sku !== 'string') {
+        console.error('Invalid SKU:', sku);
+        errorMessage.value = 'Invalid SKU';
+        // Generate a fallback barcode if SKU is invalid
+        JsBarcode(svgRef.value, fallbackSku, {
+          format: 'CODE128', // Alternative barcode format
+          lineColor: '#000',
+          width: 2,
+          height: 50,
+          displayValue: true
+        });
+        return;
+      }
+      
+      // Pad or truncate SKU to ensure it’s exactly 13 characters for EAN-13 format
+      if (sku.length < 13) {
+        sku = sku.padStart(13, '0'); // Pad with leading zeros
+      } else if (sku.length > 13) {
+        sku = sku.slice(0, 13); // Truncate if longer than 13
+      }
+
+      // Ensure the SKU is numeric and exactly 13 digits long
+      if (sku.length !== 13 || !/^\d{13}$/.test(sku)) {
+        console.error('Invalid SKU format:', sku);
+        errorMessage.value = 'Invalid SKU format: must be numeric and 13 digits.';
+        // Generate a fallback barcode in this case as well
+        JsBarcode(svgRef.value, fallbackSku, {
+          format: 'CODE128', // Alternative barcode format
+          lineColor: '#000',
+          width: 2,
+          height: 50,
+          displayValue: true
+        });
+        return;
+      }
+
+      // Calculate the checksum and append it to the SKU if necessary
+      const checksum = calculateEAN13Checksum(sku);
+      sku = sku.slice(0, 12) + checksum; // Append checksum to the first 12 digits
+
+      // Clear error message if valid SKU is detected
+      errorMessage.value = '';
+
+      // Generate the barcode using JsBarcode
+      JsBarcode(svgRef.value, sku, {
+        format: 'EAN13',
+        lineColor: '#000',
+        width: 2,
+        height: 50,
+        displayValue: true
+      });
+    };
+
+    // Generate barcode on component mount
+    onMounted(() => generateBarcode(props.sku));
+
+    // Watch for SKU changes
+    watch(() => props.sku, (newSku) => {
+      generateBarcode(newSku);
+    });
+
+    return {
+      svgRef,
+      errorMessage
+    };
+  }
 };
 </script>
+
+
+<template>
+  <div>
+    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+    <svg ref="svgRef"></svg>
+  </div>
+</template>
+
+<style scoped>
+.error-message {
+  color: red;
+  font-weight: bold;
+  margin-top: 10px;
+}
+</style>

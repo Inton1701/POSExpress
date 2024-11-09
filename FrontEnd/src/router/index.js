@@ -50,8 +50,9 @@ const routes = [
     ,
     {
         name: 'ProductDetails',
-        path: '/product-details',
-        component : ProductDetails
+        path: '/product-details/:id',
+        component : ProductDetails,
+        props: true 
     },
     {
         name: 'Category',

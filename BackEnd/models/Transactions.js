@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const transactionSchema = new mongoose.Schema({
     orderId: { 
       type: mongoose.Schema.Types.ObjectId, 
@@ -26,9 +27,6 @@ const transactionSchema = new mongoose.Schema({
       type: String, 
       enum: ['Pending', 'Completed', 'Failed'], 
       default: 'Pending' 
-    },
-    barcode: { 
-      type: String 
     },
     transactionDate: { 
       type: Date, 

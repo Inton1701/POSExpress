@@ -56,4 +56,3 @@ const unitController = {
 }
 
 module.exports = unitController;
-req.params.id

@@ -6,11 +6,11 @@ const routes = require("./routes/routes")
 const cors = require('cors')
 const errorHandler = require("./Middleware/errorHandler");
 const connectDB = require("./config/dbConnection")
-
+const path = require("path");
 app.use(cors());
 connectDB();
 app.use(express.json());
-
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use("/", routes);
 
 app.use(errorHandler);

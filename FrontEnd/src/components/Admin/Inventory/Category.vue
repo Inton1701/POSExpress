@@ -119,7 +119,7 @@
                                         </label>
                                     </th>
                                     <th>Category</th>
-                                    <th>Category slug</th>
+
                                     <th>Created On</th>
                                     <th>Status</th>
                                     <th class="no-sort">Action</th>
@@ -134,7 +134,6 @@
                                         </label>
                                     </td>
                                     <td>Laptop</td>
-                                    <td>laptop</td>
                                     <td>25 May 2023</td>
                                     <td>
                                         <span class="badge badge-linesuccess">Active</span>
