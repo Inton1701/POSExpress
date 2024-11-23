@@ -6,17 +6,17 @@ const categorySchema = new mongoose.Schema({
     required: true, 
     unique: true 
   },
-  description: { 
-    type: String 
+  status: { 
+    type: String,
+    enum: ['active', 'inactive','deleted'],
+    default: 'active' 
   },
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
-  },
-  updatedAt: { 
-    type: Date, 
-    default: Date.now 
+  deletedAt:{
+    type: Date,
+    default: null,
   }
-});
+},{timestamps:true}
+
+);
 
 module.exports = mongoose.model('Category', categorySchema);

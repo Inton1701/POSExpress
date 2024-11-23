@@ -23,6 +23,24 @@
                     </li>
                 </ul>
             </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-4 col-md-6 col-sm-8 col-12">
+                    <div class="mb-3 add-product text-center">
+                        <!-- Show/hide barcode and error messages -->
+                        <div v-show="inputedProduct.sku.length === 13 || inputedProduct.sku.length === 0">
+                            <!-- Error Message for invalid SKU -->
+                            <div v-if="inputedProduct.sku.length !== 13 && inputedProduct.sku.length > 0"
+                                class="text-danger">
+                                SKU must be exactly 13 digits.
+                            </div>
+
+                            <!-- Barcode rendering -->
+                            <Barcode v-if="inputedProduct.sku.length === 13" ref="barcodeRef" :sku="inputedProduct.sku"
+                                :productName="inputedProduct.name" />
+                        </div>
+                    </div>
+                </div>
+            </div>
             <form @submit.prevent="addProduct">
                 <div class="card">
                     <div class="card-body add-product pb-0">
@@ -44,8 +62,10 @@
                                 <div id="collapseOne" class="accordion-collapse collapse show"
                                     aria-labelledby="headingOne" data-bs-parent="#accordionExample">
                                     <div class="accordion-body">
+
+
                                         <div class="row">
-                                            <div class="col-lg-4 col-sm-6 col-12">
+                                            <div class="col-lg-5 col-sm-6 col-12">
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Status</label>
                                                     <div
@@ -58,22 +78,6 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="col-lg-4 col-sm-6 col-12"></div>
-                                            <div class="col-lg-4 col-sm-6 col-12">
-    <div class="mb-3 add-product">
-        <div class="bar-code-view" v-show="inputedProduct.sku.length === 13">
-            <!-- Error Message when SKU is not exactly 13 digits -->
-            <div v-if="inputedProduct.sku.length !== 13 && inputedProduct.sku.length > 0" class="text-danger">
-                SKU must be exactly 13 digits.
-            </div>
-            <!-- Display Barcode Component only when SKU is valid (13 digits) -->
-            <Barcode v-if="inputedProduct.sku.length === 13" :sku="inputedProduct.sku" />
-            <a class="printimg">
-                <img src="/assets/img/icons/printer.svg" alt="print" />
-            </a>
-        </div>
-    </div>
-</div>
                                         </div>
                                         <div class="row">
                                             <div class="col-lg-5 col-sm-6 col-12">
@@ -89,6 +93,7 @@
                                                         @input="inputedProduct.sku = filterNumInput($event.target.value)"
                                                         :class="{ 'is-invalid': inputedProduct.sku.length !== 13 && inputedProduct.sku.length > 0 }"
                                                         required />
+                                                    <p class="mt-1 text-danger">{{ skuError }}</p>
                                                     <div class="d-flex align-items-center mt-2">
                                                         <button type="button" class="btn btn-primaryadd"
                                                             @click="autoGenerateSKU">Auto Generate</button>
@@ -99,11 +104,11 @@
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Product Name</label>
                                                     <input type="text" class="form-control"
-                                                        placeholder="Product name here." :maxlength="60"
+                                                        placeholder="Product name here." :maxlength="35"
                                                         v-model="inputedProduct.name"
                                                         @input="productName = filterTextInput($event.target.value)"
                                                         required />
-                                                    <p class="mt-1">Maximum of 60 Characters</p>
+                                                    <p class="mt-1">Maximum of 35 Characters</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -125,9 +130,13 @@
                                                 </div>
                                                 <div class="col-lg-4 col-sm-6 col-12">
                                                     <div class="mb-3 add-product">
-                                                        <label class="form-label">Sub Category</label>
-                                                        <select class="form-control"
-                                                            v-model="inputedProduct.subCategory">
+                                                        <div class="add-newplus">
+                                                            <label class="form-label">Unit</label>
+                                                            <a href="javascript:void(0);" data-bs-toggle="modal"
+                                                                data-bs-target="#add-unit"><i data-feather="plus-circle"
+                                                                    class="plus-down-add"></i><span>Add New</span></a>
+                                                        </div>
+                                                        <select class="form-control" v-model="inputedProduct.unit">
                                                             <option selected value="None">None</option>
                                                         </select>
                                                     </div>
@@ -155,19 +164,7 @@
                                         </div>
                                         <div class="add-product-new">
                                             <div class="row">
-                                                <div class="col-lg-4 col-sm-6 col-12">
-                                                    <div class="mb-3 add-product">
-                                                        <div class="add-newplus">
-                                                            <label class="form-label">Unit</label>
-                                                            <a href="javascript:void(0);" data-bs-toggle="modal"
-                                                                data-bs-target="#add-unit"><i data-feather="plus-circle"
-                                                                    class="plus-down-add"></i><span>Add New</span></a>
-                                                        </div>
-                                                        <select class="form-control" v-model="inputedProduct.unit">
-                                                            <option selected value="None">None</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
+
                                                 <div class="col-lg-4 col-sm-6 col-12">
                                                     <div class="mb-3 add-product">
                                                         <label class="form-label">Manufactured Date</label>
@@ -181,6 +178,9 @@
                                                         <input type="date" class="form-control"
                                                             v-model="inputedProduct.expiryDate" />
                                                     </div>
+                                                </div>
+                                                <div class="col-lg-4 col-sm-6 col-12">
+
                                                 </div>
                                             </div>
                                         </div>
@@ -225,14 +225,14 @@
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Price</label>
                                                     <input type="number" class="form-control"
-                                                        v-model="inputedProduct.price" required />
+                                                        v-model="inputedProduct.price" required placeholder="0.00" />
                                                 </div>
                                             </div>
                                             <div class="col-lg-4 col-sm-6 col-12">
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Cost</label>
                                                     <input type="number" class="form-control"
-                                                        v-model="inputedProduct.cost" required />
+                                                        v-model="inputedProduct.cost" required placeholder="0.00" />
                                                 </div>
                                             </div>
                                             <div class="col-lg-4 col-sm-6 col-12">
@@ -249,7 +249,7 @@
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Discount Value</label>
                                                     <input type="number" class="form-control"
-                                                        v-model="inputedProduct.discount" />
+                                                        v-model="inputedProduct.discount" placeholder="0.00" />
                                                 </div>
                                             </div>
                                         </div>
@@ -483,6 +483,7 @@
         </div>
     </div>
 </template>
+
 <script>
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import axios from 'axios';
@@ -491,6 +492,7 @@ import feather from 'feather-icons';
 import Sidebar from '/src/components/Admin/Sidebar.vue';
 import Navbar from '/src/components/Admin/Navbar.vue';
 import Barcode from './Barcode.vue';
+import Swal from 'sweetalert2';
 
 export default {
     components: {
@@ -499,26 +501,37 @@ export default {
         Barcode
     },
     setup() {
+        const apiURL = process.env.VUE_APP_URL;
         const inputedProduct = ref({
             sku: '',
             name: '',
             description: '',
-            price: 0,
-            cost: 0,
+            price: '',
+            cost: '',
             category: '',
-            subCategory: '',
+
             unit: '',
             brand: '',
             variant: '',
-            discount: 0,
+            discount: '',
             discountType: '',
             manufacturedDate: '',
             expiryDate: '',
             status: 'inactive',
-            image: ''
-        });
+            image: '',
 
+        });
+        const skuError = ref(null);
         const select = ref('.select');
+
+        const barcodeRef = ref(null);
+
+        const triggerDownloadBarcode = () => {
+            if (barcodeRef.value) {
+                barcodeRef.value.downloadBarcode(); // Access the method on the Barcode component
+            }
+        };
+
 
         onMounted(async () => {
             try {
@@ -537,8 +550,11 @@ export default {
             inputedProduct.value.status = event.target.checked ? 'active' : 'inactive';
         };
 
-        const autoGenerateSKU = () => {
-            inputedProduct.value.sku = generateEAN13();
+        const autoGenerateSKU = async () => {
+            const generatedSku = generateEAN13();
+            inputedProduct.value.sku = generatedSku;
+
+
         };
 
         const generateEAN13 = () => {
@@ -570,10 +586,32 @@ export default {
         };
 
         // Watch for changes to the SKU and update the barcode
-        watch(() => inputedProduct.value.sku, (newSku) => {
+        watch(() => inputedProduct.value.sku, async (newSku) => {
             if (newSku.length === 13) {
-                // Barcode will be reactive and update here
-                console.log('SKU updated:', newSku);
+                try {
+                    // Send the SKU to the backend for existence check
+                    const response = await axios.get(`${apiURL}/check_sku/${newSku}`);
+                    console.log(response.data.exists);
+                    if (response.data.exists) {
+                        // SKU already exists, reset the SKU input and show an error message
+                        inputedProduct.value.sku = ''; // Clear the SKU input
+                        skuError.value = 'SKU already exists. Please generate a different SKU.'; // Set error message
+                    } else {
+                        // SKU does not exist, clear the error and accept the SKU
+                        skuError.value = ''; // Clear any existing error
+                    }
+                } catch (error) {
+                    // Handle Axios errors properly
+                    console.error('Error checking SKU:', error);
+                    if (error.response) {
+                        // Backend returned an error (status 400 or 500)
+                        console.error('Backend error:', error.response.data);
+                        skuError.value = `${error.response.data.message}`;
+                    } else {
+                        // Network or other issues
+                        skuError.value = 'Network error. Please check your connection.';
+                    }
+                }
             }
         });
 
@@ -586,7 +624,6 @@ export default {
                 formData.append('price', inputedProduct.value.price);
                 formData.append('cost', inputedProduct.value.cost);
                 formData.append('category', inputedProduct.value.category);
-                formData.append('subCategory', inputedProduct.value.subCategory);
                 formData.append('unit', inputedProduct.value.unit);
                 formData.append('brand', inputedProduct.value.brand);
                 formData.append('variant', inputedProduct.value.variant);
@@ -601,21 +638,17 @@ export default {
                     formData.append('image', inputedProduct.value.image.file);
                 }
 
-                const response = await axios.post('http://localhost:5000/api/add_products', formData, {
+                const response = await axios.post(`${apiURL}/add_products`, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                     },
                 });
 
-                // Log form data for debugging
-                formData.forEach((value, key) => {
-                    console.log(`${key}: ${value}`);
-                });
 
                 if (response.data.success) {
-                    alert('Product added successfully!');
+                    Swal.fire('Success', 'Product added successfully!', 'succss');
                 } else {
-                    alert('Failed to add product');
+                    Swal.fire('Error', 'Failed to add product', 'error');
                 }
             } catch (error) {
                 console.error('Error adding product:', error);
@@ -645,7 +678,10 @@ export default {
             autoGenerateSKU,
             toggleStatus,
             onFileChange,
-            removeImage
+            removeImage,
+            barcodeRef,
+            triggerDownloadBarcode,
+            skuError,
         };
     },
     methods: {
@@ -658,7 +694,6 @@ export default {
     }
 };
 </script>
-
 
 
 <style scoped>

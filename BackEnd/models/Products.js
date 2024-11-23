@@ -25,10 +25,6 @@ const productSchema = new mongoose.Schema({
     type: String,
     default: "N/A",
   },
-  subcategory: {
-    type: String,
-    default: "N/A",
-  },
   unit: {
     type: String,
     default: "N/A",
@@ -75,10 +71,9 @@ const productSchema = new mongoose.Schema({
     enum: ["active", "inactive", "deleted"],
     required: true,
   },
-  stockStatus: {
-    type: String,
-    enum: ["in-stock", "out-of-stock", "low-stock"],
-    default: "out-of-stock",
+  lastRestock:{
+    type: Date,
+    default: null,
   },
   createdAt: {
     type: Date,
@@ -86,8 +81,7 @@ const productSchema = new mongoose.Schema({
   },
   updatedAt: {
     type: Date,
-    default: Date.now,
-  },
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

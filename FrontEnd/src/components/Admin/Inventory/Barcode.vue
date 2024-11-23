@@ -1,109 +1,151 @@
 <script>
 import JsBarcode from 'jsbarcode';
-import { onMounted, watch, ref } from 'vue';
+import { onMounted, watch, ref, nextTick } from 'vue';
 
 export default {
   props: {
     sku: {
       type: String,
-      default: '' // Ensure a default value to avoid undefined
+      default: ''
+    },
+    productName: {
+      type: String,
+      default: 'Product Name'
+    },
+    format: {
+      type: String,
+      default: 'EAN13'
+    },
+    lineColor: {
+      type: String,
+      default: '#000000'
+    },
+    width: {
+      type: Number,
+      default: 4
+    },
+    height: {
+      type: Number,
+      default: 100
     }
   },
   setup(props) {
     const svgRef = ref(null);
-    const errorMessage = ref(''); // Ref to store error message
-    const fallbackSku = '0000000000000'; // Default SKU for fallback barcode
+    const errorMessage = ref('');
+    const showProductName = ref(true);
 
+    const generateBarcode = async (sku) => {
+      try {
+        if (!sku || typeof sku !== 'string') {
+          throw new Error('Invalid SKU: Must be a string.');
+        }
 
-    const calculateEAN13Checksum = (sku) => {
-      const digits = sku.split('').map(Number);
-      let sum = 0;
+        // Validate based on barcode format (e.g., EAN13 requires 13 digits)
+        if (props.format === 'EAN13' && (!/^\d{13}$/.test(sku))) {
+          throw new Error('Invalid EAN13 SKU: Must be 13 numeric digits.');
+        }
 
-      for (let i = 0; i < 12; i++) {
-        sum += (i % 2 === 0 ? digits[i] : digits[i] * 3);
-      }
+        errorMessage.value = '';
+        await nextTick();
 
-
-      const checksum = (10 - (sum % 10)) % 10;
-      return checksum;
-    };
-
-    const generateBarcode = (sku) => {
-      // Check if SKU exists and is a string with a length property
-      if (!sku || typeof sku !== 'string') {
-        console.error('Invalid SKU:', sku);
-        errorMessage.value = 'Invalid SKU';
-        // Generate a fallback barcode if SKU is invalid
-        JsBarcode(svgRef.value, fallbackSku, {
-          format: 'CODE128', // Alternative barcode format
-          lineColor: '#000',
-          width: 2,
-          height: 50,
+        // Generate barcode directly from the user input
+        JsBarcode(svgRef.value, sku, {
+          format: props.format,
+          lineColor: props.lineColor,
+          width: props.width,
+          height: props.height,
           displayValue: true
         });
-        return;
-      }
-      
-      // Pad or truncate SKU to ensure it’s exactly 13 characters for EAN-13 format
-      if (sku.length < 13) {
-        sku = sku.padStart(13, '0'); // Pad with leading zeros
-      } else if (sku.length > 13) {
-        sku = sku.slice(0, 13); // Truncate if longer than 13
-      }
+      } catch (error) {
+        console.error(error.message);
+        errorMessage.value = error.message;
 
-      // Ensure the SKU is numeric and exactly 13 digits long
-      if (sku.length !== 13 || !/^\d{13}$/.test(sku)) {
-        console.error('Invalid SKU format:', sku);
-        errorMessage.value = 'Invalid SKU format: must be numeric and 13 digits.';
-        // Generate a fallback barcode in this case as well
-        JsBarcode(svgRef.value, fallbackSku, {
-          format: 'CODE128', // Alternative barcode format
-          lineColor: '#000',
-          width: 2,
-          height: 50,
+        // Display fallback barcode if input is invalid
+        JsBarcode(svgRef.value, '0000000000000', {
+          format: 'CODE128',
+          lineColor: props.lineColor,
+          width: props.width,
+          height: props.height,
           displayValue: true
         });
-        return;
       }
-
-      // Calculate the checksum and append it to the SKU if necessary
-      const checksum = calculateEAN13Checksum(sku);
-      sku = sku.slice(0, 12) + checksum; // Append checksum to the first 12 digits
-
-      // Clear error message if valid SKU is detected
-      errorMessage.value = '';
-
-      // Generate the barcode using JsBarcode
-      JsBarcode(svgRef.value, sku, {
-        format: 'EAN13',
-        lineColor: '#000',
-        width: 2,
-        height: 50,
-        displayValue: true
-      });
     };
 
-    // Generate barcode on component mount
+    const downloadBarcode = () => {
+      const svg = svgRef.value;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const img = new Image();
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height + (showProductName.value ? 30 : 0);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(img, 0, 0);
+
+        if (showProductName.value) {
+          ctx.font = 'bold 20px  Courier New';
+          ctx.fillStyle = 'black';
+          ctx.textAlign = 'center';
+          ctx.fillText(props.productName, canvas.width / 2, img.height + 20);
+        }
+
+        const pngUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = pngUrl;
+        link.download = `${props.productName}_barcode.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    };
+
     onMounted(() => generateBarcode(props.sku));
-
-    // Watch for SKU changes
-    watch(() => props.sku, (newSku) => {
-      generateBarcode(newSku);
-    });
+    watch(
+      () => props.sku,
+      (newSku) => {
+        generateBarcode(newSku);
+      }
+    );
 
     return {
       svgRef,
-      errorMessage
+      errorMessage,
+      downloadBarcode,
+      showProductName
     };
   }
 };
 </script>
 
-
 <template>
-  <div>
-    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
-    <svg ref="svgRef"></svg>
+  <div class="row px-5">
+    <div class="row">
+      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+      <svg ref="svgRef"></svg>
+      <div v-if="showProductName" class="product-name text-center">{{ productName }}</div>
+    </div>
+    <div class="row ps-4 pe-3">
+      <button class="btn btn-primary fs-6" @click="downloadBarcode">
+        <span>Download </span>
+        <font-awesome-icon icon="download" style="color: #ffffff;" />
+      </button>
+    </div>
+    <!-- Toggle for controlling visibility of the product name -->
+    <div class="row">
+      <label class="show-name-label">
+  <input type="checkbox" v-model="showProductName" />
+  <span class="text-secondary">Show Product Name</span>
+</label>
+   
+    </div>
   </div>
 </template>
 
@@ -112,5 +154,29 @@ export default {
   color: red;
   font-weight: bold;
   margin-top: 10px;
+}
+
+.product-name {
+  display: flex;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-size: 16px;
+  margin-top: 5px;
+  margin-left: auto;
+  margin-right: auto;
+  color: black;
+  font-weight: bold;
+  word-break: break-word;
+  max-width: 80%;
+}
+.show-name-label {
+  display: flex;
+  align-items: center;
+}
+
+.show-name-label input {
+  margin-right: 8px;
 }
 </style>

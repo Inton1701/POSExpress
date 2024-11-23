@@ -13,11 +13,9 @@
         <div class="col-lg-8 col-sm-12">
           <div class="card" v-if="product">
             <div class="card-body">
-              <div class="bar-code-view">
-                <Barcode :sku="product.sku" />
-                <a class="printimg">
-                  <img src="/assets/img/icons/printer.svg" alt="print" />
-                </a>
+              <div class="row">
+                <Barcode ref="barcodeRef" :sku="product.sku" :productName="product.name" />
+                <a class="printimg" @click="triggerDownloadBarcode"></a>
               </div>
               <div class="productdetails">
                 <ul class="product-bar">
@@ -78,10 +76,11 @@
           <div class="card">
             <div class="card-body">
               <div class="slider-product-details">
-                <div class="owl-carousel owl-theme product-slide">
-                  <div class="slider-product">
-                    <img v-if="product.image" :src="product.image" alt="public/img/icons/no-image-icon.png" />
-                  </div>
+
+                <div>
+                  <img v-if="product.image" :src="`${imageURL}${product.image}`"
+                    alt="Product Image" />
+                  <img v-else :src="`/img/icons/no-image-icon.png`" alt="No image available" />
                 </div>
               </div>
             </div>
@@ -97,43 +96,45 @@ import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import feather from 'feather-icons';
-import Sidebar from '/src/components/Admin/Sidebar.vue';
 import Navbar from '/src/components/Admin/Navbar.vue';
 import Barcode from './Barcode.vue';
 
 export default {
   components: {
-    Sidebar,
     Navbar,
     Barcode
   },
   setup() {
+    const apiURL = process.env.VUE_APP_URL;
+    const imageURL = process.env.VUE_APP_IMAGE_URL; 
     const route = useRoute();
     const product = ref({});
 
     const getProductDetails = async () => {
-  const productId = route.params.id; // Use 'id' to match route param
-  try {
-    const response = await axios.get(`http://localhost:5000/api/get_product/${productId}`);
-    product.value = response.data.product;
-  } catch (error) {
-    console.error('Error fetching product details:', error);
-  }
-};
+      const productId = route.params.id; // Use 'id' to match route param
+      try {
+        const response = await axios.get(`${apiURL}/get_product/${productId}`);
+        product.value = response.data.product;
+      } catch (error) {
+        console.error('Error fetching product details:', error);
+      }
+    };
 
     onMounted(async () => {
       try {
         feather.replace();
         await getProductDetails();
+        console.log(imageURL)
       } catch (error) {
         console.error(error);
       }
     });
 
     return {
-      product
+      product,
+      apiURL,
+      imageURL,
     };
   },
 };
 </script>
-

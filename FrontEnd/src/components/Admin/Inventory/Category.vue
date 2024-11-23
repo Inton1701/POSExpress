@@ -1,7 +1,7 @@
 <template>
-    <Navbar/>
-
+    <Navbar />
     <div class="page-wrapper">
+        <ClipLoader v-if="loading" />
         <div class="content">
             <div class="page-header">
                 <div class="add-item d-flex">
@@ -10,141 +10,51 @@
                         <h6>Manage your categories</h6>
                     </div>
                 </div>
-                <ul class="table-top-head">
-                    <li>
-                        <a data-bs-toggle="tooltip" data-bs-placement="top" title="Pdf"><img
-                                src="/assets/img/icons/pdf.svg" alt="img" /></a>
-                    </li>
-                    <li>
-                        <a data-bs-toggle="tooltip" data-bs-placement="top" title="Excel"><img
-                                src="/assets/img/icons/excel.svg" alt="img" /></a>
-                    </li>
-                    <li>
-                        <a data-bs-toggle="tooltip" data-bs-placement="top" title="Print"><i data-feather="printer"
-                                class="feather-rotate-ccw"></i></a>
-                    </li>
-                    <li>
-                        <a data-bs-toggle="tooltip" data-bs-placement="top" title="Refresh"><i data-feather="rotate-ccw"
-                                class="feather-rotate-ccw"></i></a>
-                    </li>
-                    <li>
-                        <a data-bs-toggle="tooltip" data-bs-placement="top" title="Collapse" id="collapse-header"><i
-                                data-feather="chevron-up" class="feather-chevron-up"></i></a>
-                    </li>
-                </ul>
                 <div class="page-btn">
-                    <a href="#" class="btn btn-added" data-bs-toggle="modal" data-bs-target="#add-category"><i
-                            data-feather="plus-circle" class="me-2"></i>Add New
-                        Category</a>
+                    <a href="#" class="btn btn-added" data-bs-toggle="modal" data-bs-target="#add-category">
+                        <i data-feather="plus-circle" class="me-2"></i>Add New Category</a>
                 </div>
             </div>
-
             <div class="card table-list-card">
                 <div class="card-body">
-                    <div class="table-top">
-                        <div class="search-set">
-                            <div class="search-input">
-                                <a href="#" class="btn btn-searchset"><i data-feather="search"
-                                        class="feather-search"></i></a>
-                            </div>
-                        </div>
-                        <div class="search-path">
-                            <a class="btn btn-filter" id="filter_search">
-                                <i data-feather="filter" class="filter-icon"></i>
-                                <span><img src="/assets/img/icons/closes.svg" alt="img" /></span>
-                            </a>
-                        </div>
-                        <div class="form-sort">
-                            <i data-feather="sliders" class="info-img"></i>
-                            <select class="select">
-                                <option>Sort by Date</option>
-                                <option>Newest</option>
-                                <option>Oldest</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="card" id="filter_inputs">
-                        <div class="card-body pb-0">
-                            <div class="row">
-                                <div class="col-lg-3 col-sm-6 col-12">
-                                    <div class="input-blocks">
-                                        <i data-feather="zap" class="info-img"></i>
-                                        <select class="select">
-                                            <option>Choose Category</option>
-                                            <option>Laptop</option>
-                                            <option>Electronics</option>
-                                            <option>Shoe</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3 col-sm-6 col-12">
-                                    <div class="input-blocks">
-                                        <i data-feather="calendar" class="info-img"></i>
-                                        <div class="input-groupicon">
-                                            <input type="text" class="datetimepicker" placeholder="Choose Date" />
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3 col-sm-6 col-12">
-                                    <div class="input-blocks">
-                                        <i data-feather="stop-circle" class="info-img"></i>
-                                        <select class="select">
-                                            <option>Choose Status</option>
-                                            <option>Active</option>
-                                            <option>Inactive</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3 col-sm-6 col-12 ms-auto">
-                                    <div class="input-blocks">
-                                        <a class="btn btn-filters ms-auto">
-                                            <i data-feather="search" class="feather-search"></i>
-                                            Search
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="table-responsive">
+
                         <table class="table datanew">
                             <thead>
                                 <tr>
-                                    <th class="no-sort">
-                                        <label class="checkboxs">
-                                            <input type="checkbox" id="select-all" />
-                                            <span class="checkmarks"></span>
-                                        </label>
-                                    </th>
                                     <th>Category</th>
-
                                     <th>Created On</th>
                                     <th>Status</th>
                                     <th class="no-sort">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
+
+                                <tr v-if="categories.length <= 0">
+                                    <td colspan="8">No products available</td>
+                                </tr>
+                                <tr v-else v-for="category in categories" :key="category.id">
+                                    <td>{{ category.name }}</td>
+                                    <td>{{ $formatDate(category.createdAt) }}</td>
                                     <td>
-                                        <label class="checkboxs">
-                                            <input type="checkbox" />
-                                            <span class="checkmarks"></span>
-                                        </label>
+
+                                        <span :class="{
+                                            'badge': true,
+                                            'badge-linesuccess': category.status === 'active',
+                                            'badge-linewarning': category.status === 'inactive'
+                                        }">
+                                            {{ category.status }}
+                                        </span>
                                     </td>
-                                    <td>Laptop</td>
-                                    <td>25 May 2023</td>
-                                    <td>
-                                        <span class="badge badge-linesuccess">Active</span>
-                                    </td>
+
                                     <td class="action-table-data">
                                         <div class="edit-delete-action">
                                             <a class="me-2 p-2" href="#" data-bs-toggle="modal"
-                                                data-bs-target="#edit-category">
+                                                data-bs-target="#edit-category" @click="openEditModal(category._id)">
                                                 <i data-feather="edit" class="feather-edit"></i>
                                             </a>
-                                            <a class="confirm-text p-2" href="javascript:void(0);">
+                                            <a class="confirm-text p-2" href="javascript:void(0);"
+                                                @click="deleteCategory(category._id)">
                                                 <i data-feather="trash-2" class="feather-trash-2"></i>
                                             </a>
                                         </div>
@@ -157,136 +67,244 @@
             </div>
         </div>
     </div>
+
+    <!-- Add Category Modal -->
     <div class="modal fade" id="add-category">
         <div class="modal-dialog modal-dialog-centered custom-modal-two">
             <div class="modal-content">
-                <div class="page-wrapper-new p-0">
-                    <div class="content">
-                        <div class="modal-header border-0 custom-modal-header">
-                            <div class="page-title">
-                                <h4>Create Category</h4>
-                            </div>
-                            <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body custom-modal-body">
-                            <form action="category-list.html">
-                                <div class="mb-3">
-                                    <label class="form-label">Category</label>
-                                    <input type="text" class="form-control" />
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Category Slug</label>
-                                    <input type="text" class="form-control" />
-                                </div>
-                                <div class="mb-0">
-                                    <div
-                                        class="status-toggle modal-status d-flex justify-content-between align-items-center">
-                                        <span class="status-label">Status</span>
-                                        <input type="checkbox" id="user2" class="check" checked />
-                                        <label for="user2" class="checktoggle"></label>
-                                    </div>
-                                </div>
-                                <div class="modal-footer-btn">
-                                    <button type="button" class="btn btn-cancel me-2" data-bs-dismiss="modal">
-                                        Cancel
-                                    </button>
-                                    <button type="submit" class="btn btn-submit">
-                                        Create Category
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                <div class="modal-header border-0 custom-modal-header">
+                    <div class="page-title">
+                        <h4>Create Category</h4>
                     </div>
+                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body custom-modal-body">
+                    <form @submit.prevent="addCategory">
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <input type="text" class="form-control" v-model="newCategory.name" required />
+                        </div>
+                        <div class="mb-0">
+                            <div class="status-toggle modal-status d-flex justify-content-between">
+                                <span class="form-label">{{ newCategory.status }}</span>
+                                <input type="checkbox" id="add-category-status" class="check"
+                                    v-model="newCategory.status" :true-value="'active'" :false-value="'inactive'" />
+                                <label for="add-category-status" class="checktoggle"></label>
+                            </div>
+                        </div>
+                        <div class="modal-footer-btn">
+                            <button type="button" class="btn btn-cancel me-2" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-submit">Create Category</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Edit Category Modal -->
     <div class="modal fade" id="edit-category">
-        <div class="modal-dialog modal-dialog-centered custom-modal-two">
+        <div class="modal-dialog modal-dialog-centered ">
             <div class="modal-content">
-                <div class="page-wrapper-new p-0">
-                    <div class="content">
-                        <div class="modal-header border-0 custom-modal-header">
-                            <div class="page-title">
-                                <h4>Edit Category</h4>
-                            </div>
-                            <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body custom-modal-body">
-                            <form action="category-list.html">
-                                <div class="mb-3">
-                                    <label class="form-label">Category</label>
-                                    <input type="text" class="form-control" value="Laptop" />
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Category Slug</label>
-                                    <input type="text" class="form-control" value="laptop" />
-                                </div>
-                                <div class="mb-0">
-                                    <div
-                                        class="status-toggle modal-status d-flex justify-content-between align-items-center">
-                                        <span class="status-label">Status</span>
-                                        <input type="checkbox" id="user3" class="check" checked />
-                                        <label for="user3" class="checktoggle"></label>
-                                    </div>
-                                </div>
-                                <div class="modal-footer-btn">
-                                    <button type="button" class="btn btn-cancel me-2" data-bs-dismiss="modal">
-                                        Cancel
-                                    </button>
-                                    <button type="submit" class="btn btn-submit">
-                                        Save Changes
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                <div class="modal-header border-0">
+                    <div class="page-title">
+                        <h4>Edit Category</h4>
                     </div>
+                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body ">
+                    <form @submit.prevent="updateCategory">
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <input type="text" class="form-control" v-model="editCategory.name" required />
+                        </div>
+                        <div class="mb-0">
+                            <div class="status-toggle modal-status d-flex justify-content-between">
+                                <span class="form-label">{{ editCategory.status }}</span>
+                                <input type="checkbox" id="edit-category-status" class="check"
+                                    v-model="editCategory.status" :true-value="'active'" :false-value="'inactive'" />
+                                <label for="edit-category-status" class="checktoggle"></label>
+                            </div>
+                        </div>
+                        <div class="modal-footer-btn">
+                            <button type="button" class="btn btn-cancel me-2" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-submit">Save Changes</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-
 </template>
+
 <script>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-
-import 'select2'; 
-import feather from 'feather-icons'
-import 'datatables.net-bs5'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
-
-import Sidebar from '/src/components/Admin/Sidebar.vue';
+import { ref, onMounted, onBeforeMount,nextTick } from 'vue';
+import axios from 'axios';
+import Swal from 'sweetalert2';
 import Navbar from '/src/components/Admin/Navbar.vue';
+import ClipLoader from 'vue-spinner/src/ClipLoader.vue';
+import feather from 'feather-icons'
+import $ from 'jquery';
 
 
 export default {
-  components: {
-    Sidebar,
-    Navbar,
-  },
-  setup() {
-    const select = ref('.select'); 
-    onMounted(async () => {
-        try{
-            await $(select.value).select2();
-            await feather.replace();
-            await $('.table').DataTable();
-        }catch(error){
-            console.log(error);
-        }
+    components: {
+        Navbar,
+        ClipLoader
+    },
 
-    });
-    onBeforeUnmount(() => {
-      $(select.value).select2('destroy');
-    });
-    return {
-      select
-    };
-  },
+    setup() {
+        const apiURL = process.env.VUE_APP_URL;
+        const imageURL = process.env.VUE_APP_IMAGE_URL;
+        const categories = ref([]);
+        const newCategory = ref({
+            name: '',
+            status: 'inactive'
+        });
+        const editCategory = ref({ _id: null, name: '', status: 'inactive' });
+        const loading = ref(true);
+
+        const getCategories = async () => {
+            loading.value = true;
+            try {
+                const response = await axios.get(`${apiURL}/get_category_list`);
+                categories.value = response.data.categories;
+                if (!response.data.success) {
+                    Swal.fire('Error', response.data.message, 'errror');
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'Unable to fetch categories', 'error');
+            }
+            finally {
+                loading.value = false;
+            }
+        };
+
+
+
+        const addCategory = async () => {
+            try {
+                const response = await axios.post(`${apiURL}/add_category`, newCategory.value);
+
+                if (response.data.success) {
+                    Swal.fire('Success', 'Category added successfully!', 'success');
+
+                    document.querySelector('#add-category .btn-cancel').click();
+
+                } else {
+                    Swal.fire('Error', response.data.message || 'Failed to add category', 'error');
+                    
+                    document.querySelector('#add-category .btn-cancel').click();
+                }
+                getCategories();
+            } catch (error) {
+                console.error(error);
+                const errorMessage = error.response?.data?.message || 'An unexpected error occurred';
+                Swal.fire('Error', errorMessage, 'error');
+            }
+        };
+
+        const openEditModal = async (id) => {
+            const response = await axios.get(`${apiURL}/get_category/${id}`);
+            editCategory.value = response.data.category;
+        };
+        const toggleStatus = (data, event) => {
+            data.status = event.target.checked ? 'active' : 'inactive';
+        };
+
+        const updateCategory = async () => {
+            try {
+                const response = await axios.patch(`${apiURL}/edit_category/${editCategory.value._id}`, editCategory.value);
+                if (!response.data.success) {
+                    Swal.fire('Error', response.data.message, 'error');
+                } else {
+                    Swal.fire('Success', 'Category updated successfully!', 'success');
+                }
+                document.querySelector('#edit-category .btn-cancel').click();
+                getCategories();
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'Failed to update category', 'error');
+            }
+        };
+
+        const deleteCategory = async (id) => {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'You are about to delete this category!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete it!',
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await axios.patch(`${apiURL}/edit_category/${id}`, { status: 'deleted', deletedAt: Date.now()});
+                        if(response.data.success) {
+                            Swal.fire('Deleted!', 'Category has been deleted.', 'success');
+                        }else{
+                            Swal.fire('Error', response.data.message, 'error');
+                        }
+                       
+                        getCategories();
+                    } catch (error) {
+                        console.error(error);
+                        Swal.fire('Error', 'Failed to delete category', 'error');
+                    }
+                }
+            });
+        };
+
+
+        onMounted(async () => {
+            try {
+                await nextTick()
+                await getCategories();
+           
+                nextTick(() => {
+                    const table = document.querySelector('.table');
+                    if (table) {
+                        $(table).DataTable();
+                    }
+                })
+
+                await feather.replace();
+      
+            } catch (error) {
+                console.log(error);
+            }
+        });
+        onBeforeMount(async () => {
+            try {
+                await getCategories();
+               feather.replace();
+             
+
+            } catch (error) {
+                console.error(error);
+            }
+        })
+
+        return {
+            categories,
+            newCategory,
+            editCategory,
+            getCategories,
+            addCategory,
+            openEditModal,
+            updateCategory,
+            deleteCategory,
+            toggleStatus,
+            loading,
+            imageURL,
+            apiURL,
+
+        };
+    },
 };
 </script>

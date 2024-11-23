@@ -25,8 +25,8 @@
                 class="feather-rotate-ccw"></i></a>
           </li>
           <li>
-            <a data-bs-toggle="tooltip" data-bs-placement="top" title="Refresh"><i data-feather="rotate-ccw"
-                class="feather-rotate-ccw"></i></a>
+            <router-link to="/products" data-bs-toggle="tooltip" data-bs-placement="top" title="Refresh"><i
+                data-feather="rotate-ccw" class="feather-rotate-ccw"></i></router-link>
           </li>
           <li>
             <a data-bs-toggle="tooltip" data-bs-placement="top" title="Collapse" id="collapse-header"><i
@@ -63,12 +63,13 @@
                 <tr v-if="products.length <= 0">
                   <td colspan="8">No products available</td>
                 </tr>
-                <tr v-for="product in products" :key="product._id">
+                <tr v-else v-for="product in products" :key="product._id">
                   <td>{{ product.sku }}</td>
                   <td>
                     <div class="productimgname">
                       <a href="javascript:void(0);" class="product-img stock-img">
-                        <img v-if="product.image" :src="product.image" alt="/img/icons/no-image-icon.png" />
+                        <img v-if="product.image" :src="`${imageURL}${product.image}`" alt="/img/icons/no-image-icon.png" />
+                        <img v-else :src="`/img/icons/no-image-icon.png`"/>
                       </a>
                       <a href="javascript:void(0);">{{ product.name }}</a>
                     </div>
@@ -79,23 +80,24 @@
                     <span :class="{
                       'badge': true,
                       'badge-linesuccess': product.status === 'active',
-                      'badge-linedanger': product.status === 'inactive'
+                      'badge-linewarning': product.status === 'inactive'
                     }">
                       {{ product.status }}
                     </span>
                   </td>
-                  <td>{{ new Date(product.createdAt).toLocaleString() }}</td>
-                  <td>{{ new Date(product.updatedAt).toLocaleString() }}</td>
+                  <td>{{ $formatDate(product.createdAt) }}</td>
+                  <td>{{ $formatDate(product.updatedAt) }}</td>
                   <td class="action-table-data">
                     <div class="edit-delete-action">
-                      <router-link class="me-2 edit-icon p-2"  :to="{ name: 'ProductDetails', params: { id: product._id } }">
-                        <i data-feather="eye" class="feather-eye"></i>
+                      <router-link class="me-2 edit-icon p-2"
+                        :to="{ name: 'ProductDetails', params: { id: product._id } }">
+                        <font-awesome-icon icon="eye" class="feather-eye" />
                       </router-link>
-                      <router-link to="edit-product" class="me-2 p-2">
-                        <i data-feather="edit" class="feather-edit"></i>
+                      <router-link :to="{ name: 'EditProduct', params: { id: product._id } }" class="me-2 p-2">
+                        <font-awesome-icon icon="fa-pen-to-square" class="feather-edit" />
                       </router-link>
-                      <a class="confirm-text p-2" href="javascript:void(0);" @click="deleteAlert()">
-                        <i data-feather="trash-2" class="feather-trash-2"></i>
+                      <a class="confirm-text p-2" href="javascript:void(0);" @click="deleteAlert(product._id)">
+                        <font-awesome-icon icon="fa-trash" class="feather-trash-2" />
                       </a>
                     </div>
                   </td>
@@ -167,116 +169,116 @@
 </template>
 
 <script>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import axios from 'axios';
 import 'select2';
 import feather from 'feather-icons';
 import ClipLoader from 'vue-spinner/src/ClipLoader.vue';
-import 'datatables.net-bs5';
-import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
 import Swal from 'sweetalert2';
-import Sidebar from '/src/components/Admin/Sidebar.vue';
 import Navbar from '/src/components/Admin/Navbar.vue';
+import $ from 'jquery';
 
 export default {
   components: {
-    Sidebar,
     Navbar,
     ClipLoader,
   },
   setup() {
+    const apiURL = process.env.VUE_APP_URL;
+    const imageURL = process.env.VUE_APP_IMAGE_URL;
     const products = ref([]);
     const loading = ref(true);
     const select = ref(null);
     const table = ref(null);
 
-    // Function to get products from the API
+    //  get products from the API
     const getProductList = async () => {
       loading.value = true;
       try {
-        const response = await axios.get('http://localhost:5000/api/products_list'); // Update with actual API endpoint
-        products.value = response.data.productList; // Update based on your API response structure
-        console.log(products.value); // For debugging
+        const response = await axios.get(`${apiURL}/products_list`);
+        products.value = response.data.products;
+
       } catch (error) {
-        console.error('Error fetching products:', error);
+        Swal.fire('Error', 'Unable to get products', 'error')
       } finally {
         loading.value = false;
       }
     };
+    
+    const deleteAlert = async (productId) => {
+      try{
+        const { value: result } = await Swal.fire({
+        title: 'Delete Product',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!',
+      });
 
+      if (result) {
+        try {
+          // Send a PUT request to update the product status to "deleted"
+          const response = await axios.patch(`${apiURL}/edit_products/${productId}`, {
+            status: 'deleted', // Update the status to 'deleted'
+          });
+
+          if (response.data.success) {
+            Swal.fire('Deleted!', 'Your product has been deleted.', 'success');
+
+          } else {
+            Swal.fire('Failed', 'There was an issue deleting the product.', 'error');
+          }
+        } catch (error) {
+          console.error('Error updating product:', error);
+          Swal.fire('Error', 'Failed to delete the product.', 'error');
+        }
+      } else {
+        Swal.fire('Cancelled', 'Your product is safe :)', 'error');
+      }
+      }catch(error){
+        Swal.fire('Error',error, 'error');
+      }finally{
+        getProductList();
+      }
+      
+    };
     onMounted(async () => {
       try {
+        await nextTick()
         await getProductList();
-        await $(select.value).select2();
-        await feather.replace();
-        await $('.table').DataTable();
+
+        nextTick(() => {
+          const table = document.querySelector('.table');
+          if (table) {
+            $(table).DataTable();
+          }
+        })
+        feather.replace();
+
+
       } catch (error) {
         console.log(error);
       }
     });
 
     onBeforeUnmount(() => {
+      feather.replace();
       $(select.value).select2('destroy');
     });
+
 
     return {
       products,
       loading,
       select,
+      apiURL,
+      imageURL,
+      deleteAlert
     };
-  },
-  methods: {
-    async deleteAlert() {
-      const { value: result } = await Swal.fire({
-        title: 'Delete Products',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
-      });
-
-      if (result) {
-        Swal.fire('Deleted!', 'Your file has been deleted.', 'success');
-      } else {
-        Swal.fire('Cancelled', 'Your file is safe :)', 'error');
-      }
-    },
-    async exportCSVAlert() {
-      console.log("Export alert triggered", this.products); // Debug
-      const result = await this.$showAlert({
-        title: 'Export Products',
-        text: 'Do you want to export products to CSV?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Export'
-      });
-
-      if (result.isConfirmed) {
-        console.log("Export confirmed, data:", this.products); // Debug
-        await this.$exportToCSV(this.products, 'products');
-      }
-    },
-    async exportPDFAlert() {
-      console.log("Export alert triggered", this.products); // Debug
-      const result = await this.$showAlert({
-        title: 'Export Products',
-        text: 'Do you want to export products to PDF?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Export'
-      });
-
-      if (result.isConfirmed) {
-        console.log("Export confirmed, data:", this.products); // Debug
-        await this.$exportToPDF('Product List', this.products, 'products');
-      }
-    }
   }
+
+
 };
 </script>

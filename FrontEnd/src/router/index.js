@@ -7,13 +7,13 @@ import ProductDetails from '@/components/Admin/Inventory/ProductDetails.vue';
 import CreateProduct from '/src/components/Admin/Inventory/CreateProduct.vue';
 import EditProduct from '/src/components/Admin/Inventory/EditProduct.vue';
 import Category from '/src/components/Admin/Inventory/Category.vue';
-import LowStocks from '/src/components/Admin/Inventory/LowStocks.vue';
+import ManageStocks from '/src/components/Admin/Inventory/ManageStocks.vue';
 import Subcategories from '/src/components/Admin/Inventory/Subcategories.vue';
 import Brands from '/src/components/Admin/Inventory/Brands.vue'
 import Units from '/src/components/Admin/Inventory/Units.vue'
 import Variants from '/src/components/Admin/Inventory/Variants.vue';
 import Barcode from '/src/components/Admin/Inventory/Barcode.vue';
-import Stocks from '/src/components/Admin/Inventory/Stocks.vue';
+
 import Transactions from '/src/components/Admin/Sales/Transactions.vue';
 import Returns from '/src/components/Admin/Sales/Returns.vue'
 import VoidSales from '/src/components/Admin/Sales/VoidSales.vue';
@@ -39,8 +39,9 @@ const routes = [
     },
     {
         name: 'EditProduct',
-        path: '/edit-product',
-        component : EditProduct
+        path: '/product/edit/:id',
+        component : EditProduct,
+        props: true
     },
     {
         name: 'ProductList',
@@ -50,7 +51,7 @@ const routes = [
     ,
     {
         name: 'ProductDetails',
-        path: '/product-details/:id',
+        path: '/products/view/:id',
         component : ProductDetails,
         props: true 
     },
@@ -60,9 +61,9 @@ const routes = [
         component : Category
     },
     {
-        name: 'LowStocks',
-        path: '/low-stocks',
-        component : LowStocks
+        name: 'ManageStocks',
+        path: '/manage-stocks',
+        component : ManageStocks
     },
     {
         name: 'Subcategories',
@@ -89,11 +90,7 @@ const routes = [
         path: '/barcode',
         component : Barcode
     },
-    {
-        name: 'Stocks',
-        path: '/manage-stocks',
-        component : Stocks
-    },
+
     {
         name: 'Transactions',
         path: '/transactions',
@@ -109,11 +106,11 @@ const routes = [
         name: 'VoidSales',
         path: '/voids',
         component : VoidSales
-    },{
-        name: 'POS',
-        path: '/pos',
-        component : POS
-    } 
+    }//,{
+    //     name: 'POS',
+    //     path: '/pos',
+    //     component : POS
+    // } 
     ,{
         name: 'CustomerList',
         path: '/customers',
