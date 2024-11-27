@@ -1,6 +1,6 @@
 import { Parser } from 'json2csv';
 
-export function exportToCSV(products, baseFilename = 'data') {
+export function exportToCSV(products, baseFilename) {
   try {
     if (!products || products.length === 0) {
       console.error('No data to export');

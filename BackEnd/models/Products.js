@@ -70,6 +70,7 @@ const productSchema = new mongoose.Schema({
     type: String,
     enum: ["active", "inactive", "deleted"],
     required: true,
+    default: "active",
   },
   lastRestock:{
     type: Date,

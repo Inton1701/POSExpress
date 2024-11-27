@@ -1,5 +1,7 @@
 const Brand = require("../models/Brands");
 const asyncHandler = require("express-async-handler");
+const fs = require('fs');
+const path = require('path');
 
 const brand = {
     // Get all brands
@@ -8,11 +10,6 @@ const brand = {
             const brandList = await Brand.find({status: {$ne: 'deleted'} });
 
             
-        // const brandList = brands.map(brand => ({
-        //     ...brand._doc,
-        //     logo: brand.logo ? `http://localhost:5000/uploads/${brand.logo}` : '',
-        // }));
-
             res.status(200).json({ success: true, brandList });
         }catch(error){
             res.status(500).json({ success: false, message: error.message });
@@ -97,53 +94,60 @@ const brand = {
             if (!brand) {
                 return res.status(404).json({
                     success: false,
-                    message: "Brand not found"
+                    message: "Brand not found",
                 });
             }
     
-            // Define fields that can be updated from request body
-            const allowedUpdates = ['name', 'status']; // Add other fields if needed
-    
-            // Update allowed fields
-            allowedUpdates.forEach(key => {
+            // Update other fields
+            const allowedUpdates = ['name', 'status'];
+            allowedUpdates.forEach((key) => {
                 if (req.body[key] !== undefined) {
                     brand[key] = req.body[key];
                 }
             });
     
-            // Handle new logo upload if available
-            if (req.file && req.file.filename !== 'no-logo-icon.png') {
-                // Optional: delete old logo if it exists
-                if (brand.logo && brand.logo !== 'no-logo-icon.png') {
+            // Check if the logo is removed via frontend
+            if (req.body.logoRemoved === 'true') {
+                if (brand.logo && brand.logo !== 'no-image-icon.png') {
                     const oldLogoPath = path.join(__dirname, '..', 'public', 'uploads', brand.logo);
-                    fs.unlink(oldLogoPath, (err) => {
-                        if (err) console.error('Error deleting old logo:', err);
-                    });
+                    if (fs.existsSync(oldLogoPath)) {
+                        fs.unlink(oldLogoPath, (err) => {
+                            if (err) console.error("Error deleting old logo:", err);
+                        });
+                    }
                 }
-    
-                // Update brand's logo field with new filename
-                brand.logo = req.file.filename;
+                brand.logo = 'no-image-icon.png'; // Set to default logo
             }
     
-            // Save updated brand data
-            await brand.save();
+            // Handle new file upload
+            if (req.file && req.file.filename) {
+                if (brand.logo && brand.logo !== 'no-image-icon.png') {
+                    const oldLogoPath = path.join(__dirname, '..', 'public', 'uploads', brand.logo);
+                    if (fs.existsSync(oldLogoPath)) {
+                        fs.unlink(oldLogoPath, (err) => {
+                            if (err) console.error("Error deleting old logo:", err);
+                        });
+                    }
+                }
+                brand.logo = req.file.filename; // Update logo with uploaded file
+            }
     
-            // Prepare the response with full image URL (or null if no logo)
-            const updatedBrand = {
-                ...brand._doc,
-                logo: brand.logo ? brand.logo : null,
-            };
+            await brand.save();
     
             res.status(200).json({
                 success: true,
                 message: "Brand updated successfully",
-                updatedBrand
+                updatedBrand: {
+                    ...brand._doc,
+                    logo: brand.logo || 'no-image-icon.png',
+                },
             });
         } catch (error) {
+            console.error("Error in editBrand:", error);
             res.status(500).json({
                 success: false,
-                message: "Failed to update brand",
-                error: error.message
+                message: "Internal Server Error",
+                error: error.message,
             });
         }
     }),

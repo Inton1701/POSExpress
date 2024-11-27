@@ -171,6 +171,9 @@
 <script>
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import axios from 'axios';
+import { exportToCSV } from '@/utils/exportCSV';
+import { exportToPDF } from '@/utils/exportPDF';
+
 import 'select2';
 import feather from 'feather-icons';
 import ClipLoader from 'vue-spinner/src/ClipLoader.vue';
@@ -244,6 +247,68 @@ export default {
       }
       
     };
+    const exportCSVAlert = async () => {
+  try {
+    const { value: result } = await Swal.fire({
+      title: 'Export Product',
+      text: 'Export via CSV',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Export',
+    });
+
+    if (result) {
+      const response = await axios.get(`${apiURL}/get_report`);
+      
+      // Ensure products are available
+      if (response.data.success && response.data.products && response.data.products.length > 0) {
+        const products = response.data.products;
+
+        exportToCSV(products, `product_report`); // Call function to export CSV
+        Swal.fire('Success', 'products successfully exported','success')
+      } else {
+        Swal.fire('Error', 'No products found to export', 'error');
+      }
+    }
+  } catch (error) {
+    console.error('Error during export:', error);
+    Swal.fire('Error', 'Something went wrong while exporting.', 'error');
+  }
+};
+const exportPDFAlert = async ()=>{
+  try {
+    const { value: result } = await Swal.fire({
+      title: 'Export Product',
+      text: 'Export via PDF',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Export',
+    });
+
+    if (result) {
+      const response = await axios.get(`${apiURL}/get_report`);
+      
+      // Ensure products are available
+      if (response.data.success && response.data.products && response.data.products.length > 0) {
+        const products = response.data.products;
+
+        exportToPDF( `product_report`, products); // Call function to export CSV
+        Swal.fire('Success', 'products successfully exported','success')
+      } else {
+        Swal.fire('Error', 'No products found to export', 'error');
+      }
+    }
+  } catch (error) {
+    console.error('Error during export:', error);
+    Swal.fire('Error', 'Something went wrong while exporting.', 'error');
+  }
+}
+
+
     onMounted(async () => {
       try {
         await nextTick()
@@ -275,7 +340,9 @@ export default {
       select,
       apiURL,
       imageURL,
-      deleteAlert
+      deleteAlert,
+      exportCSVAlert,
+      exportPDFAlert
     };
   }
 

@@ -106,11 +106,11 @@ const routes = [
         name: 'VoidSales',
         path: '/voids',
         component : VoidSales
-    }//,{
-    //     name: 'POS',
-    //     path: '/pos',
-    //     component : POS
-    // } 
+    },{
+        name: 'POS',
+        path: '/pos',
+        component : POS
+    } 
     ,{
         name: 'CustomerList',
         path: '/customers',

@@ -124,7 +124,11 @@
                                                                     class="plus-down-add"></i><span>Add New</span></a>
                                                         </div>
                                                         <select class="form-control" v-model="inputedProduct.category">
-                                                            <option selected value="None">None</option>
+                                                            <option value="None">None</option>
+                                                            <option v-for="category in categories" :key="category._id"
+                                                                :value="category.name">
+                                                                {{ category.name }}
+                                                            </option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -138,6 +142,10 @@
                                                         </div>
                                                         <select class="form-control" v-model="inputedProduct.unit">
                                                             <option selected value="None">None</option>
+                                                            <option v-for="unit in units" :key="unit._id"
+                                                                :value="unit.name">
+                                                                {{ unit.name }}
+                                                            </option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -152,10 +160,10 @@
                                                         </div>
                                                         <div>
                                                             <select class="form-control" v-model="inputedProduct.brand">
-                                                                <option value="None">None</option>
-                                                                <option value="Brand A">Brand A</option>
-                                                                <option value="Brand B">Brand B</option>
-                                                                <option value="Brand C">Brand C</option>
+                                                                <option v-for="brand in brands" :key="brand._id"
+                                                                :value="brand.name">
+                                                                {{ brand.name }}
+                                                            </option>
                                                             </select>
                                                         </div>
                                                     </div>
@@ -239,9 +247,7 @@
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Discount Type</label>
                                                     <select class="form-control" v-model="inputedProduct.discountType">
-                                                        <option value="none">None</option>
-                                                        <option value="percent">Percent</option>
-                                                        <option value="fixed">Fixed</option>
+                                                        <option selected value="none">None</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -523,7 +529,9 @@ export default {
         });
         const skuError = ref(null);
         const select = ref('.select');
-
+        const categories = ref([]);
+        const units = ref([]);
+        const brands = ref([]);
         const barcodeRef = ref(null);
 
         const triggerDownloadBarcode = () => {
@@ -531,12 +539,27 @@ export default {
                 barcodeRef.value.downloadBarcode(); // Access the method on the Barcode component
             }
         };
+        const getSelection = async () => {
+            try {
+                const categoryResponse = await axios.get(`${apiURL}/get_category_list`);
+                const unitResponse = await axios.get(`${apiURL}/get_units_list`);
+                const brandResponse = await axios.get(`${apiURL}/brands_list`);
+
+                if (categoryResponse.data.success) categories.value = categoryResponse.data.categories; else Swal.fire('Error', categoryResponse.data.message, 'error');
+                if (unitResponse.data.success) units.value = unitResponse.data.unitList; else Swal.fire('Error', unitResponse.data.message, 'error');
+                if (brandResponse.data.success) brands.value = brandResponse.data.brandList; else Swal.fire('Error', brandResponse.data.message, 'error');
+            } catch (error) {
+                Swal.fire('Error', 'Failed to fetch selection data', 'error');
+            }
+        };
+
 
 
         onMounted(async () => {
             try {
                 await $(select.value).select2();
                 await feather.replace();
+                await getSelection();
             } catch (error) {
                 console.log(error);
             }
@@ -682,6 +705,10 @@ export default {
             barcodeRef,
             triggerDownloadBarcode,
             skuError,
+            categories,
+            getSelection,
+            units,
+            brands,
         };
     },
     methods: {

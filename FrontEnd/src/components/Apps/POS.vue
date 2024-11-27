@@ -1,448 +1,775 @@
 <template>
-    <div class="main-wrapper">
-        <div class="header">
-            <div class="header-left active">
-                <a href="index.html" class="logo logo-normal">
-                    <img src="assets/img/logo.png" alt />
-                </a>
-                <a href="index.html" class="logo logo-white">
-                    <img src="assets/img/logo-white.png" alt />
-                </a>
-                <a href="index.html" class="logo-small">
-                    <img src="assets/img/logo-small.png" alt />
-                </a>
-            </div>
-
-            <a id="mobile_btn" class="mobile_btn d-none" href="#sidebar">
-                <span class="bar-icon">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </span>
-            </a>
-
-            <ul class="nav user-menu">
-                <li class="nav-item nav-item-box">
-                    <a href="javascript:void(0);" id="btnFullscreen">
-                        <i data-feather="maximize"></i>
-                    </a>
-                </li>
-                <li class="nav-item dropdown has-arrow main-drop">
-                    <a href="javascript:void(0);" class="dropdown-toggle nav-link userset" data-bs-toggle="dropdown">
-                        <span class="user-info">
-                            <span class="user-letter">
-                                <img src="assets/img/profiles/avator1.jpg" alt class="img-fluid" />
-                            </span>
-                            <span class="user-detail">
-                                <span class="user-name">John Smilga</span>
-                                <span class="user-role">Super Admin</span>
-                            </span>
-                        </span>
-                    </a>
-                    <div class="dropdown-menu menu-drop-user">
-                        <div class="profilename">
-                            <div class="profileset">
-                                <span class="user-img"><img src="assets/img/profiles/avator1.jpg" alt />
-                                    <span class="status online"></span></span>
-                                <div class="profilesets">
-                                    <h6>John Smilga</h6>
-                                    <h5>Super Admin</h5>
-                                </div>
-                            </div>
-                            <hr class="m-0" />
-                            <a class="dropdown-item" href="profile.html">
-                                <i class="me-2" data-feather="user"></i> My Profile</a>
-                            <a class="dropdown-item" href="general-settings.html"><i class="me-2"
-                                    data-feather="settings"></i>Settings</a>
-                            <hr class="m-0" />
-                            <a class="dropdown-item logout pb-0" href="signin.html"><img
-                                    src="assets/img/icons/log-out.svg" class="me-2" alt="img" />Logout</a>
-                        </div>
-                    </div>
-                </li>
-            </ul>
-
-            <div class="dropdown mobile-user-menu">
-                <a href="javascript:void(0);" class="nav-link dropdown-toggle" data-bs-toggle="dropdown"
-                    aria-expanded="false"><i class="fa fa-ellipsis-v"></i></a>
-                <div class="dropdown-menu dropdown-menu-right">
-                    <a class="dropdown-item" href="profile.html">My Profile</a>
-                    <a class="dropdown-item" href="general-settings.html">Settings</a>
-                    <a class="dropdown-item" href="signin.html">Logout</a>
-                </div>
-            </div>
-        </div>
-        <div class="page-wrapper pos-pg-wrapper ms-0">
-            <div class="content pos-design p-0">
-
-                <div class="row align-items-start pos-wrapper">
-                    <div class="col-md-12 col-lg-7">
-
-                        <div class="row bg-white px-4 pb-5 mx-3 mt-2">
-                            <h4>Enter Barcode:</h4>
-                            <input v-model="barcode" class="form-control bg-light border border-dark fs-1 mb-2 mt-3"
-                                type="text" @keyup.enter="addProduct" placeholder="Scan Barcode">
-                        </div>
-                        <div class="row">
-                            <div class="row pos-categories tabs_wrapper">
-                                <div class="pos-products">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <h5 class="mb-3">Products</h5>
-                                    </div>
-                                    <div class="tabs_container">
-                                        <div class="tab_content active" data-tab="all">
-                                            <div class="row">
-                                                <div class="col-sm-2 col-md-6 col-lg-3 col-xl-3">
-                                                    <div class="product-info default-cover card">
-                                                        <a href="javascript:void(0);" class="img-bg">
-                                                            <img src="assets/img/products/pos-product-01.png"
-                                                                alt="Products" />
-                                                            <span><i data-feather="check" class="feather-16"></i></span>
-                                                        </a>
-                                                        <h6 class="cat-name">
-                                                            <a href="javascript:void(0);">Mobiles</a>
-                                                        </h6>
-                                                        <h6 class="product-name">
-                                                            <a href="javascript:void(0);">IPhone 14 64GB</a>
-                                                        </h6>
-                                                        <div
-                                                            class="d-flex align-items-center justify-content-between price">
-                                                            <span>30 Pcs</span>
-                                                            <p>$15800</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-sm-2 col-md-6 col-lg-3 col-xl-3 pe-2">
-                                                    <div class="product-info default-cover card">
-                                                        <a href="javascript:void(0);" class="img-bg">
-                                                            <img src="assets/img/products/pos-product-02.png"
-                                                                alt="Products" />
-                                                            <span><i data-feather="check" class="feather-16"></i></span>
-                                                        </a>
-                                                        <h6 class="cat-name">
-                                                            <a href="javascript:void(0);">Computer</a>
-                                                        </h6>
-                                                        <h6 class="product-name">
-                                                            <a href="javascript:void(0);">MacBook Pro</a>
-                                                        </h6>
-                                                        <div
-                                                            class="d-flex align-items-center justify-content-between price">
-                                                            <span>140 Pcs</span>
-                                                            <p>$1000</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-sm-2 col-md-6 col-lg-3 col-xl-3 pe-2">
-                                                    <div class="product-info default-cover card">
-                                                        <a href="javascript:void(0);" class="img-bg">
-                                                            <img src="assets/img/products/pos-product-02.png"
-                                                                alt="Products" />
-                                                            <span><i data-feather="check" class="feather-16"></i></span>
-                                                        </a>
-                                                        <h6 class="cat-name">
-                                                            <a href="javascript:void(0);">Computer</a>
-                                                        </h6>
-                                                        <h6 class="product-name">
-                                                            <a href="javascript:void(0);">MacBook Pro</a>
-                                                        </h6>
-                                                        <div
-                                                            class="d-flex align-items-center justify-content-between price">
-                                                            <span>140 Pcs</span>
-                                                            <p>$1000</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-sm-2 col-md-6 col-lg-3 col-xl-3 pe-2">
-                                                    <div class="product-info default-cover card">
-                                                        <a href="javascript:void(0);" class="img-bg">
-                                                            <img src="assets/img/products/pos-product-02.png"
-                                                                alt="Products" />
-                                                            <span><i data-feather="check" class="feather-16"></i></span>
-                                                        </a>
-                                                        <h6 class="cat-name">
-                                                            <a href="javascript:void(0);">Computer</a>
-                                                        </h6>
-                                                        <h6 class="product-name">
-                                                            <a href="javascript:void(0);">MacBook Pro</a>
-                                                        </h6>
-                                                        <div
-                                                            class="d-flex align-items-center justify-content-between price">
-                                                            <span>140 Pcs</span>
-                                                            <p>$1000</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-sm-2 col-md-6 col-lg-3 col-xl-3 pe-2">
-                                                    <div class="product-info default-cover card">
-                                                        <a href="javascript:void(0);" class="img-bg">
-                                                            <img src="assets/img/products/pos-product-02.png"
-                                                                alt="Products" />
-                                                            <span><i data-feather="check" class="feather-16"></i></span>
-                                                        </a>
-                                                        <h6 class="cat-name">
-                                                            <a href="javascript:void(0);">Computer</a>
-                                                        </h6>
-                                                        <h6 class="product-name">
-                                                            <a href="javascript:void(0);">MacBook Pro</a>
-                                                        </h6>
-                                                        <div
-                                                            class="d-flex align-items-center justify-content-between price">
-                                                            <span>140 Pcs</span>
-                                                            <p>$1000</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-sm-2 col-md-6 col-lg-3 col-xl-3 pe-2">
-                                                    <div class="product-info default-cover card">
-                                                        <a href="javascript:void(0);" class="img-bg">
-                                                            <img src="assets/img/products/pos-product-11.png"
-                                                                alt="Products" />
-                                                            <span><i data-feather="check" class="feather-16"></i></span>
-                                                        </a>
-                                                        <h6 class="cat-name">
-                                                            <a href="javascript:void(0);">Watches</a>
-                                                        </h6>
-                                                        <h6 class="product-name">
-                                                            <a href="javascript:void(0);">Fossil Pair Of 3 in 1
-                                                            </a>
-                                                        </h6>
-                                                        <div
-                                                            class="d-flex align-items-center justify-content-between price">
-                                                            <span>40 Pcs</span>
-                                                            <p>$789</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-sm-2 col-md-6 col-lg-3 col-xl-3 pe-2">
-                                                    <div class="product-info default-cover card">
-                                                        <a href="javascript:void(0);" class="img-bg">
-                                                            <img src="assets/img/products/pos-product-18.png"
-                                                                alt="Products" />
-                                                            <span><i data-feather="check" class="feather-16"></i></span>
-                                                        </a>
-                                                        <h6 class="cat-name">
-                                                            <a href="javascript:void(0);">Shoes</a>
-                                                        </h6>
-                                                        <h6 class="product-name">
-                                                            <a href="javascript:void(0);">Green Nike Fe</a>
-                                                        </h6>
-                                                        <div
-                                                            class="d-flex align-items-center justify-content-between price">
-                                                            <span>78 Pcs</span>
-                                                            <p>$7847</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                    </div>
-                    <div class="col-md-12 col-lg-5 ps-0">
-                        <aside class="product-order-list">
-                            <div class="head d-flex align-items-center justify-content-between w-100">
-                                <div class>
-                                    <h5>Order List</h5>
-                                </div>
-                                <div class>
-                                    <a class="confirm-text" href="javascript:void(0);"><i data-feather="trash-2"
-                                            class="feather-16 text-danger"></i></a>
-                                    <a href="javascript:void(0);" class="text-default"><i data-feather="more-vertical"
-                                            class="feather-16"></i></a>
-                                </div>
-                            </div>
-                            <div class="product-added block-section">
-                                <div class="product-wrap">
-                                    <table class="table table-responsive">
-                                        <thead>
-                                            <tr>
-                                                <th>Product</th>
-                                                <th>Price</th>
-                                                <th>Quantity</th>
-                                                <th>Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="(item, index) in cart" :key="index">
-                                                <td>{{ item.product }}</td>
-                                                <td>{{ item.price }}</td>
-                                                <td>
-                                                        <input type="text" class="text-center" :value=item.quantity />
-                                                </td>
-                                                <td>{{ item.total }}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="block-section">
-                                <div class="row">
-                                    <div class="col-lg-8 ">
-                                        <h6>Order Summary</h6>
-                                        <div class="order-total">
-                                            <table class="table table-responsive table-borderless">
-                                                <tr>
-                                                    <td>Sub Total</td>
-                                                    <td class="text-end">$60,454</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Tax</td>
-                                                    <td class="text-end">$40.21</td>
-                                                </tr>
-
-                                                <tr>
-                                                    <td class="danger">Discount</td>
-                                                    <td class="danger text-end">$15.21</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Total</td>
-                                                    <td class="text-end">$64,024.5</td>
-                                                </tr>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-4 payment-method d-flex flex-column">
-                                        <h6>Payment Method</h6>
-
-                                        <div class="row d-flex align-items-center justify-content-center methods">
-                                            <div class="item border-secondary border border-1 rounded-2">
-                                                <div class="default-cover">
-                                                    <a href="javascript:void(0);">
-                                                        <img src="assets/img/icons/cash-pay.svg" alt="Payment Method" />
-                                                        <span>Cash</span>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                            <div class="item border-secondary border border-1 rounded-2 my-2">
-                                                <div class="default-cover">
-                                                    <a href="javascript:void(0);">
-                                                        <img src="assets/img/icons/credit-card.svg"
-                                                            alt="Payment Method" />
-                                                        <span>Debit Card</span>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                            <div class="item border-secondary border border-1 rounded-2">
-                                                <div class="default-cover ">
-                                                    <a href="javascript:void(0); ">
-                                                        <img src="assets/img/icons/qr-scan.svg" alt="Payment Method" />
-                                                        <span>Scan</span>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="btn-row d-sm-flex align-items-center justify-content-between">
-                                <a href="javascript:void(0);" class="btn btn-info btn-icon flex-fill"
-                                    data-bs-toggle="modal" data-bs-target="#hold-order"><span
-                                        class="me-1 d-flex align-items-center"><i data-feather="corner-up-right"
-                                            class="feather-16"></i></span>Return</a>
-                                <a href="javascript:void(0);" class="btn btn-danger btn-icon flex-fill"><span
-                                        class="me-1 d-flex align-items-center"><i data-feather="trash-2"
-                                            class="feather-16"></i></span>Void</a>
-                                <a href="javascript:void(0);" class="btn btn-success btn-icon flex-fill"
-                                    data-bs-toggle="modal" data-bs-target="#payment-completed"><span
-                                        class="me-1 d-flex align-items-center"><i data-feather="credit-card"
-                                            class="feather-16"></i></span>Pay</a>
-                            </div>
-                        </aside>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="main-wrapper">
+    <div class="header">
+      <!-- Header Content -->
     </div>
 
+    <div class="page-wrapper pos-pg-wrapper ms-0">
+      <div class="content pos-design p-0">
+        <div class="row align-items-start pos-wrapper">
+          <!-- Category Sidebar -->
+          <div class="col-md-3 col-lg-2 ps-0">
+            <div class="category-list">
+              <h5>Categories</h5>
+              <ul class="list-group text-center">
+                <li v-for="category in categories" :key="category.name" class="list-group-item"
+                  :class="{ 'active': selectedCategory === category.name }" @click="selectCategory(category.name)">
+                  <a href="javascript:void(0);">{{ category.name }}</a>
+                </li>
+              </ul>
+            </div>
+          </div>
 
 
+          <!-- Product Display -->
+          <div class="col-md-12 col-lg-6">
+            <div class="row bg-white px-4 pb-5 mx-3 mt-2">
+              <h4>Enter Barcode:</h4>
+              <input v-model="barcode" ref="barcodeInput"
+                class="form-control bg-light border border-dark fs-1 mb-2 mt-3" type="text" @keyup.enter="addProduct()"
+                placeholder="Scan Barcode" />
+              <p v-if="barcodeError.message" class="text-danger">ERROR: {{ barcodeError.message }}</p>
 
+            </div>
+            <div class="pos-wrapper">
+              <div class="row">
+                <div class="col-md-12 col-lg-12">
+                  <div class="pos-products">
+                    <div class="tabs_container">
+                      <!-- Display products based on selected category -->
+                      <div v-if="products.length" class="tab_content active">
+                        <div class="row">
+                          <div v-for="product in products" :key="product.id" class="col-sm-2 col-md-12 col-lg-5 col-xl-5 product-item">
+  <div class="product-info default-cover card" @click="addProduct(product)">
+    <a href="javascript:void(0);" class="img-bg">
+      <img v-if="product.image" :src="`${imgURL}${product.image}`" alt="Product" />
+      <img v-else :src="`/img/icons/no-image-icon.png`" />
+      <span><i data-feather="check"></i></span>
+    </a>
+    <h6 class="product-name">
+      <a href="javascript:void(0);">{{ product.name }}</a>
+    </h6>
+    <div class="d-flex align-items-center justify-content-between price">
+      <span>Stock: {{ product.quantity }}</span>
+      <p>${{ product.price }}</p>
+    </div>
+  </div>
+</div>
 
+                        </div>
+                      </div>
 
-  
-    
+                      <!-- If no products, show a message -->
+                      <div v-else class="no-products-message">
+                        <p>No products available in this category.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order List and Summary -->
+          <div class="col-md-12 col-lg-4 ps-0">
+            <aside class="product-order-list">
+              <div class="head d-flex align-items-center justify-content-between w-100">
+                <h5>Order List</h5>
+                <a class="confirm-text" href="javascript:void(0);"><i data-feather="trash-2"
+                    class="feather-16 text-danger"></i></a>
+              </div>
+
+              <div class="product-added block-section">
+                <div class="product-wrap">
+                  <table class="table table-responsive">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="item in cart" :key="item.id">
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.price }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.quantity * item.price }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="block-section">
+                <h6>Order Summary</h6>
+                <table class="table table-responsive table-borderless">
+                  <tr>
+                    <td>Sub Total</td>
+                    <td class="text-end">${{ subtotal }}</td>
+                  </tr>
+                  <tr>
+                    <td>VAT</td>
+                    <td class="text-end">{{ VAT }}%</td>
+                  </tr>
+                  <tr>
+                    <td class="danger">Discount</td>
+                    <td class="danger text-end">${{ discount }}</td>
+                  </tr>
+                  <tr>
+                    <td>Total</td>
+                    <td class="text-end">${{ total.toFixed(2) }}</td>
+                  </tr>
+                  <tr v-if="change">
+                    <td>Change</td>
+                    <td class="text-end">${{ change }}</td>
+                  </tr>
+                </table>
+              </div>
+            </aside>
+            <div class="btn-row d-sm-flex align-items-center justify-content-between">
+              <a href="javascript:void(0);" class="btn btn-success btn-icon flex-fill position-relative p-4 fs-6"
+                data-bs-toggle="modal" data-bs-target="#payment-completed">
+                <span class="keyboard-key">F1</span>
+                <span class="me-1 d-flex align-items-center">
+                  <i data-feather="credit-card" class="feather-16"></i>
+                </span>Pay
+              </a>
+              <a href="javascript:void(0);" class="btn btn-danger btn-icon flex-fill position-relative p-4 fs-6">
+                <span class="keyboard-key">F2</span>
+                <span class="me-1 d-flex align-items-center">
+                  <i data-feather="trash-2" class="feather-16"></i>
+                </span>Void
+              </a>
+
+              <a href="javascript:void(0);" class="btn btn-info btn-icon flex-fill position-relative p-4 fs-6"
+                data-bs-toggle="modal" data-bs-target="#hold-order">
+                <span class="keyboard-key">F3</span>
+                <span class="me-1 d-flex align-items-center">
+                  <i data-feather="corner-up-right" class="feather-16"></i>
+                </span>Return
+              </a>
+            </div>
+
+          </div>
+          <!-- Action Buttons -->
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Modal for Updating Quantity -->
+  <div class="modal fade" id="update-quantity-modal" tabindex="-1" aria-labelledby="update-quantity-modalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="update-quantity-modalLabel">Update Quantity</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="new-quantity">Quantity</label>
+            <input type="number" id="new-quantity" class="form-control" v-model="newQuantity" min="1"
+              @keydown="handleModalKeydown" />
+          </div>
+          <p v-if="quantityError" class="text-danger">{{ quantityError }}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" @click="updateProductQuantity">Update</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Payment -->
+  <div class="modal fade" id="payment-modal" tabindex="-1" aria-labelledby="payment-modalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="payment-modalLabel">Payment</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="payment">Amount to Pay: ${{ total }}</label>
+            <input type="number" id="payment" class="form-control" v-model="clientPayment" min="1"
+              @keydown="handlePaymentKeydown" placeholder="Enter payment amount" />
+          </div>
+          <p v-if="paymentError.message" class="text-danger">{{ paymentError.message }}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" @click="processPayment">Process Payment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </template>
 <script>
-export default {
-  data() {
-    return {
-      barcode: '',
-      products: [
-        { barcode: '4801981116270', product: 'Apple iPhone 12 Pro Max', price: 1200 },
-        { barcode: '234567', product: 'Samsung Galaxy S21', price: 999 },
-        { barcode: '345678', product: 'Google Pixel 5', price: 700 },
-        // Add more products as needed
-      ],
-      cart: []
-    };
-  },
-  methods: {
-    addProduct() {
-      if (!this.barcode) return;
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import axios from 'axios';
+import 'sweetalert2'
 
-      // Find product by barcode
-      const foundProduct = this.products.find(product => product.barcode === this.barcode);
-      if (foundProduct) {
-        // Check if the product is already in the cart
-        const existingProduct = this.cart.find(item => item.product === foundProduct.product);
-        if (existingProduct) {
-          // Increase quantity if product is already in the cart
-          existingProduct.quantity += 1;
-          existingProduct.total = existingProduct.quantity * existingProduct.price;
-        } else {
-          // Add new product to the cart
-          this.cart.push({
-            product: foundProduct.product,
-            price: foundProduct.price,
-            quantity: 1,
-            total: foundProduct.price
+export default {
+  setup() {
+    // Reactive Variables
+    const apiURL = process.env.VUE_APP_URL;
+    const imgURL = process.env.VUE_APP_IMAGE_URL;
+    const selectedCategory = ref('all');
+    const barcode = ref('');
+    const barcodeInput = ref(null);
+    const cart = ref([]);
+    const categories = ref([]);
+    const subtotal = ref(0);
+    const VAT = ref(12); // Example tax rate
+    const discount = ref(0);
+    const barcodeError = ref({ message: null });
+    const paymentError = ref({ message: null });
+    const lastAddedProduct = ref(null);
+    const stockQuantity = ref(null); // Store the stock quantity of the last fetched product
+    const newQuantity = ref(1); // New quantity input for the modal
+    const quantityError = ref(null);
+    const change = ref(null);
+    const clientPayment = ref(null);
+    const products = ref([]);
+    // Computed Variables
+    const total = computed(() =>
+      subtotal.value + (subtotal.value * VAT.value) / 100 - discount.value
+    );
+
+    // Methods
+    const getCategories = async () => {
+      try {
+        const response = await axios.get(`${apiURL}/get_category_list`);
+        categories.value = response.data.categories;
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    const getProductsByCategory = async (categoryName) => {
+      try {
+        const response = await axios.get(`${apiURL}/get_products_by_category/${categoryName}`);
+        products.value = response.data.products;
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    const selectCategory = (categoryName) => {
+      selectedCategory.value = categoryName; // Update selected category
+      getProductsByCategory(categoryName); // Fetch products for the selected category
+    };
+
+
+    const filteredCategories = computed(() => {
+      // Filter products based on the selected category
+      if (selectedCategory.value === 'all') {
+        return categories.value;
+      }
+      return categories.value.filter(category => category.name === selectedCategory.value);
+    });
+
+
+    const addProduct = async (product = null) => {
+  try {
+    change.value = null; 
+
+ 
+    if (!product) {
+      if (!barcode.value.trim()) {
+        return;
+      }
+
+      const response = await axios.get(`${apiURL}/get_product_info/${barcode.value.trim()}`);
+      if (response.data.success) {
+        product = response.data.product; // Assign the fetched product
+        barcodeError.value.message = null;
+      } else {
+        barcodeError.value.message = response.data.message || "Product not found.";
+        return;
+      }
+    }
+
+    // Store the last added product and its stock quantity
+    lastAddedProduct.value = product;
+    stockQuantity.value = product.quantity;
+
+    // Check if the product is already in the cart
+    const existingItem = cart.value.find((item) => item._id === product._id);
+
+    if (existingItem) {
+      // Increment quantity if product is already in the cart
+      const newTotalQuantity = existingItem.quantity + 1;
+      if (newTotalQuantity <= stockQuantity.value) {
+        existingItem.quantity = newTotalQuantity;
+      } else {
+        barcodeError.value.message = `Maximum stock reached for ${product.name}.`;
+      }
+    } else {
+      // Add product to cart if not already present
+      if (stockQuantity.value > 0) {
+        cart.value.push({ ...product, quantity: 1 });
+      } else {
+        barcodeError.value.message = `No stock available for ${product.name}.`;
+      }
+    }
+
+    updateSubtotal(); // Update the subtotal after adding the product
+  } catch (error) {
+    console.error("Error adding product:", error);
+    barcodeError.value.message = "An error occurred while fetching the product.";
+  } finally {
+    barcode.value = ""; // Clear the barcode input
+  }
+};
+
+
+    const updateSubtotal = () => {
+      subtotal.value = cart.value.reduce((sum, item) => sum + item.quantity * item.price, 0);
+    };
+
+    const handleKeydown = (event) => {
+      switch (event.key) {
+        case 'F1':
+          event.preventDefault();
+          openPaymentModal(); // Open payment modal
+          break;
+        case 'q':
+          event.preventDefault();
+          openUpdateQuantityModal(); // Open quantity modal
+          break;
+        default:
+          break;
+      }
+    };
+
+    const openPaymentModal = () => {
+      const modalElement = document.getElementById('payment-modal');
+      const modal = new bootstrap.Modal(modalElement);
+
+      if (modal) {
+        modal.show();
+
+        // Focus on the payment input field when the modal opens
+        modalElement.addEventListener('shown.bs.modal', () => {
+          const inputField = modalElement.querySelector('input');
+          if (inputField) {
+            inputField.focus();
+          }
+        });
+      }
+    };
+
+    const handleModalKeydown = (event) => {
+      const modalElement = document.getElementById('update-quantity-modal');
+
+      if (modalElement) {
+        // Check for Enter key
+        if (event.key === 'Enter') {
+          event.preventDefault(); // Prevent default form submission
+          updateProductQuantity(); // Trigger the update function
+        }
+
+        // Check for Escape key
+        if (event.key === 'Escape') {
+          event.preventDefault(); // Prevent default behavior
+          const modal = bootstrap.Modal.getInstance(modalElement);
+          if (modal) {
+            modal.hide(); // Close the modal
+          }
+
+          // Refocus barcode input after closing the modal
+          const barcodeInput = document.getElementById('barcode-input');
+          if (barcodeInput) {
+            barcodeInput.focus();
+          }
+        }
+      }
+    };
+
+    const handlePaymentKeydown = (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent default form submission
+        processPayment(); // Trigger payment processing
+      }
+    };
+
+    const openUpdateQuantityModal = () => {
+      if (lastAddedProduct.value) {
+        // Open modal to update quantity
+        const modalElement = document.getElementById('update-quantity-modal');
+        const modal = new bootstrap.Modal(modalElement);
+
+        if (modal) {
+          modal.show();
+
+          // Focus on the input field when modal is shown
+          modalElement.addEventListener('shown.bs.modal', () => {
+            const inputField = modalElement.querySelector('input');
+            if (inputField) {
+              inputField.focus();
+            }
           });
         }
       } else {
-        alert('Product not found!');
+        barcodeError.value.message = "No product in cart yet.";
+      }
+    };
+    const processPayment = async () => {
+      // Validate payment
+      if (clientPayment.value === null || clientPayment.value < total.value) {
+        paymentError.value.message = `Payment must be at least $${total.value}.`;
+        return;
       }
 
-      // Clear the barcode input after adding product
-      this.barcode = '';
-    }
-  }
+      try {
+        // Prepare transaction data
+        const transactionData = {
+          cart: cart.value.map((item) => ({
+            _id: item._id, // Product ID
+            sku: item.sku,
+            name: item.name,
+            price: item.price,
+            total: item.total,
+            quantity: item.quantity,
+          })),
+          paymentMethod: "Cash", // You can dynamically set this
+          discounts: discount.value,
+          netAmount: subtotal.value,
+          VAT: (subtotal.value * VAT.value) / 100,
+          totalAmount: total.value,
+          status: "Completed", // Transaction status
+          employee: "JohnDoe", // Example employee, replace with actual
+        };
+
+        // Send transaction data to the backend
+        const response = await axios.post(`${apiURL}/commit_transaction`, transactionData);
+
+        if (response.data.success) {
+          // Backend transaction was successful
+          console.log("Transaction saved:", response.data.transaction);
+
+          // Calculate change
+          change.value = (clientPayment.value - total.value).toFixed(2);
+
+
+          clientPayment.value = null;
+          paymentError.value.message = null;
+
+          // Notify the user of successful payment (optional)
+          Swal.fire({
+            title: 'Success!',
+            text: 'Transaction successful.',
+            icon: 'success',
+            timer: 1500, // 
+            showConfirmButton: false // Optional: Hide the confirm button
+          });
+
+          // Close the payment modal
+          const modalElement = document.getElementById("payment-modal");
+          const modal = bootstrap.Modal.getInstance(modalElement);
+          if (modal) {
+            modal.hide();
+          }
+
+          cart.value = [];
+          subtotal.value = 0;
+          discount.value = 0;
+
+        } else {
+          // Backend returned an error
+          paymentError.value.message = response.data.message || "Failed to process transaction.";
+          console.error("Transaction failed:", response.data.message);
+        }
+      } catch (error) {
+        // Handle network or server errors
+        console.error("Error processing payment:", error);
+        paymentError.value.message = "An error occurred while processing the payment. Please try again.";
+      }
+    };
+
+
+
+
+    const updateProductQuantity = () => {
+      if (lastAddedProduct.value) {
+        if (newQuantity.value > stockQuantity.value) {
+          quantityError.value = `Stock quantity is only ${stockQuantity.value}. Please enter a valid quantity.`;
+          return;
+        }
+
+        // Update quantity in cart
+        const cartItem = cart.value.find((item) => item._id === lastAddedProduct.value._id);
+        if (cartItem) {
+          cartItem.quantity = newQuantity.value;
+        }
+
+        updateSubtotal();
+
+        // Close the modal
+        const modalElement = document.getElementById('update-quantity-modal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+          modal.hide();
+        }
+
+        // Reset modal input
+        newQuantity.value = 1;
+        quantityError.value = null;
+
+        // Focus back on the barcode input
+        if (barcodeInput.value) {
+          barcodeInput.value.focus();
+        }
+      }
+    };
+
+    // Lifecycle Hooks
+    onMounted(() => {
+      getCategories();
+
+    
+      window.addEventListener('keydown', handleKeydown); // Listen to keydown events
+    });
+
+    onBeforeUnmount(() => {
+      window.removeEventListener('keydown', handleKeydown);
+    });
+
+    // Return Variables and Methods
+    return {
+      categories,
+      selectedCategory,
+      barcode,
+      barcodeInput,
+      cart,
+      subtotal,
+      VAT,
+      discount,
+      total,
+      barcodeError,
+      lastAddedProduct,
+      stockQuantity,
+      newQuantity,
+      quantityError,
+      addProduct,
+      updateProductQuantity,
+      handleModalKeydown,
+      handlePaymentKeydown,
+      change,
+      clientPayment,
+      paymentError,
+      selectCategory,
+      products,
+      imgURL,
+    };
+  },
 };
 </script>
 
+
+
+
+
+
 <style scoped>
+/* Container for the product display */
 .tabs_container {
-    height:500px;
-    max-height: 500px; /* Adjust the height as needed */
-    overflow-y: auto;  /* Enable vertical scrolling */
-    background: #fff;
-    padding: 20px;
+  min-height: 620px;
+  max-height: 620px;
+  overflow-y: auto;
+  background: #fff;
+  padding: 20px;
+
 }
 
+/* Flex container for product display */
 .tab_content {
-    display: flex;
-    flex-wrap: wrap;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  /* Space between items */
+  justify-content: space-between;
 }
 
+/* Ensure product-info fits within columns properly */
 .product-info {
-    flex: 0 0 25%; /* 4 items per row */
-    box-sizing: border-box;
-    padding: 10px;
-}
-.pos-categories .tabs {
+  position: relative;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s ease-in-out;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  /* Optional shadow */
   display: flex;
   flex-direction: column;
-  gap: 15px; /* Add space between each item */
-}
-.pos-categories .tabs li {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  justify-content: space-between;
+  /* Flex to ensure each card takes equal width */
+  flex: 1 1 calc(33.33% - 1rem);
+  /* Default to 3 items per row */
+  height: 100%;
+
 }
 
+.product-info img {
+  width: 100%;
+  height: 150px;
+  /* Fixed height for images */
+  object-fit: cover;
+  /* Ensure images cover the area proportionally */
+}
+
+.product-info:hover {
+  transform: scale(1.05);
+  /* Slight zoom effect on hover */
+}
+
+/* Mobile and tablet adjustments for card layout */
+@media (max-width: 1200px) {
+  .product-info {
+    flex: 1 1 calc(25% - 1rem);
+    /* 4 items per row for large screens */
+    height: 300px;
+    /* Set height for large screens */
+  }
+}
+
+@media (max-width: 768px) {
+  .product-info {
+    flex: 1 1 calc(33.33% - 1rem);
+    /* 3 items per row for medium screens */
+    height: 250px;
+    /* Adjust height for medium screens */
+  }
+}
+
+@media (max-width: 576px) {
+  .product-info {
+    flex: 1 1 calc(50% - 1rem);
+    /* 2 items per row for small screens */
+    height: 200px;
+    /* Adjust height for small screens */
+  }
+}
+
+/* Category List Styling */
+.category-list {
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-right: 1px solid #ddd;
+}
+
+.category-list ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.category-list li {
+  margin-bottom: 10px;
+}
+
+.category-list a {
+  text-decoration: none;
+  color: #333;
+  font-size: 16px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.category-list a:active {
+  color: #fff;
+}
+
+.category-list a:hover {
+  color: #fff;
+
+}
+
+.list-group-item.active {
+  background-color: #22A95E;
+  /* Green background for active list item */
+  border-color: #22A95E;
+  /* Optional: Match border with the active color */
+}
+
+.list-group-item.active a {
+  color: #fff;
+  /* Make the text white inside the active list item */
+}
+
+/* Keyboard Key Styling for the UI */
+.keyboard-key {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 12px;
+  background-color: rgba(0, 0, 0, 0.1);
+  color: white;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.product-wrap {
+  max-height: 100%;
+
+  overflow: hidden;
+  
+}
+
+.table {
+  width: 100%;
+  table-layout: auto;
+  word-wrap: break-word;
+
+}
+
+.table th,
+.table td {
+  white-space: normal;
+
+  word-break: break-word;
+
+  text-align: left;
+
+}
+
+.product-name-cell {
+  max-width: 200px;
+  /* Adjust as needed for column width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Optional: adds "..." for long text */
+  white-space: normal;
+}
+
+.quantity-input {
+  width: 50px;
+  /* Ensures quantity input field doesn't take too much space */
+  text-align: center;
+}
+
+.no-products-message {
+  display: flex;
+  justify-content: center;
+  /* Center horizontally */
+  align-items: center;
+  /* Center vertically */
+  height: 200px;
+  /* Adjust the height as needed */
+  text-align: center;
+  /* Center the text */
+  font-size: 18px;
+  /* Optional: Adjust the font size */
+  color: #777;
+  /* Optional: Set a color for the text */
+}
 </style>

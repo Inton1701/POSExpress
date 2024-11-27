@@ -1,7 +1,7 @@
 <template>
     <Navbar />
     <div class="page-wrapper">
-        <ClipLoader v-if="loading" />
+
         <div class="content">
             <div class="page-header">
                 <div class="add-item d-flex">
@@ -18,8 +18,8 @@
             <div class="card table-list-card">
                 <div class="card-body">
                     <div class="table-responsive">
-
-                        <table class="table datanew">
+                        <ClipLoader v-if="loading" />
+                        <table v-else class="table datanew" id="category-table">
                             <thead>
                                 <tr>
                                     <th>Category</th>
@@ -142,7 +142,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onBeforeMount,nextTick } from 'vue';
+import { ref, onMounted, onBeforeMount, nextTick } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import Navbar from '/src/components/Admin/Navbar.vue';
@@ -167,14 +167,35 @@ export default {
         });
         const editCategory = ref({ _id: null, name: '', status: 'inactive' });
         const loading = ref(true);
+        const initializeDataTable = () => {
+            const tableElement = $('#category-table');
 
-        const getCategories = async () => {
+            if ($.fn.DataTable.isDataTable(tableElement)) {
+                tableElement.DataTable().destroy();
+            }
+      
+            tableElement.DataTable({
+                searching: true,
+                paging: true,
+                info: true,
+                responsive: true,
+            });
+        };
+
+        const refreshDataTable = () => {
+            const table = $('#category-table').DataTable();
+            table.destroy();
+            initializeDataTable();
+        };
+         const getCategories = async () => {
             loading.value = true;
             try {
                 const response = await axios.get(`${apiURL}/get_category_list`);
                 categories.value = response.data.categories;
                 if (!response.data.success) {
                     Swal.fire('Error', response.data.message, 'errror');
+                } else {
+                    nextTick(() => refreshDataTable());
                 }
             } catch (error) {
                 console.error(error);
@@ -198,7 +219,7 @@ export default {
 
                 } else {
                     Swal.fire('Error', response.data.message || 'Failed to add category', 'error');
-                    
+
                     document.querySelector('#add-category .btn-cancel').click();
                 }
                 getCategories();
@@ -244,13 +265,13 @@ export default {
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
-                        const response = await axios.patch(`${apiURL}/edit_category/${id}`, { status: 'deleted', deletedAt: Date.now()});
-                        if(response.data.success) {
+                        const response = await axios.patch(`${apiURL}/edit_category/${id}`, { status: 'deleted', deletedAt: Date.now() });
+                        if (response.data.success) {
                             Swal.fire('Deleted!', 'Category has been deleted.', 'success');
-                        }else{
+                        } else {
                             Swal.fire('Error', response.data.message, 'error');
                         }
-                       
+
                         getCategories();
                     } catch (error) {
                         console.error(error);
@@ -265,16 +286,9 @@ export default {
             try {
                 await nextTick()
                 await getCategories();
-           
-                nextTick(() => {
-                    const table = document.querySelector('.table');
-                    if (table) {
-                        $(table).DataTable();
-                    }
-                })
-
+                initializeDataTable();
                 await feather.replace();
-      
+
             } catch (error) {
                 console.log(error);
             }
@@ -282,8 +296,8 @@ export default {
         onBeforeMount(async () => {
             try {
                 await getCategories();
-               feather.replace();
-             
+                feather.replace();
+
 
             } catch (error) {
                 console.error(error);

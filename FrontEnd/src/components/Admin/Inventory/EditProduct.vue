@@ -522,7 +522,8 @@ export default {
             manufacturedDate: '',
             expiryDate: '',
             status: '',
-            image: ''
+            image: {file: null , url: null},
+            url:'',
         });
         const skuError = ref(null);
         const route = useRoute();

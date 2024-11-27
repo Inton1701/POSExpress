@@ -22,6 +22,14 @@ const brand = require("../controllers/brandController");
 const unit = require("../controllers/unitController"); 
 const gdrive = require('../controllers/gdriveController');
 const stockHistory = require("../controllers/stockHistoryController");
+const POS = require('../controllers/POSController')
+const transaction = require("../controllers/transactionController");
+
+
+router.route("/api/get_all_transactions").get(transaction.getAllTransactions)
+
+router.route("/api/get_product_info/:id").get(POS.getProductInfo);
+router.route("/api/commit_transaction").post(POS.createTransaction);
 
 router.route("/api/stock_history_list").get(stockHistory.getAllHistory);
 router.route("/api/add_stock_history").post(stockHistory.addHistory);
@@ -62,6 +70,8 @@ router.route("/api/check_sku/:id").get(product.checkSKU);
 router.route("/api/low_stocks").get(product.getLowStock);
 router.route("/api/no_stock").get(product.getOutOfStock);
 router.route("/api/edit_stock/:id").patch(product.editStock);
+router.route("/api/get_report").get(product.generateReports);
+router.route("/api/get_products_by_category/:id").get(product.getProductsByCategory);
 // Discount routes
 router.route("/api/discounts").get(discount.getAllDiscounts); 
 router.route("/api/discounts").post(discount.addDiscount); 
@@ -78,9 +88,9 @@ router.route("/api/delete_brands/:id").delete(brand.deleteBrand);
 
 // Unit routes
 router.route("/api/get_units_list").get(unit.getAllUnits);          
-router.route("/api/get_units").post(unit.addUnit);             
-router.route("/api/units/:id").get(unit.getUnit);          
-router.route("/api/units/:id").patch(unit.editUnit);      
-router.route("/api/units/:id").delete(unit.deleteUnit);  
+router.route("/api/add_units").post(unit.addUnit);             
+router.route("/api/get_unit/:id").get(unit.getUnit);          
+router.route("/api/edit_unit/:id").patch(unit.editUnit);      
+router.route("/api/delete_unit/:id").patch(unit.softDeleteUnit);   
 
 module.exports = router;

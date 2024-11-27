@@ -4,19 +4,24 @@ const unitSchema = new mongoose.Schema({
       type: String, 
       required: true 
     },
-    abbreviation: { 
+    shortname: { 
       type: String, 
       required: true 
     },
-    createdAt: { 
-      type: Date, 
-      default: Date.now 
+    status:{
+      type: String,
+      enum: ["active", "inactive", "deleted"],
+      default: "active"
     },
-    updatedAt: { 
-      type: Date, 
-      default: Date.now 
+    deletedAt:{
+      type: Date,
+      default: null,
     }
-  });
+
+  },
+  {timestamps: true}
+
+);
   
   module.exports = mongoose.model('Unit', unitSchema);
   

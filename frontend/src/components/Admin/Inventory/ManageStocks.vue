@@ -95,7 +95,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="product in products" :key="product._id">
+                                            <tr v-for="product in filteredProducts" :key="product._id">
                                                 <td>{{ product.sku }}</td>
                                                 <td>{{ product.name }}</td>
                                                 <td>{{ product.category }}</td>
@@ -203,7 +203,7 @@ export default {
         const selectedProductId = ref(null);
         const entryValue = ref(null);
         const newQuantityAlert = ref(0);
-        const activeTab = ref('all');
+        const activeTab = ref('low');
         const tableInstance = ref(null);
         const loadingStates = ref({
             all: false,
@@ -211,11 +211,29 @@ export default {
             out: false,
             history: false,
         });
+        onMounted(() => {
+
+            // Fetch data for the active tab on 
+            setTimeout(() => {
+                const activeTabData = tabs.find(tab => tab.key === activeTab.value);
+                if (activeTabData && activeTabData.fetch) {
+                    activeTabData.fetch();
+                }
+            }, 1000)
+        });
+
+        onBeforeUnmount(() => {
+            // Destroy DataTable instance on component unmount
+
+            if (tableInstance.value) {
+                tableInstance.value.destroy();
+            }
+        });
 
         const tabs = [
             { key: 'all', label: 'All Stocks', fetch: () => fetchStock('products_list', products) },
             { key: 'low', label: 'Low Stocks', fetch: () => fetchStock('low_stocks', lowStocks) },
-            { key: 'out', label: 'Out of Stocks', fetch: () => fetchStock('no_stock', outOfStock) },
+            { key: 'out', label: 'Out of Stocks', fetch: () => fetchStock('no_stock', outOfStock) },  // Changed here
             { key: 'history', label: 'History', fetch: () => fetchStock('stock_history_list', history) },
         ];
 
@@ -224,34 +242,47 @@ export default {
             loadingStates.value[activeTab.value] = true;
             try {
                 const response = await axios.get(`${apiURL}/${endpoint}`);
-                stateVariable.value = response.data[endpoint === 'stock_history_list' ? 'history' : 'products'];
+                console.log(`${endpoint} response:`, response.data);
 
+                // Check for the endpoint and populate the appropriate state variable
+                if (endpoint === 'stock_history_list') {
+                    history.value = response.data.history;
+                } else if (endpoint === 'products_list') {
+                    products.value = response.data.products;
+                } else if (endpoint === 'low_stocks') {
+                    lowStocks.value = response.data.lowStock;
+                } else if (endpoint === 'no_stock') {
+                    outOfStock.value = response.data.noStock;
+                }
             } catch (error) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
                     text: 'Failed to fetch products. Please try again later.',
-                })
+                });
             } finally {
                 loadingStates.value[activeTab.value] = false;
-                initializeDataTable();
+
             }
         };
+
         const changeTab = async (key) => {
             activeTab.value = key;
             const selectedTab = tabs.find((tab) => tab.key === key);
 
             if (selectedTab && selectedTab.fetch) {
-                await selectedTab.fetch(); 
+                await selectedTab.fetch();
             }
 
             // Initialize DataTable after the DOM is updated
             nextTick(() => {
-                initializeDataTable();
+
             });
         };
 
         const filteredProducts = computed(() => {
+            console.log('Active Tab:', activeTab.value);  // Log active tab
+            console.log('Filtered Products:', filteredProducts.value);  // Log filtered products
             if (activeTab.value === 'all') return products.value;
             if (activeTab.value === 'low') return lowStocks.value;
             if (activeTab.value === 'out') return outOfStock.value;
@@ -259,7 +290,7 @@ export default {
             return [];
         });
 
-        
+
         const openEditStockModal = async (productId) => {
             try {
                 entryValue.value = 0;
@@ -282,47 +313,6 @@ export default {
             }
         };
 
-        const initializeDataTable = () => {
-            nextTick(() => {
-                // Check if the active tab corresponds to the correct table
-                const tableSelector = activeTab.value === 'history'
-                    ? '#history-table' // Target the history tab table
-                    : '#other-table';   // Target other tables
-
-                const tableElement = document.querySelector(tableSelector);
-
-                // If the table does not exist in the DOM, skip DataTable initialization
-                if (!tableElement) {
-                    return;
-                }
-                if (tableInstance.value) {
-                    tableInstance.value.destroy();
-                }
-
-                // Initialize DataTable
-                tableInstance.value = $(tableSelector).DataTable({
-                    paging: true,
-                    searching: true,
-                    info: true,
-                    autoWidth: false,
-                    responsive: true,
-                    language: {
-                        emptyTable: 'No data available for this tab.',
-                    },
-                });
-            });
-        };
-        onMounted(() => {
-            feather.replace();
-            tabs[0].fetch();
-        })
-        onBeforeUnmount(() => {
-            // Destroy DataTable instance on component unmount
-            feather.replace();
-            if (tableInstance.value) {
-                tableInstance.value.destroy();
-            }
-        });
 
         const editStock = async () => {
             try {
@@ -343,8 +333,7 @@ export default {
                         showConfirmButton: true,
                     });
                     if (result.isConfirmed) {
-                        const modal = new bootstrap.Modal(document.getElementById('edit-stock'));
-                        modal.hide();
+                        document.querySelector('#edit-stock .btn-cancel').click();
                     }
                 } else {
                     Swal.fire({

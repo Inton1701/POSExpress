@@ -189,14 +189,14 @@ const product = {
     // Get low stock products
     getLowStock: asyncHandler(async (req, res) => {
         try {
-            const productList = await Product.find({
+            const lowStock = await Product.find({
                 $and: [
                     { $expr: { $lte: ["$quantity", "$quantityAlert"] } },  // Check if quantity is less than or equal to quantityAlert
                     { status: { $ne: "deleted" } }  // Check if status is not "deleted"
                 ]
             });
 
-            res.status(200).json({ success: true, productList });
+            res.status(200).json({ success: true, lowStock });
         } catch (error) {
             res.status(500).json({ success: false, message: 'Failed to fetch low stock products', error: error.message });
         }
@@ -205,18 +205,51 @@ const product = {
     // Get out of stock products
     getOutOfStock: asyncHandler(async (req, res) => {
         try {
-            const productList = await Product.find({
+            const noStock = await Product.find({
                 $and: [
-                    { quantity: 0 },
+                    { $expr: { $lte: ["$quantity", 0] } },
                     { status: { $ne: "deleted" } }
                 ]
             });
 
-            res.status(200).json({ success: true, productList });
+            res.status(200).json({ success: true, noStock });
         } catch (error) {
             res.status(500).json({ success: false, message: 'Failed to fetch out of stock products', error: error.message });
         }
-    })
+    }),
+
+    generateReports: asyncHandler(async (req,res)=>{
+        try{
+            const products = await Product.find(
+                {}, // Find all products
+                {
+                    _id: 0,
+                    description: 0,
+                    variant: 0,
+                    discount: 0,
+                    discountType: 0,
+                    image: 0,
+                }
+            )
+            res.status(200).json({ success:true, products: products })
+        }catch(error){
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }),
+      getProductsByCategory: asyncHandler(async (req, res) => {
+        const category = req.params.id; // Retrieve category from the URL params
+        let products;
+      
+        if (category === 'all') {
+          // Fetch all products if category is 'all'
+          products = await Product.find();
+        } else {
+          // Fetch products by the specific category
+          products = await Product.find({ category: category });
+        }
+      
+        res.status(200).json({ products: products });
+      })
 };
 
 module.exports = product;
