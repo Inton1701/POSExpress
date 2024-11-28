@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 const userSchema = new mongoose.Schema({
   username: { 
       type: String, 
@@ -34,5 +35,46 @@ const userSchema = new mongoose.Schema({
       default: Date.now 
   }
 });
+=======
+const mongoose = require("mongoose");
+
+const userSchema = new mongoose.Schema(
+    {
+        username: { 
+            type: String, 
+            required: true, 
+            unique: true 
+        },
+        password: { 
+            type: String, 
+            required: true 
+        },
+        firstName: { 
+            type: String, 
+            required: true 
+        },
+        lastName: { 
+            type: String, 
+            required: true 
+        },
+        email: { 
+            type: String, 
+            required: true, 
+            unique: true, 
+            match: [/.+@.+\..+/, 'Please enter a valid email address'] // Email format validation
+        },
+        birthDate: { 
+            type: Date, 
+            required: true 
+        },
+        role: { 
+            type: String, 
+            enum: ['Admin', 'Cashier'], 
+            required: true 
+        }
+    },
+    { timestamps: true } // Automatically manage `createdAt` and `updatedAt`
+);
+>>>>>>> Stashed changes
 
 module.exports = mongoose.model('User', userSchema);
