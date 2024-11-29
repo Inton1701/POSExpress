@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 // Controllers
+<<<<<<< Updated upstream
 const category  = require("../controllers/categoryController");
 const userController = require("../controllers/userController");
 
@@ -9,6 +10,12 @@ const userController = require("../controllers/userController");
 const protect = require("../Middleware/authMiddleware"); // Protect routes with JWT verification
 
 // Category Routes
+=======
+const category = require("../controllers/categoryController");
+const userController = require("../controllers/userController");
+
+// Category routes
+>>>>>>> Stashed changes
 router.route("/api/get_category_list").get(category.getAllCategories);
 router.route("/api/add_category").post(category.addCategory);
 router.route("/api/get_category/:id").get(category.getCategory);
@@ -29,5 +36,15 @@ router.post("/api/login", userController.loginUser);
 router.get("/api/user/:id", userController.getUserById);              
 router.put("/api/user/:id", userController.updateUserById);           
 router.delete("/api/user/:id", userController.deleteUserById);        
+
+
+// User registration and login
+router.route("/api/register").post(userController.registerUser);
+router.route("/api/login").post(userController.loginUser);
+router.route("/api/forgot_password").post(userController.forgotPassword);
+router.route("/api/reset_password").post(userController.resetPassword);
+router.route("/api/get_user/:id").get(userController.getUser);
+router.route("/api/edit_user/:id").get(userController.editUser);
+router.route("/api/delete_user/:id").delete(userController.deleteUser);
 
 module.exports = router;

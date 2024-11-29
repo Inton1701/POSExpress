@@ -1,4 +1,5 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 const User = require("../models/User");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt"); // For password hashing
@@ -39,6 +40,13 @@ const Users = require("../models/Users");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken"); // Import JWT for "Remember Me" functionality
+=======
+const Users = require("../models/Users");
+const asyncHandler = require("express-async-handler");
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+>>>>>>> Stashed changes
 
 const userController = {
     // User registration
@@ -83,15 +91,24 @@ const userController = {
         });
     }),
 
+<<<<<<< Updated upstream
     // User login 
     loginUser: asyncHandler(async (req, res) => {
         const { username, password, rememberMe } = req.body;
 >>>>>>> Stashed changes
 
+=======
+    // User login
+    loginUser: asyncHandler(async (req, res) => {
+        const { username, password } = req.body;
+
+      
+>>>>>>> Stashed changes
         if (!username || !password) {
             return res.status(400).json({ message: "Username and password are required" });
         }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
         // Find the user by username
         const user = await User.findOne({ username });
@@ -135,16 +152,24 @@ const userController = {
         // Find user by ID
         const user = await User.findById(req.params.id);
 =======
+=======
+        
+>>>>>>> Stashed changes
         const user = await Users.findOne({ username });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
+<<<<<<< Updated upstream
+=======
+        
+>>>>>>> Stashed changes
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(400).json({ message: "Invalid password" });
         }
 
+<<<<<<< Updated upstream
         // Generate a JWT token for "Remember Me" functionality
         let token;
         if (rememberMe) {
@@ -166,18 +191,99 @@ const userController = {
     // Forgot password (reset password)
     forgotPassword: asyncHandler(async (req, res) => {
         const { email } = req.body;
+=======
+        
+        res.status(200).json({
+            status: "success",
+            message: "Login successful",
+            data: user,
+            redirectTo: "/dashboard"  
+        });
+    }),
+
+    // Forgot password (request reset token)
+    forgotPassword: asyncHandler(async (req, res) => {
+        const { email } = req.body;
+
+>>>>>>> Stashed changes
         if (!email) {
             return res.status(400).json({ message: "Email is required" });
         }
 
+<<<<<<< Updated upstream
+=======
+        // Find the user by email
+>>>>>>> Stashed changes
         const user = await Users.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
+<<<<<<< Updated upstream
         // Here you would implement logic to send a reset password email
         // (e.g., generating a reset token and sending it via email)
         res.status(200).json({ message: "Password reset instructions have been sent to your email" });
+=======
+        // Generate a password reset token
+        const resetToken = crypto.randomBytes(32).toString("hex");
+
+        // Set token expiration date (e.g., 1 hour)
+        const tokenExpiration = Date.now() + 3600000;
+
+        // Store the reset token and expiration in the database
+        user.resetToken = resetToken;
+        user.resetTokenExpiration = tokenExpiration;
+        await user.save();
+
+        // Create a password reset link
+        const resetLink = `http://yourapp.com/reset-password?token=${resetToken}`;
+
+        // Send email with reset link (using nodemailer)
+        const transporter = nodemailer.createTransport({
+            service: "Gmail",
+            auth: {
+                user: "your-email@gmail.com",
+                pass: "your-email-password"
+            }
+        });
+
+        const mailOptions = {
+            from: "your-email@gmail.com",
+            to: email,
+            subject: "Password Reset Request",
+            text: `Click the following link to reset your password: ${resetLink}`
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({ message: "Password reset link has been sent to your email" });
+    }),
+
+    // Reset password
+    resetPassword: asyncHandler(async (req, res) => {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({ message: "Token and new password are required" });
+        }
+
+        // Find the user by reset token
+        const user = await Users.findOne({ resetToken: token, resetTokenExpiration: { $gt: Date.now() } });
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired token" });
+        }
+
+        // Hash the new password before saving it
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password and clear the reset token
+        user.password = hashedPassword;
+        user.resetToken = undefined;
+        user.resetTokenExpiration = undefined;
+        await user.save();
+
+        res.status(200).json({ message: "Password has been successfully reset" });
+>>>>>>> Stashed changes
     }),
 
     // Get user by ID
@@ -189,7 +295,13 @@ const userController = {
         res.status(200).json({ status: "success", data: user });
     }),
 
+<<<<<<< Updated upstream
     // Edit user 
+    editUser: asyncHandler(async (req, res) => {
+        const user = await Users.findById(req.params.id);
+>>>>>>> Stashed changes
+=======
+    // Edit user
     editUser: asyncHandler(async (req, res) => {
         const user = await Users.findById(req.params.id);
 >>>>>>> Stashed changes
@@ -197,6 +309,7 @@ const userController = {
             return res.status(404).json({ message: "User not found" });
         }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
         // Hash the new password if provided
         const updatedData = {
@@ -224,6 +337,14 @@ const userController = {
             runValidators: true // Run validation on update
         });
         
+=======
+        // Update the user information
+        const updatedUser = await Users.findByIdAndUpdate(req.params.id, req.body, {
+            new: true, 
+            runValidators: true 
+        });
+
+>>>>>>> Stashed changes
         res.status(200).json({
             status: "success",
             data: updatedUser,
@@ -234,14 +355,22 @@ const userController = {
     // Delete user
     deleteUser: asyncHandler(async (req, res) => {
         const user = await Users.findById(req.params.id);
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         await User.deleteOne({ _id: req.params.id });
         res.status(200).json({ message: `User ${req.params.id} has been successfully deleted` });
+=======
+        await Users.deleteOne({ _id: req.params.id });
+        res.status(200).json({ status: "success", message: "User deleted successfully" });
+>>>>>>> Stashed changes
 =======
         await Users.deleteOne({ _id: req.params.id });
         res.status(200).json({ status: "success", message: "User deleted successfully" });
