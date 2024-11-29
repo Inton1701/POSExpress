@@ -12,10 +12,14 @@
   "description": "",
   "dependencies": {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     "bcrypt": "^5.1.1",
 =======
 >>>>>>> Stashed changes
     "bcryptjs": "^2.4.3",
+=======
+    "bcrypt": "^5.1.1",
+>>>>>>> Stashed changes
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "cryptojs": "^2.5.3",

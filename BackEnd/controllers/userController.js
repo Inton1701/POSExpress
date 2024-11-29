@@ -1,5 +1,6 @@
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 const User = require("../models/User");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt"); // For password hashing
@@ -41,11 +42,14 @@ const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken"); // Import JWT for "Remember Me" functionality
 =======
+=======
+>>>>>>> Stashed changes
 const Users = require("../models/Users");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
 
 const userController = {
@@ -54,26 +58,50 @@ const userController = {
         const { firstName, lastName, email, birthDate, role, username, password } = req.body;
 
         // Check if all required fields are provided
+=======
+
+const userController = {
+    
+    registerUser: asyncHandler(async (req, res) => {
+        const { firstName, lastName, email, birthDate, role, username, password } = req.body;
+
+        
+>>>>>>> Stashed changes
         if (!firstName || !lastName || !email || !birthDate || !role || !username || !password) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
+<<<<<<< Updated upstream
         // Check if the email already exists
+=======
+        
+>>>>>>> Stashed changes
         const userExists = await Users.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: "Email already exists" });
         }
 
+<<<<<<< Updated upstream
         // Check if the username already exists
+=======
+        
+>>>>>>> Stashed changes
         const usernameExists = await Users.findOne({ username });
         if (usernameExists) {
             return res.status(400).json({ message: "Username already exists" });
         }
 
+<<<<<<< Updated upstream
         // Hash the password before saving it to the database
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create a new user with the provided details
+=======
+        
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        
+>>>>>>> Stashed changes
         const createdUser = await Users.create({
             firstName,
             lastName,
@@ -92,22 +120,30 @@ const userController = {
     }),
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     // User login 
     loginUser: asyncHandler(async (req, res) => {
         const { username, password, rememberMe } = req.body;
 >>>>>>> Stashed changes
 
 =======
+=======
+>>>>>>> Stashed changes
     // User login
     loginUser: asyncHandler(async (req, res) => {
         const { username, password } = req.body;
 
+<<<<<<< Updated upstream
       
+>>>>>>> Stashed changes
+=======
+        
 >>>>>>> Stashed changes
         if (!username || !password) {
             return res.status(400).json({ message: "Username and password are required" });
         }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
         // Find the user by username
@@ -155,12 +191,19 @@ const userController = {
 =======
         
 >>>>>>> Stashed changes
+=======
+        
+>>>>>>> Stashed changes
         const user = await Users.findOne({ username });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+        
+>>>>>>> Stashed changes
 =======
         
 >>>>>>> Stashed changes
@@ -169,6 +212,7 @@ const userController = {
             return res.status(400).json({ message: "Invalid password" });
         }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
         // Generate a JWT token for "Remember Me" functionality
         let token;
@@ -192,6 +236,8 @@ const userController = {
     forgotPassword: asyncHandler(async (req, res) => {
         const { email } = req.body;
 =======
+=======
+>>>>>>> Stashed changes
         
         res.status(200).json({
             status: "success",
@@ -201,7 +247,14 @@ const userController = {
         });
     }),
 
+<<<<<<< Updated upstream
     // Forgot password (request reset token)
+    forgotPassword: asyncHandler(async (req, res) => {
+        const { email } = req.body;
+
+>>>>>>> Stashed changes
+=======
+  
     forgotPassword: asyncHandler(async (req, res) => {
         const { email } = req.body;
 
@@ -211,14 +264,19 @@ const userController = {
         }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
         // Find the user by email
+>>>>>>> Stashed changes
+=======
+       
 >>>>>>> Stashed changes
         const user = await Users.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
         // Here you would implement logic to send a reset password email
         // (e.g., generating a reset token and sending it via email)
@@ -231,14 +289,29 @@ const userController = {
         const tokenExpiration = Date.now() + 3600000;
 
         // Store the reset token and expiration in the database
+=======
+        
+        const resetToken = crypto.randomBytes(32).toString("hex");
+
+        
+        const tokenExpiration = Date.now() + 3600000;
+
+       
+>>>>>>> Stashed changes
         user.resetToken = resetToken;
         user.resetTokenExpiration = tokenExpiration;
         await user.save();
 
+<<<<<<< Updated upstream
         // Create a password reset link
         const resetLink = `http://yourapp.com/reset-password?token=${resetToken}`;
 
         // Send email with reset link (using nodemailer)
+=======
+        
+        const resetLink = `http://yourapp.com/reset-password?token=${resetToken}`;
+
+>>>>>>> Stashed changes
         const transporter = nodemailer.createTransport({
             service: "Gmail",
             auth: {
@@ -259,7 +332,11 @@ const userController = {
         res.status(200).json({ message: "Password reset link has been sent to your email" });
     }),
 
+<<<<<<< Updated upstream
     // Reset password
+=======
+   
+>>>>>>> Stashed changes
     resetPassword: asyncHandler(async (req, res) => {
         const { token, newPassword } = req.body;
 
@@ -267,26 +344,43 @@ const userController = {
             return res.status(400).json({ message: "Token and new password are required" });
         }
 
+<<<<<<< Updated upstream
         // Find the user by reset token
+=======
+        
+>>>>>>> Stashed changes
         const user = await Users.findOne({ resetToken: token, resetTokenExpiration: { $gt: Date.now() } });
         if (!user) {
             return res.status(400).json({ message: "Invalid or expired token" });
         }
 
+<<<<<<< Updated upstream
         // Hash the new password before saving it
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         // Update the user's password and clear the reset token
+=======
+        
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        
+>>>>>>> Stashed changes
         user.password = hashedPassword;
         user.resetToken = undefined;
         user.resetTokenExpiration = undefined;
         await user.save();
 
         res.status(200).json({ message: "Password has been successfully reset" });
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
     }),
 
     // Get user by ID
+=======
+    }),
+
+    
+>>>>>>> Stashed changes
     getUser: asyncHandler(async (req, res) => {
         const user = await Users.findById(req.params.id);
         if (!user) {
@@ -295,6 +389,7 @@ const userController = {
         res.status(200).json({ status: "success", data: user });
     }),
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
     // Edit user 
     editUser: asyncHandler(async (req, res) => {
@@ -305,10 +400,16 @@ const userController = {
     editUser: asyncHandler(async (req, res) => {
         const user = await Users.findById(req.params.id);
 >>>>>>> Stashed changes
+=======
+    
+    editUser: asyncHandler(async (req, res) => {
+        const user = await Users.findById(req.params.id);
+>>>>>>> Stashed changes
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
         // Hash the new password if provided
@@ -339,11 +440,17 @@ const userController = {
         
 =======
         // Update the user information
+=======
+       
+>>>>>>> Stashed changes
         const updatedUser = await Users.findByIdAndUpdate(req.params.id, req.body, {
             new: true, 
             runValidators: true 
         });
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         res.status(200).json({
             status: "success",
@@ -352,6 +459,7 @@ const userController = {
         });
     }),
 
+<<<<<<< Updated upstream
     // Delete user
     deleteUser: asyncHandler(async (req, res) => {
         const user = await Users.findById(req.params.id);
@@ -359,14 +467,24 @@ const userController = {
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
+=======
+    
+    deleteUser: asyncHandler(async (req, res) => {
+        const user = await Users.findById(req.params.id);
+>>>>>>> Stashed changes
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         await User.deleteOne({ _id: req.params.id });
         res.status(200).json({ message: `User ${req.params.id} has been successfully deleted` });
+=======
+        await Users.deleteOne({ _id: req.params.id });
+        res.status(200).json({ status: "success", message: "User deleted successfully" });
+>>>>>>> Stashed changes
 =======
         await Users.deleteOne({ _id: req.params.id });
         res.status(200).json({ status: "success", message: "User deleted successfully" });
