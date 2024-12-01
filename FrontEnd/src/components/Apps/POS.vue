@@ -8,10 +8,12 @@
       <div class="content pos-design p-0">
         <div class="row align-items-start pos-wrapper">
           <!-- Category Sidebar -->
-          <div class="col-md-3 col-lg-2 ps-0">
+          <!-- Category Sidebar -->
+          <div class="col-md-3 col-lg-2 ">
             <div class="category-list">
               <h5>Categories</h5>
-              <ul class="list-group text-center">
+              <ul class="list-group text-center overflow-auto"
+                style="max-height:80vh; overflow-y: auto; scrollbar-width: thin;">
                 <li v-for="category in categories" :key="category.name" class="list-group-item"
                   :class="{ 'active': selectedCategory === category.name }" @click="selectCategory(category.name)">
                   <a href="javascript:void(0);">{{ category.name }}</a>
@@ -19,6 +21,7 @@
               </ul>
             </div>
           </div>
+
 
 
           <!-- Product Display -->
@@ -39,22 +42,23 @@
                       <!-- Display products based on selected category -->
                       <div v-if="products.length" class="tab_content active">
                         <div class="row">
-                          <div v-for="product in products" :key="product.id" class="col-sm-2 col-md-12 col-lg-5 col-xl-5 product-item">
-  <div class="product-info default-cover card" @click="addProduct(product)">
-    <a href="javascript:void(0);" class="img-bg">
-      <img v-if="product.image" :src="`${imgURL}${product.image}`" alt="Product" />
-      <img v-else :src="`/img/icons/no-image-icon.png`" />
-      <span><i data-feather="check"></i></span>
-    </a>
-    <h6 class="product-name">
-      <a href="javascript:void(0);">{{ product.name }}</a>
-    </h6>
-    <div class="d-flex align-items-center justify-content-between price">
-      <span>Stock: {{ product.quantity }}</span>
-      <p>${{ product.price }}</p>
-    </div>
-  </div>
-</div>
+                          <div v-for="product in products" :key="product.id"
+                            class="col-sm-3 col-md-3 col-lg-3 col-xl-3 col-3 product-item">
+                            <div class="product-info default-cover card" @click="addProduct(product)">
+                              <a href="javascript:void(0);" class="img-bg">
+                                <img v-if="product.image" :src="`${imgURL}${product.image}`" alt="Product" />
+                                <img v-else :src="`/img/icons/no-image-icon.png`" />
+                                <span><i data-feather="check"></i></span>
+                              </a>
+                              <h6 class="product-name">
+                                <a href="javascript:void(0);">{{ product.name }}</a>
+                              </h6>
+                              <div class="d-flex align-items-center justify-content-between price">
+                                <span>Stock: {{ product.quantity }}</span>
+                                <p>${{ product.price }}</p>
+                              </div>
+                            </div>
+                          </div>
 
                         </div>
                       </div>
@@ -118,25 +122,26 @@
                     <td class="danger text-end">${{ discount }}</td>
                   </tr>
                   <tr>
-                    <td>Total</td>
-                    <td class="text-end">${{ total.toFixed(2) }}</td>
+                    <td class="fs-4 fw-bolder"> Total</td>
+                    <td class="text-end fs-4 fw-bolder">{{ total.toFixed(2) }}</td>
                   </tr>
                   <tr v-if="change">
-                    <td>Change</td>
-                    <td class="text-end">${{ change }}</td>
+                    <td class="fs-4 fw-bolder text-danger">Change</td>
+                    <td class="text-end fs-4 fw-bolder text-danger">{{ change }}</td>
                   </tr>
                 </table>
               </div>
             </aside>
             <div class="btn-row d-sm-flex align-items-center justify-content-between">
               <a href="javascript:void(0);" class="btn btn-success btn-icon flex-fill position-relative p-4 fs-6"
-                data-bs-toggle="modal" data-bs-target="#payment-completed">
+                @click="openPaymentModal">
                 <span class="keyboard-key">F1</span>
                 <span class="me-1 d-flex align-items-center">
                   <i data-feather="credit-card" class="feather-16"></i>
                 </span>Pay
               </a>
-              <a href="javascript:void(0);" class="btn btn-danger btn-icon flex-fill position-relative p-4 fs-6">
+              <a href="javascript:void(0);" class="btn btn-danger btn-icon flex-fill position-relative p-4 fs-6"
+                @click="openVoidModal">
                 <span class="keyboard-key">F2</span>
                 <span class="me-1 d-flex align-items-center">
                   <i data-feather="trash-2" class="feather-16"></i>
@@ -144,16 +149,17 @@
               </a>
 
               <a href="javascript:void(0);" class="btn btn-info btn-icon flex-fill position-relative p-4 fs-6"
-                data-bs-toggle="modal" data-bs-target="#hold-order">
+                @click="openReturnModal">
                 <span class="keyboard-key">F3</span>
                 <span class="me-1 d-flex align-items-center">
                   <i data-feather="corner-up-right" class="feather-16"></i>
                 </span>Return
               </a>
+
             </div>
 
           </div>
-          <!-- Action Buttons -->
+
 
         </div>
       </div>
@@ -162,7 +168,7 @@
   <!-- Modal for Updating Quantity -->
   <div class="modal fade" id="update-quantity-modal" tabindex="-1" aria-labelledby="update-quantity-modalLabel"
     aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="update-quantity-modalLabel">Update Quantity</h5>
@@ -186,7 +192,7 @@
 
   <!-- Modal for Payment -->
   <div class="modal fade" id="payment-modal" tabindex="-1" aria-labelledby="payment-modalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="payment-modalLabel">Payment</h5>
@@ -208,9 +214,101 @@
     </div>
   </div>
 
+  <div class="modal fade" id="return-modal" tabindex="-1" aria-labelledby="return-modalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="return-modalLabel">Enter Transaction ID for Return</h5>
+          <button type="button" class="btn-close" id="return-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input v-model="transactionId" class="form-control" type="text" placeholder="Transaction ID" />
+          <p v-if="transactionError" class="text-danger">{{ transactionError }}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" @click="fetchTransactionItems">Fetch Items</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Return Item Selection -->
+  <div class="modal fade" id="select-return-items-modal" tabindex="-1" aria-labelledby="select-return-items-modalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="select-return-items-modalLabel">Select Items for Return</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Select</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Return Quantity</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in returnItems" :key="item._id">
+                <td>
+                  <input type="checkbox" v-model="item.selected" />
+                </td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>
+                  <input type="number" v-model="item.returnQuantity" :max="item.quantity" min="1" />
+                </td>
+                <td>${{ item.price }}</td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" @click="processReturn">Process Return</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Void Transaction Modal -->
+  <div class="modal fade" id="void-transaction-modal" tabindex="-1" aria-labelledby="voidTransactionModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="voidTransactionModalLabel">Void Transaction</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="processVoid">
+            <div class="mb-3">
+              <label for="transaction-id" class="form-label">Transaction ID</label>
+              <input type="text" id="transaction-id" class="form-control" v-model="transactionId"
+                placeholder="Enter Transaction ID" required>
+            </div>
+            <p v-if="transactionError" class="text-danger">{{ transactionError }}</p>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" @click="processVoid">Void Transaction</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </template>
 <script>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { modalController } from '@/utils/modalController';
 import axios from 'axios';
 import 'sweetalert2'
 
@@ -236,6 +334,9 @@ export default {
     const change = ref(null);
     const clientPayment = ref(null);
     const products = ref([]);
+    const transactionId = ref('');
+    const transactionError = ref(null);
+    const returnItems = ref([]);
     // Computed Variables
     const total = computed(() =>
       subtotal.value + (subtotal.value * VAT.value) / 100 - discount.value
@@ -276,57 +377,57 @@ export default {
 
 
     const addProduct = async (product = null) => {
-  try {
-    change.value = null; 
+      try {
+        change.value = null;
 
- 
-    if (!product) {
-      if (!barcode.value.trim()) {
-        return;
+
+        if (!product) {
+          if (!barcode.value.trim()) {
+            return;
+          }
+
+          const response = await axios.get(`${apiURL}/get_product_info/${barcode.value.trim()}`);
+          if (response.data.success) {
+            product = response.data.product; // Assign the fetched product
+            barcodeError.value.message = null;
+          } else {
+            barcodeError.value.message = response.data.message || "Product not found.";
+            return;
+          }
+        }
+
+        // Store the last added product and its stock quantity
+        lastAddedProduct.value = product;
+        stockQuantity.value = product.quantity;
+
+        // Check if the product is already in the cart
+        const existingItem = cart.value.find((item) => item._id === product._id);
+
+        if (existingItem) {
+          // Increment quantity if product is already in the cart
+          const newTotalQuantity = existingItem.quantity + 1;
+          if (newTotalQuantity <= stockQuantity.value) {
+            existingItem.quantity = newTotalQuantity;
+          } else {
+            barcodeError.value.message = `Maximum stock reached for ${product.name}.`;
+          }
+        } else {
+          // Add product to cart if not already present
+          if (stockQuantity.value > 0) {
+            cart.value.push({ ...product, quantity: 1 });
+          } else {
+            barcodeError.value.message = `No stock available for ${product.name}.`;
+          }
+        }
+
+        updateSubtotal(); // Update the subtotal after adding the product
+      } catch (error) {
+        console.error("Error adding product:", error);
+        barcodeError.value.message = "An error occurred while fetching the product.";
+      } finally {
+        barcode.value = ""; // Clear the barcode input
       }
-
-      const response = await axios.get(`${apiURL}/get_product_info/${barcode.value.trim()}`);
-      if (response.data.success) {
-        product = response.data.product; // Assign the fetched product
-        barcodeError.value.message = null;
-      } else {
-        barcodeError.value.message = response.data.message || "Product not found.";
-        return;
-      }
-    }
-
-    // Store the last added product and its stock quantity
-    lastAddedProduct.value = product;
-    stockQuantity.value = product.quantity;
-
-    // Check if the product is already in the cart
-    const existingItem = cart.value.find((item) => item._id === product._id);
-
-    if (existingItem) {
-      // Increment quantity if product is already in the cart
-      const newTotalQuantity = existingItem.quantity + 1;
-      if (newTotalQuantity <= stockQuantity.value) {
-        existingItem.quantity = newTotalQuantity;
-      } else {
-        barcodeError.value.message = `Maximum stock reached for ${product.name}.`;
-      }
-    } else {
-      // Add product to cart if not already present
-      if (stockQuantity.value > 0) {
-        cart.value.push({ ...product, quantity: 1 });
-      } else {
-        barcodeError.value.message = `No stock available for ${product.name}.`;
-      }
-    }
-
-    updateSubtotal(); // Update the subtotal after adding the product
-  } catch (error) {
-    console.error("Error adding product:", error);
-    barcodeError.value.message = "An error occurred while fetching the product.";
-  } finally {
-    barcode.value = ""; // Clear the barcode input
-  }
-};
+    };
 
 
     const updateSubtotal = () => {
@@ -337,85 +438,90 @@ export default {
       switch (event.key) {
         case 'F1':
           event.preventDefault();
-          openPaymentModal(); // Open payment modal
+          openPaymentModal();
+          break;
+        case 'F2':
+          event.preventDefault();
+          openVoidModal(); // open return modal
+          break;
+        case 'F3':
+          event.preventDefault();
+          openReturnModal(); // open return modal
           break;
         case 'q':
           event.preventDefault();
           openUpdateQuantityModal(); // Open quantity modal
           break;
+        case 'Escape':
+          // Refocus on the barcode input
+          if (barcodeInput.value) {
+            barcodeInput.value.focus();
+            transactionId.value = ''; // Clear transaction ID
+            returnItems.value = []; // Clear previously selected items
+            transactionError.value = null; // Clear any previous errors
+          }
+
+          break;
         default:
           break;
       }
     };
+    const resetTransactions = () => {
+      transactionId.value = '';
+      returnItems.value = [];
+      transactionError.value = null;
+    }
 
     const openPaymentModal = () => {
-      const modalElement = document.getElementById('payment-modal');
-      const modal = new bootstrap.Modal(modalElement);
-
-      if (modal) {
-        modal.show();
-
-        // Focus on the payment input field when the modal opens
-        modalElement.addEventListener('shown.bs.modal', () => {
-          const inputField = modalElement.querySelector('input');
-          if (inputField) {
-            inputField.focus();
-          }
-        });
+      if (total.value > 0) {
+        resetTransactions();
+        modalController.show('payment-modal');
+        modalController.focus('payment-modal');
       }
+
     };
 
+    const openReturnModal = () => {
+      resetTransactions();
+      modalController.show('return-modal');
+      modalController.focus('return-modal');
+    };
+
+    const openVoidModal = () => {
+      resetTransactions();
+      modalController.show('void-transaction-modal');
+      modalController.focus('void-transaction-modal');
+    };
+
+
+
     const handleModalKeydown = (event) => {
-      const modalElement = document.getElementById('update-quantity-modal');
-
-      if (modalElement) {
-        // Check for Enter key
-        if (event.key === 'Enter') {
-          event.preventDefault(); // Prevent default form submission
-          updateProductQuantity(); // Trigger the update function
-        }
-
-        // Check for Escape key
-        if (event.key === 'Escape') {
-          event.preventDefault(); // Prevent default behavior
-          const modal = bootstrap.Modal.getInstance(modalElement);
-          if (modal) {
-            modal.hide(); // Close the modal
-          }
-
-          // Refocus barcode input after closing the modal
-          const barcodeInput = document.getElementById('barcode-input');
-          if (barcodeInput) {
-            barcodeInput.focus();
-          }
-        }
+      // Check for Enter key
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent default form submission
+        updateProductQuantity(); // Trigger the update function
       }
+
+      // Check for Escape key
+      if (event.key === 'Escape') {
+        event.preventDefault(); // Prevent default behavior
+        modalController.hide('update-quantity-modal')
+      }
+
     };
 
     const handlePaymentKeydown = (event) => {
       if (event.key === 'Enter') {
         event.preventDefault(); // Prevent default form submission
-        processPayment(); // Trigger payment processing
+        processPayment();
       }
     };
 
     const openUpdateQuantityModal = () => {
       if (lastAddedProduct.value) {
         // Open modal to update quantity
-        const modalElement = document.getElementById('update-quantity-modal');
-        const modal = new bootstrap.Modal(modalElement);
-
-        if (modal) {
-          modal.show();
-
-          // Focus on the input field when modal is shown
-          modalElement.addEventListener('shown.bs.modal', () => {
-            const inputField = modalElement.querySelector('input');
-            if (inputField) {
-              inputField.focus();
-            }
-          });
-        }
+        modalController.show('update-quantity-modal');
+        modalController.focus('update-quantity-modal');
       } else {
         barcodeError.value.message = "No product in cart yet.";
       }
@@ -443,6 +549,8 @@ export default {
           netAmount: subtotal.value,
           VAT: (subtotal.value * VAT.value) / 100,
           totalAmount: total.value,
+          cash: clientPayment.value,
+          change: change.value,
           status: "Completed", // Transaction status
           employee: "JohnDoe", // Example employee, replace with actual
         };
@@ -471,12 +579,7 @@ export default {
           });
 
           // Close the payment modal
-          const modalElement = document.getElementById("payment-modal");
-          const modal = bootstrap.Modal.getInstance(modalElement);
-          if (modal) {
-            modal.hide();
-          }
-
+          modalController.hide('payment-modal')
           cart.value = [];
           subtotal.value = 0;
           discount.value = 0;
@@ -494,6 +597,43 @@ export default {
     };
 
 
+    const processVoid = async () => {
+      try {
+        const response = await axios.post(`${apiURL}/void_transaction`, {
+          transactionId: transactionId.value,
+          employee: 'JohnDoe' // Replace with actual employee information
+        });
+
+        if (response.data.success) {
+          // Display success message
+          Swal.fire({
+            title: 'Voided!',
+            text: 'Transaction has been successfully voided.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+
+          // Clear transaction ID and close the modal
+          resetTransactions();
+          modalController.hide('void-transaction-modal');
+        } else {
+          // Handle server error messages
+          Swal.fire({
+            title: 'Error',
+            text: response.data.message || 'Failed to void the transaction.',
+            icon: 'error'
+          });
+        }
+      } catch (error) {
+        // Handle unexpected errors
+        Swal.fire({
+          title: 'Error',
+          text: `An error occurred: ${error.message}`,
+          icon: 'error'
+        });
+      }
+    };
 
 
     const updateProductQuantity = () => {
@@ -511,14 +651,7 @@ export default {
 
         updateSubtotal();
 
-        // Close the modal
-        const modalElement = document.getElementById('update-quantity-modal');
-        const modal = bootstrap.Modal.getInstance(modalElement);
-        if (modal) {
-          modal.hide();
-        }
-
-        // Reset modal input
+        modalController.hide('update-quantity-modal');
         newQuantity.value = 1;
         quantityError.value = null;
 
@@ -528,12 +661,103 @@ export default {
         }
       }
     };
+    const fetchTransactionItems = async () => {
+      try {
+        modalController.hide('return-modal');
+
+        // Fetch transaction items from the API
+        const response = await axios.get(`${apiURL}/get_transaction_items/${transactionId.value}`);
+        const { success, cart, totalAmount } = response.data;
+
+        if (success && cart && Array.isArray(cart)) {
+          // Process the cart items
+          console.log('Transaction cart items:', cart);
+
+          // Populate the returnItems array with the fetched items
+          returnItems.value = cart.map(item => ({
+            _id: item._id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            selected: false, // Add a 'selected' property to track if the item is selected for return
+            returnQuantity: 0, // Initialize return quantity to 0
+          }));
+
+          modalController.show('select-return-items-modal')
+        } else {
+          console.error('Cart is empty or response structure is incorrect');
+        }
+      } catch (error) {
+        console.error('Error fetching transaction items:', error);
+      }
+    };
+
+    const processReturn = async () => {
+      try {
+        const itemsToReturn = returnItems.value.filter(item => item.selected && item.returnQuantity > 0);
+
+        if (itemsToReturn.length === 0) {
+          transactionError.value = 'Please select at least one item to return.';
+          return;
+        }
+
+        // Await the axios call to get the response properly
+        const response = await axios.post(`${apiURL}/return_transaction/${transactionId.value}`, {
+          returnedItems: itemsToReturn,
+          employee: 'JhonDoe'
+        });
+
+        console.log(response.data); // This will now log the actual response data
+
+        if (response.data.success) {
+          // Update stock and cart
+          itemsToReturn.forEach(item => {
+            const cartItem = cart.value.find(cartItem => cartItem._id === item._id);
+            if (cartItem) {
+              cartItem.quantity -= item.returnQuantity;
+              if (cartItem.quantity <= 0) {
+                const index = cart.value.indexOf(cartItem);
+                cart.value.splice(index, 1); // Remove the item if quantity becomes 0
+              }
+            }
+          });
+
+          // Notify the user of successful payment (optional)
+          Swal.fire({
+            title: 'Returned!',
+            text: 'Transaction successful.',
+            icon: 'success',
+            timer: 1500, // 
+            showConfirmButton: false // Optional: Hide the confirm button
+          });
+
+          modalController.hide('select-return-items-modal')
+          // Clear transaction ID input
+
+        } else {
+          Swal.fire({
+            title: 'Error',
+            text: response.data.message || 'Failed to process the return.',
+            icon: 'error'
+          });
+        }
+      } catch (error) {
+        console.error('Error processing return:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'An error occurred while processing the return. Please try again.',
+          icon: 'error'
+        });
+      }
+    };
 
     // Lifecycle Hooks
     onMounted(() => {
       getCategories();
+      if (barcodeInput.value) {
+        barcodeInput.value.focus();
+      }
 
-    
       window.addEventListener('keydown', handleKeydown); // Listen to keydown events
     });
 
@@ -567,6 +791,15 @@ export default {
       selectCategory,
       products,
       imgURL,
+      transactionId,
+      transactionError,
+      returnItems,
+      fetchTransactionItems,
+      processReturn,
+      processVoid,
+      openPaymentModal,
+      openVoidModal,
+      openReturnModal
     };
   },
 };
@@ -662,7 +895,7 @@ export default {
 .category-list {
   padding: 15px;
   background-color: #f9f9f9;
-  border-right: 1px solid #ddd;
+
 }
 
 .category-list ul {
@@ -722,7 +955,7 @@ export default {
   max-height: 100%;
 
   overflow: hidden;
-  
+
 }
 
 .table {
@@ -771,5 +1004,18 @@ export default {
   /* Optional: Adjust the font size */
   color: #777;
   /* Optional: Set a color for the text */
+}
+
+.category-list ul::-webkit-scrollbar {
+  width: 8px;
+}
+
+.category-list ul::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 4px;
+}
+
+.category-list ul::-webkit-scrollbar-thumb:hover {
+  background-color: #aaa;
 }
 </style>

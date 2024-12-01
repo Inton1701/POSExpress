@@ -19,23 +19,19 @@ const productSchema = new mongoose.Schema({
   },
   cost: {
     type: Number,
+    default: 'NONE',
     required: true,
   },
   category: {
     type: String,
-    default: "N/A",
   },
   unit: {
     type: String,
-    default: "N/A",
+       default: 'NONE',
   },
   brand: {
     type: String,
-    default: "N/A",
-  },
-  variant: {
-    type: String,
-    default: "N/A",
+       default: 'NONE',
   },
   discount: {
     type: Number,
@@ -52,6 +48,12 @@ const productSchema = new mongoose.Schema({
   quantityAlert: {
     type: Number,
     default: 0,
+  },
+  taxType: {
+    type: String,
+    enum: ["vatable", "none-vatable",],
+    default: "vatable",
+    required: true
   },
   manufacturedDate: {
     type: Date,
@@ -76,6 +78,7 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+
   createdAt: {
     type: Date,
     default: Date.now,

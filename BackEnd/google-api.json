@@ -1,15 +1,14 @@
+// {
+//   "type": "service_account",
+//   "project_id": "posxpress-443216",
+//   "private_key_id": "a03bbbda6d486f8414c06689c6631ba86718afef",
+//   // do not uncomment on public para d ako mablock huhu "(private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQClmZmfExSOSZwX\nWJFIg+lZ56GIKqs4zkDOcg/1ajnyrubtrav9T/5f5E56VG0/ADll2z5dRxnRrwr7\nrpvtsVeIPlOSg4OvHRBTOIH4IQUdIhjQ0DJiIKarycJBaBiRopJSWjbkySCjFHt0\nzXfdGbi3nACrKXxkdad0PvWQf13nUKPCzYnPIc7CIcTgq9/ZLP9u985kshaZvrQb\nbtDFWq6tvIIrc1lvcJoTSEYyIUaykeJsmLX/RwY0z6/w9uMkXSgwxYYC/mmo6qZs\nZ005DtgU3qAEy5ai/IWeesi8jxK/hh2jsy8hsoq3vso3nuDbiERvCSjZ4Ri8mtpf\nzqfLJbUBAgMBAAECggEASf8fNoY7nrMEtSflz23mRT6sHuDWHq2HJtiwCd0cJLWD\nyfvbSPdINsgZSy9Tm525iCqWLO8a+efKNBlbYrRmZSJYjLUIkCSgCVfMN7hlhRWZ\n2iDWCqQFZejjTP+7TsRCttrKAaRf2Y9K9S/k2h7mu+DRKaqBg5BRMa/6YcWQC85y\n6L9bT0ULmhOGa7StvkycYqLECH4bfmPj4UPVlAeuJzFZ11JQElWbnGSm6iG0fxmb\n23R3B3NlHJkD7rXcC48myQ2zs5SdRezGBMjEF09dwMcpiSuNvWV0RdWgf7efvdQF\nyc/6hlhMVKjceWrIKwiDWYQ3L8Zab2IWtgFNZthJuwKBgQDoej3PFoG2EPfagpYo\nPiIAMBqF8q6dvC+nanTl9SUMaShTVVxiHZI9yVMXelsydPVLFaRaU2KVJvUrCrvU\nTaeEi8DDuA/YcEqlpaN3/Sien8ryk3AXsZAUOoR/7HfBy9is0bds1fYNX+TkeyF+\nFWC2fqpLI5TbP7C/NJ+Eb5Q8WwKBgQC2Ww+qXlYxtchdkLZV6Vud7wu7MDVPNND7\ngOcvVBzXJxV5aUq+r0GGHTk4yBbdk0s0hGMpLwvvx7HoogLk1KCTwSm685OSDSNt\nmlhjZJRsGPOt/9by34t88LXv8v3i+KvQTwPzlFWWira7dDpFDJBf1HYzWfq6xPSl\n39nw66HC0wKBgQCJzexVlUHOasCBBmd781i0Q891FyXq2mJlGvWwWmBbuvnsa+0X\nO/A0L+LRR/ZHMo00tN93q3YEc9NgcDxm3KEwMKdTXQgHhIi7KDR+K9KoNJBYuoz3\nfompdAaWzdUvS2ZlCutv2GTCCNXlmheAZauugebwI2dZj6d1r/vexUVZgQKBgDgM\nLvlvO1DWDXpskw4+xjD5mwJyo7/vfNgAW44ZbS/XzGrfqOCI3zvIWaERJq39qpy+\nn/e1hRayqwTUXs1UaPJg6WGToeS+8wep68bI0DGVTbhKLRfDC41gMptIdS5AvhYt\nYwqHqfK2OcnNxGcaoHlDxPytiDnFdWhSMBszYSmPAoGBAIp9zMnawbXEtzv5Grf5\njwolpoDI0uzleTZW6U7V2bUaC16yiNzm/cLY+vLFiy2SS260dINUdOyQeRuN566N\nxj2z9Li16aOCoA6WruSRu9TZZAGXVhLZAvDSDdsk8uq2b3uNCd4SrnT/Ikc3gfoc\nr1kguSRMY6++gOxwkZ7Ez0tM\n-----END PRIVATE KEY-----\n)",
+//   "client_email": "posxpress@posxpress-443216.iam.gserviceaccount.com",
+//   "client_id": "100950758933767032979",
+//   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+//   "token_uri": "https://oauth2.googleapis.com/token",
+//   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+//   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/posxpress%40posxpress-443216.iam.gserviceaccount.com",
+//   "universe_domain": "googleapis.com"
+// }
 
-{
-
-  "type": "service_account",
-  "project_id": "posexpress",
-  "private_key_id": "c5a80167cc545ac6040ab6f49fdc2ef59003436b",
-  // "private_keys": "-----BEGIN PRIVATE KEYs-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCuMcoJWoofaJwh\nNxI6ootoud1XVHLnTInY6AN7O01Juw2Kr5ILtA/r7yc2gt5O8Ymg5NvXmuMuWjYs\nj3uaKFNHHcJQXbRjZ87Po1uuQC649TorfQtuXM906tNRl3U9hNtfBLwUp3WDo02t\nU5iwQuN32XxRXIqEargZTxZiMjVcMUyz6tRRyYBc2s67R57BSP55SNZoA8vLBfkk\nFvqXTqNfon435b3b7Eq5fhjjgLIi1eNsOD7pra5ZBRlQ3VYQ/u5nOfoNSal5xzvn\nMb0R+fkcm24hp43Cw4uq4zamU1e8Fs1uWIkxmbw5hVu7wHwN4DDL17JScUkrACrf\nkitj5aL3AgMBAAECggEABwnL+ATIf+xiIpVvDx9yMpEP+G9ZFS9qgnEdcuU6gjgk\nm+3sILztx8Kp+vHeuaHYxb95goSnmT/b4IELpXbrpnv1VfnzR/Dx0kHvemLtgFuo\nNgmfZJ4rY7X5Q9qyygGMO5KdZtg9T0xR3yb5jGWnezg2ZbMvhZoqRhuD9APDVC44\no821NYCeLflNFBAEPV2rPKEA0/fYFLXAxQf09jTUMFcXlCFTB1ZKsVXMnDFYWT7g\n2iB2HBhjl8boVh9GzLgwNUCdo7exaX6mYgYnHDbLzzzjwOw3FEyFKeclEc8M9OzP\n+kxDIe3yPrCjFirBlbPdDglDuQoJRbp9D1FYVEmngQKBgQDlPzt0TuHpKwZgB8jX\nJHoxQMUtIxN+XkMcRH7XzXbES3k6UjLD/pAwm5NzhleQkX0OSZr4xUk9qC48WZXX\n/8RucwioNKu18WVHly31a5JoATqTKdNQD9DgUhbJvzEkdLMHAec1lL42wfA/3v2L\n8HUIPLWOxlnyOmoppuU56fvizwKBgQDChdwime4yA3ml3lBYfnXM/6Up8uRPTgi2\ntPx8rpnESG+nWyu1vYWrjgOYBfZrkKX4nXXOmIywGDwrXi5EcsbI5vcIufA17nef\nK//Nm8d3xjw3N0CEzatftGsTGDvXobVIcXJZM5GkupdB4BBNp1U8e/XiW5UuvrlP\n71r+2mXnWQKBgGjb4H0V6920kWjxhptqEv5eaxJ3Xd5KjZXrer2JPM8S2rOjj5b4\n5MlnEC4igAEfmz0iy+EIlLTALc3rCFBRrG787TPLS9OgRDxX2WzNtJ0gGsPfuMmB\nQoCo68WCT58mRhFpfHGUxODVGuiMPht5dH69DirtbY0PzSmaLnWsIkwfAoGABf7i\nPh7IfLomsbocd93N+7eVe6mE5/zbv+XsMlufWbFx35Kr0jo5OIR0D+d/JOmcdAFG\ndEu3amYU1LFec7Wl8uNLkfVJNiBXh4xvogK/Ly3pBTqqvm0obxa8hiYlEgxl7gmx\nIJa6Un191AX3+qzBr8+SUJvKCVrPk2spPtm0cmECgYEAlugjGfD2SQj4tGvmxu01\nZOE0ZA7tS5+XTwak0xFfgVQxmkn8tZ9rZq4sULHrm9Ir8VJkDmcfU9r7XOP25gWC\nGqitKX2LV17y9ClPoRhMv10ZyXajJW6ZjY92vW19aMQfRfKOEQ7gyoZEerD2gXCa\nPkAsQt0x3crjeIS1nYGMUPw.=\n-----END PRIVATE KEY-----\n",
-  "client_email": "posexpress-591@posexpress.iam.gserviceaccount.com",
-  "client_id": "117408472118946500175",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/posexpress-591%40posexpress.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}

@@ -170,28 +170,6 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="add-product-new">
-                                            <div class="row">
-
-                                                <div class="col-lg-4 col-sm-6 col-12">
-                                                    <div class="mb-3 add-product">
-                                                        <label class="form-label">Manufactured Date</label>
-                                                        <input type="date" class="form-control"
-                                                            v-model="inputedProduct.manufacturedDate" />
-                                                    </div>
-                                                </div>
-                                                <div class="col-lg-4 col-sm-6 col-12">
-                                                    <div class="mb-3 add-product">
-                                                        <label class="form-label">Expiry Date</label>
-                                                        <input type="date" class="form-control"
-                                                            v-model="inputedProduct.expiryDate" />
-                                                    </div>
-                                                </div>
-                                                <div class="col-lg-4 col-sm-6 col-12">
-
-                                                </div>
-                                            </div>
-                                        </div>
                                         <div class="col-lg-12">
                                             <div class="input-blocks summer-description-box transfer mb-3">
                                                 <label>Description</label>
@@ -245,17 +223,11 @@
                                             </div>
                                             <div class="col-lg-4 col-sm-6 col-12">
                                                 <div class="mb-3 add-product">
-                                                    <label class="form-label">Discount Type</label>
-                                                    <select class="form-control" v-model="inputedProduct.discountType">
-                                                        <option selected value="none">None</option>
+                                                    <label class="form-label">Tax Type</label>
+                                                    <select class="form-control" v-model="inputedProduct.taxType">
+                                                        <option selected value="vatable">Vatable Sales</option>
+                                                        <option value="non-vatable">None Vatable Sales</option>
                                                     </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-lg-4 col-sm-6 col-12">
-                                                <div class="mb-3 add-product">
-                                                    <label class="form-label">Discount Value</label>
-                                                    <input type="number" class="form-control"
-                                                        v-model="inputedProduct.discount" placeholder="0.00" />
                                                 </div>
                                             </div>
                                         </div>
@@ -515,17 +487,11 @@ export default {
             price: '',
             cost: '',
             category: '',
-
             unit: '',
             brand: '',
-            variant: '',
-            discount: '',
-            discountType: '',
-            manufacturedDate: '',
-            expiryDate: '',
+            taxType: 'vatable',
             status: 'inactive',
             image: '',
-
         });
         const skuError = ref(null);
         const select = ref('.select');
@@ -649,11 +615,7 @@ export default {
                 formData.append('category', inputedProduct.value.category);
                 formData.append('unit', inputedProduct.value.unit);
                 formData.append('brand', inputedProduct.value.brand);
-                formData.append('variant', inputedProduct.value.variant);
-                formData.append('discount', inputedProduct.value.discount);
-                formData.append('discountType', inputedProduct.value.discountType);
-                formData.append('manufacturedDate', inputedProduct.value.manufacturedDate);
-                formData.append('expiryDate', inputedProduct.value.expiryDate);
+                formData.append('taxType', inputedProduct.value.taxType);
                 formData.append('status', inputedProduct.value.status);
 
                 // Append image file if it exists
@@ -669,7 +631,8 @@ export default {
 
 
                 if (response.data.success) {
-                    Swal.fire('Success', 'Product added successfully!', 'succss');
+                  await  Swal.fire('Success', 'Product added successfully!', 'succss');
+                    router.push({ name: 'ProductList' });
                 } else {
                     Swal.fire('Error', 'Failed to add product', 'error');
                 }
@@ -709,6 +672,7 @@ export default {
             getSelection,
             units,
             brands,
+
         };
     },
     methods: {

@@ -20,12 +20,13 @@
     "express": "^4.21.1",
     "express-async-handler": "^1.2.0",
     "fs": "^0.0.1-security",
-    "google-auth-library": "^9.14.2",
+    "google-auth-library": "^9.15.0",
     "googleapis": "^144.0.0",
     "gridfs-stream": "^1.1.1",
     "mongoose": "^8.7.3",
     "multer": "^1.4.5-lts.1",
     "nodemon": "^3.1.7",
-    "usb": "^2.14.0"
+    "usb": "^1.8.0",
+    "usb-detection": "^4.14.2"
   }
 }

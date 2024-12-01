@@ -167,9 +167,6 @@
                 <li>
                   <router-link to="/units"><i data-feather="speaker"></i><span>Units</span></router-link>
                 </li>
-                <li>
-                  <router-link to="/variant"><i data-feather="layers"></i><span>Variant Attributes</span></router-link>
-                </li>
 
               </ul>
             </li>
@@ -362,3 +359,9 @@ export default {
   }
 };
 </script>
+<style scoped>
+.sidebar {
+  overflow-y: auto; /* Enables vertical scrolling */
+  max-height: 100vh; /* Ensures it doesn't exceed the viewport height */
+}
+</style>

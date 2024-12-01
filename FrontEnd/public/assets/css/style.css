@@ -29155,14 +29155,20 @@ body.mini-sidebar.expand-menu
 .badge-bgsuccess {
   border-radius: 5px;
   background: #28c76f;
-  padding: 3px 10px;
+  padding: 7px 10px;
   font-size: 14px;
 }
 
 .badge-bgdanger {
   border-radius: 5px;
-  background: red;
-  padding: 3px 19px;
+  background: #B72D33;
+  padding: 7px 10px;
+  font-size: 14px;
+}
+.badge-bgprimary {
+  border-radius: 5px;
+  background: #2674E6;
+  padding: 7px 19px;
   font-size: 14px;
 }
 

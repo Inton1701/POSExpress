@@ -170,6 +170,7 @@
 
 <script>
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { exportToCSV } from '@/utils/exportCSV';
 import { exportToPDF } from '@/utils/exportPDF';
@@ -223,9 +224,7 @@ export default {
       if (result) {
         try {
           // Send a PUT request to update the product status to "deleted"
-          const response = await axios.patch(`${apiURL}/edit_products/${productId}`, {
-            status: 'deleted', // Update the status to 'deleted'
-          });
+          const response = await axios.delete(`${apiURL}/delete_product/${productId}`);
 
           if (response.data.success) {
             Swal.fire('Deleted!', 'Your product has been deleted.', 'success');

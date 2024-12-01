@@ -30,6 +30,9 @@ router.route("/api/get_all_transactions").get(transaction.getAllTransactions)
 
 router.route("/api/get_product_info/:id").get(POS.getProductInfo);
 router.route("/api/commit_transaction").post(POS.createTransaction);
+router.route("/api/get_transaction_items/:id").get(POS.getTransactionsItems);
+router.route("/api/return_transaction/:id").post(POS.returnTransaction);
+router.route("/api/void_transaction").post(POS.voidTransaction);
 
 router.route("/api/stock_history_list").get(stockHistory.getAllHistory);
 router.route("/api/add_stock_history").post(stockHistory.addHistory);

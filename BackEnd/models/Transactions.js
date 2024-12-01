@@ -33,11 +33,6 @@ const transactionSchema = new mongoose.Schema(
           type: Number,
           min: 0,
         },
-        status: {
-          type: String,
-          enum: ['Paid', 'Returned'], // Item-specific status
-          default: 'Paid',
-        },
       },
     ],
 
@@ -77,15 +72,22 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    cash:{
+      type: Number,
+      min: 0,
 
-    // Overall status of the transaction
-    status: {
-      type: String,
-      enum: ['Completed', 'Canceled', 'Void', 'Deleted'],
-      default: 'Completed',
     },
 
-    // Name of the employee handling the transaction
+    change: {
+      type: Number, 
+      min: 0,
+    },
+
+    status: {
+      type: String,
+      enum: ['Completed', 'Canceled', 'Voided', 'Deleted','Returned'],
+      default: 'Completed',
+    },
     employee: {
       type: String,
       default: 'unknown',
