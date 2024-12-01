@@ -1,4 +1,4 @@
-productController
+
 const Product = require("../models/Products");
 const asyncHandler = require("express-async-handler");
 
@@ -10,8 +10,9 @@ const product = {
     }),
 
     // Add product
+    //add sku ni cael daw
     addProduct: asyncHandler(async (req, res) => {
-        const { name, description, price, cost, categoryId, subcategoryId, unitId, brandId, discountId, stock, stockAlert, barcode, manufacturedDate, expiryDate, imageUrl, status
+        const { name, description, price, cost, categoryId, subcategoryId, unitId, brandId, discountId, stock, stockAlert, barcode, sku, manufacturedDate, expiryDate, imageUrl, status
         } = req.body;
 
         if (!name || !price || !cost || !barcode) {
@@ -19,7 +20,7 @@ const product = {
         }
 
         const createdProduct = await Product.create({
-            name, description, price, cost, categoryId, subcategoryId, unitId, brandId, discountId, stock, stockAlert, barcode, manufacturedDate, expiryDate, imageUrl,  status
+            name, description, price, cost, categoryId, subcategoryId, unitId, brandId, discountId, stock, stockAlert, barcode, sku: sku || generateSKU(), manufacturedDate, expiryDate, imageUrl,  status
         });
 
         res.status(201).json({ success: true, createdProduct });

@@ -3,6 +3,7 @@ const router = express.Router();
 
 //Controllers
 const category  = require("../controllers/categoryController");
+const subCategory = require("../controllers/subCategoryController");
 const variant = require("../controllers/variantController");
 const dashboard = require("../controllers/dashboardController");
 const product = require("../controllers/productController");
@@ -20,8 +21,14 @@ router.route("/api/get_category/:id").get(category.getCategory);
 router.route("/api/edit_category/:id").put(category.editCategory);
 router.route("/api/delete_category/:id").delete(category.deleteCategory);
 
+router.route("/api/subcategories").get(subCategory.getAllSubCategories);    
+router.route("/api/subcategories").post(subCategory.addSubCategory);       
+router.route("/api/subcategories/:id").get(subCategory.getSubCategory);    
+router.route("/api/subcategories/:id").put(subCategory.editSubCategory);   
+router.route("/api/subcategories/:id").delete(subCategory.deleteSubCategory);
 
-//thiena maganda
+
+//thiena maganda at cael
 //variant routes
 router.route("/api/variants").get(variant.getAllVariants); 
 router.route("/api/variants").post(variant.addVariant); 
@@ -37,6 +44,7 @@ router.route("/api/dashboard/sales_report/:period").get(dashboard.getSalesReport
 
 
 // Product routes
+//thien/cael
 router.route("/api/products").get(product.getAllProducts);
 router.route("/api/products").post(product.addProduct); 
 router.route("/api/products/:id").get(product.getProduct); 
@@ -63,5 +71,9 @@ router.route("/api/units").post(unit.addUnit);
 router.route("/api/units/:id").get(unit.getUnit);          
 router.route("/api/units/:id").put(unit.editUnit);      
 router.route("/api/units/:id").delete(unit.deleteUnit);  
+
+// SubCategory routes
+//kay cael dapat
+
 
 module.exports = router;

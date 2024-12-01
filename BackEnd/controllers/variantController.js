@@ -66,4 +66,3 @@ const variantController = {
 };
 
 module.exports = variantController;
-req.params.id

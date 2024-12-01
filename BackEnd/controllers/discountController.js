@@ -1,4 +1,4 @@
-discontController
+
 const Discount = require("../models/Discount");
 const asyncHandler = require("express-async-handler");
 
@@ -55,4 +55,3 @@ const discount = {
 }
 
 module.exports = discount;
-req.params.id

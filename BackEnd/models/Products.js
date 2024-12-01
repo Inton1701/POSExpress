@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema({
     },
   subcategoryId: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Subcategory' 
+    ref: 'SubCategory' 
     },
   unitId: { 
     type: mongoose.Schema.Types.ObjectId,
@@ -48,6 +48,10 @@ const productSchema = new mongoose.Schema({
     type: String, 
     unique: true, 
     required: true
+    },
+    sku: {
+      type: String,
+      unique: true
     },
   manufacturedDate: {
     type: Date,
