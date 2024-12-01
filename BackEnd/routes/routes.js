@@ -63,4 +63,13 @@ router.route("/api/get_user/:id").get(user.getUser);
 router.route("/api/edit_user/:id").put(user.editUser);
 router.route("/api/delete_user/:id").delete(user.deleteUser);
 
+// User Routes
+router.route("/api/users/register").post(userController.registerUser);           
+router.route("/api/users/login").post(userController.loginUser);               
+router.route("/api/users/forgot-password").post(userController.forgotPassword);  
+router.route("/api/users/reset-password").post(userController.resetPassword);    
+router.route("/api/users/user/:id").get(userController.getUser);                
+router.route("/api/users/user/:id").put(userController.editUser);               
+router.route("/api/users/user/:id").delete(userController.deleteUser);       
+
 module.exports = router;

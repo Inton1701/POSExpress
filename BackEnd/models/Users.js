@@ -1,6 +1,7 @@
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 const userSchema = new mongoose.Schema({
   username: { 
       type: String, 
@@ -87,6 +88,11 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
 >>>>>>> Stashed changes
+=======
+const mongoose = require("mongoose");
+
+const userSchema = new mongoose.Schema({
+>>>>>>> Stashed changes
     username: { 
         type: String, 
         required: true, 
@@ -116,7 +122,11 @@ const userSchema = new mongoose.Schema({
     role: { 
         type: String, 
         enum: ['Admin', 'Cashier'], 
+<<<<<<< Updated upstream
         default: 'Cashier'  
+=======
+        default: 'Cashier' 
+>>>>>>> Stashed changes
     },
     createdAt: { 
         type: Date, 
@@ -127,6 +137,7 @@ const userSchema = new mongoose.Schema({
         default: Date.now 
     }
 }, {
+<<<<<<< Updated upstream
     timestamps: true 
 });
 <<<<<<< Updated upstream
@@ -137,4 +148,8 @@ module.exports = mongoose.model('User', userSchema);
 
 module.exports = mongoose.model('User', userSchema);
 
+>>>>>>> Stashed changes
+=======
+    timestamps: true
+});
 >>>>>>> Stashed changes
