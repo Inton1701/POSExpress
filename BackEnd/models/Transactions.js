@@ -1,48 +1,105 @@
-const transactionSchema = new mongoose.Schema({
-    orderId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Order', 
-      required: true 
+const mongoose = require('mongoose');
+
+const transactionSchema = new mongoose.Schema(
+  {
+    // Reference to an associated Order document
+    transactionId: {
+       type: String,
+        required: true
+       },
+
+    // List of items in the transaction cart
+    cart: [
+      {
+        _id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+        },
+        name: {
+          type: String,
+          required: true,
+        },
+        price: {
+          type: Number,
+          required: true,
+          min: 0, // Ensure price is non-negative
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1, // Ensure at least one item is purchased
+        },
+        total:{
+          type: Number,
+          min: 0,
+        },
+      },
+    ],
+
+    // Payment method used for the transaction
+    paymentMethod: {
+      type: String,
+      enum: ['Cash', 'E-wallet'],
+      required: true,
     },
-    paymentMethod: { 
-      type: String, 
-      required: true 
-    },
+
+    // Discounts applied to the transaction
     discounts: {
-        type: number,
-        required: true,
-        default: 0.00
+      type: Number,
+      required: true,
+      default: 0.0,
+      min: 0, // Ensure non-negative values
     },
-    tax:{
-        type: Number,
-        required: true,
-        default: 0.00
+
+    // Net amount (subtotal - discounts)
+    netAmount: {
+      type: Number,
+      required: true,
+      min: 0,
     },
-    amount: { 
+
+    // VAT applied to the transaction
+    VAT: {
+      type: Number,
+      required: true,
+      default: 0.0,
+      min: 0,
+    },
+
+    // Total amount paid by the customer
+    totalAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    cash:{
+      type: Number,
+      min: 0,
+
+    },
+
+    change: {
       type: Number, 
-      required: true 
+      min: 0,
     },
-    status: { 
-      type: String, 
-      enum: ['Pending', 'Completed', 'Failed'], 
-      default: 'Pending' 
+
+    status: {
+      type: String,
+      enum: ['Completed', 'Canceled', 'Voided', 'Deleted','Returned'],
+      default: 'Completed',
     },
-    barcode: { 
-      type: String 
+    employee: {
+      type: String,
+      default: 'unknown',
     },
-    transactionDate: { 
-      type: Date, 
-      default: Date.now 
+
+    // Date and time of the transaction
+    transactionDate: {
+      type: Date,
+      default: Date.now,
     },
-    createdAt: { 
-      type: Date, 
-      default: Date.now 
-    },
-    updatedAt: { 
-      type: Date, 
-      default: Date.now 
-    }
-  });
-  
-  module.exports = mongoose.model('Transaction', transactionSchema);
-  
+  },
+  { timestamps: true } // Automatically adds createdAt and updatedAt fields
+);
+
+module.exports = mongoose.model('Transaction', transactionSchema);

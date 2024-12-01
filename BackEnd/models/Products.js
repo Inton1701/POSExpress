@@ -1,75 +1,91 @@
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
-  name: { 
-     type: String,
-     required: true 
-    },
-  description: { 
-    type: String 
-    },
-  price: { 
-    type: Number, 
-    required: true 
-    },
-  cost:{
+  sku: {
+    type: String,
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    default: 'no description yet',
+  },
+  price: {
     type: Number,
+    required: true,
+  },
+  cost: {
+    type: Number,
+    default: 'NONE',
+    required: true,
+  },
+  category: {
+    type: String,
+  },
+  unit: {
+    type: String,
+       default: 'NONE',
+  },
+  brand: {
+    type: String,
+       default: 'NONE',
+  },
+  discount: {
+    type: Number,
+    default: 0,
+  },
+  discountType: {
+    type: String,
+    default: "none",
+  },
+  quantity: {
+    type: Number,
+    default: 0,
+  },
+  quantityAlert: {
+    type: Number,
+    default: 0,
+  },
+  taxType: {
+    type: String,
+    enum: ["vatable", "none-vatable",],
+    default: "vatable",
     required: true
   },
-  categoryId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Category' 
-    },
-  subcategoryId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Subcategory' 
-    },
-  unitId: { 
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Unit' 
-    },
-  brandId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Brand' 
-    },
-  discountId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Discount' 
-    },
-  stock: { 
-    type: Number, 
-    default: 0 
-    },
-  stockAlert: {
-    type: Number,
-    default: 10
-    },  
-  barcode: {
-    type: String, 
-    unique: true, 
-    required: true
-    },
   manufacturedDate: {
     type: Date,
-    },
+    required: false,
+  },
   expiryDate: {
-    type: Date, 
-    },
-  imageUrl: { 
-    type: String 
-    },
-  status: { 
-    type: String, 
-    default: 'active' 
-    },  
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
-    },
-  updatedAt: { 
-    type: Date, 
-    default: Date.now 
-    }
-});
+    type: Date,
+    required: false,
+  },
+  image: {
+    type: String,
+    default: 'no-image-icon.png',
+
+  },
+  status: {
+    type: String,
+    enum: ["active", "inactive", "deleted"],
+    required: true,
+    default: "active",
+  },
+  lastRestock:{
+    type: Date,
+    default: null,
+  },
+
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+  }
+}, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

@@ -19,10 +19,6 @@ const kioskTransactionSchema = new mongoose.Schema({
     type: Number, 
     required: true 
   },
-  barcode: { 
-    type: String, 
-    unique: true 
-  },
   status: { 
     type: String, 
     enum: ['Pending', 'Completed'], 

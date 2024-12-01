@@ -1,0 +1,14 @@
+// {
+//   "type": "service_account",
+//   "project_id": "posxpress-443216",
+//   "private_key_id": "a03bbbda6d486f8414c06689c6631ba86718afef",
+//   // do not uncomment on public para d ako mablock huhu "(private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQClmZmfExSOSZwX\nWJFIg+lZ56GIKqs4zkDOcg/1ajnyrubtrav9T/5f5E56VG0/ADll2z5dRxnRrwr7\nrpvtsVeIPlOSg4OvHRBTOIH4IQUdIhjQ0DJiIKarycJBaBiRopJSWjbkySCjFHt0\nzXfdGbi3nACrKXxkdad0PvWQf13nUKPCzYnPIc7CIcTgq9/ZLP9u985kshaZvrQb\nbtDFWq6tvIIrc1lvcJoTSEYyIUaykeJsmLX/RwY0z6/w9uMkXSgwxYYC/mmo6qZs\nZ005DtgU3qAEy5ai/IWeesi8jxK/hh2jsy8hsoq3vso3nuDbiERvCSjZ4Ri8mtpf\nzqfLJbUBAgMBAAECggEASf8fNoY7nrMEtSflz23mRT6sHuDWHq2HJtiwCd0cJLWD\nyfvbSPdINsgZSy9Tm525iCqWLO8a+efKNBlbYrRmZSJYjLUIkCSgCVfMN7hlhRWZ\n2iDWCqQFZejjTP+7TsRCttrKAaRf2Y9K9S/k2h7mu+DRKaqBg5BRMa/6YcWQC85y\n6L9bT0ULmhOGa7StvkycYqLECH4bfmPj4UPVlAeuJzFZ11JQElWbnGSm6iG0fxmb\n23R3B3NlHJkD7rXcC48myQ2zs5SdRezGBMjEF09dwMcpiSuNvWV0RdWgf7efvdQF\nyc/6hlhMVKjceWrIKwiDWYQ3L8Zab2IWtgFNZthJuwKBgQDoej3PFoG2EPfagpYo\nPiIAMBqF8q6dvC+nanTl9SUMaShTVVxiHZI9yVMXelsydPVLFaRaU2KVJvUrCrvU\nTaeEi8DDuA/YcEqlpaN3/Sien8ryk3AXsZAUOoR/7HfBy9is0bds1fYNX+TkeyF+\nFWC2fqpLI5TbP7C/NJ+Eb5Q8WwKBgQC2Ww+qXlYxtchdkLZV6Vud7wu7MDVPNND7\ngOcvVBzXJxV5aUq+r0GGHTk4yBbdk0s0hGMpLwvvx7HoogLk1KCTwSm685OSDSNt\nmlhjZJRsGPOt/9by34t88LXv8v3i+KvQTwPzlFWWira7dDpFDJBf1HYzWfq6xPSl\n39nw66HC0wKBgQCJzexVlUHOasCBBmd781i0Q891FyXq2mJlGvWwWmBbuvnsa+0X\nO/A0L+LRR/ZHMo00tN93q3YEc9NgcDxm3KEwMKdTXQgHhIi7KDR+K9KoNJBYuoz3\nfompdAaWzdUvS2ZlCutv2GTCCNXlmheAZauugebwI2dZj6d1r/vexUVZgQKBgDgM\nLvlvO1DWDXpskw4+xjD5mwJyo7/vfNgAW44ZbS/XzGrfqOCI3zvIWaERJq39qpy+\nn/e1hRayqwTUXs1UaPJg6WGToeS+8wep68bI0DGVTbhKLRfDC41gMptIdS5AvhYt\nYwqHqfK2OcnNxGcaoHlDxPytiDnFdWhSMBszYSmPAoGBAIp9zMnawbXEtzv5Grf5\njwolpoDI0uzleTZW6U7V2bUaC16yiNzm/cLY+vLFiy2SS260dINUdOyQeRuN566N\nxj2z9Li16aOCoA6WruSRu9TZZAGXVhLZAvDSDdsk8uq2b3uNCd4SrnT/Ikc3gfoc\nr1kguSRMY6++gOxwkZ7Ez0tM\n-----END PRIVATE KEY-----\n)",
+//   "client_email": "posxpress@posxpress-443216.iam.gserviceaccount.com",
+//   "client_id": "100950758933767032979",
+//   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+//   "token_uri": "https://oauth2.googleapis.com/token",
+//   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+//   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/posxpress%40posxpress-443216.iam.gserviceaccount.com",
+//   "universe_domain": "googleapis.com"
+// }
+
