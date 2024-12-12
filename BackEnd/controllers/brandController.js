@@ -7,7 +7,7 @@ const brand = {
     // Get all brands
     getAllBrands: asyncHandler(async (req, res) => {
         try{
-            const brandList = await Brand.find({status: {$ne: 'deleted'} });
+            const brandList = await Brand.find({status: {$ne: 'deleted'} }).sort({createdAt: -1});
 
             
             res.status(200).json({ success: true, brandList });

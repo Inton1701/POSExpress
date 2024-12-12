@@ -965,13 +965,12 @@ import 'datatables.net-bs5'
 import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
 import Swal from 'sweetalert2';
 
-import Sidebar from '/src/components/Admin/Sidebar.vue';
+
 import Navbar from '/src/components/Admin/Navbar.vue';
 
 
 export default {
   components: {
-    Sidebar,
     Navbar,
     ClipLoader,
   },

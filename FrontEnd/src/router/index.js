@@ -1,7 +1,7 @@
 import {createRouter, createWebHistory} from 'vue-router';
 
 import Dashboard from '/src/components/Admin/Main/Dashboard.vue';
-import SalesDashboard from '/src/components/Admin/Main/SalesDashboard.vue';
+
 import ProductList from '/src/components/Admin/Inventory/ProductList.vue';
 import ProductDetails from '@/components/Admin/Inventory/ProductDetails.vue';
 import CreateProduct from '/src/components/Admin/Inventory/CreateProduct.vue';
@@ -13,7 +13,6 @@ import Brands from '/src/components/Admin/Inventory/Brands.vue'
 import Units from '/src/components/Admin/Inventory/Units.vue'
 import Variants from '/src/components/Admin/Inventory/Variants.vue';
 import Barcode from '/src/components/Admin/Inventory/Barcode.vue';
-
 import Transactions from '/src/components/Admin/Sales/Transactions.vue';
 import Returns from '/src/components/Admin/Sales/Returns.vue'
 import VoidSales from '/src/components/Admin/Sales/VoidSales.vue';
@@ -26,11 +25,6 @@ const routes = [
         name: 'Dashboard',
         path: '/',
         component : Dashboard
-    },
-    {
-        name: 'SalesDashboard',
-        path: '/sales-dashboard',
-        component : SalesDashboard
     },
     {
         name: 'CreateProduct',

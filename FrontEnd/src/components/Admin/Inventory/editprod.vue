@@ -7,7 +7,7 @@
                 <div class="add-item d-flex">
                     <div class="page-title">
                         <h4>Edit Product</h4>
-                 
+
                     </div>
                 </div>
                 <ul class="table-top-head">
@@ -76,7 +76,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                           
+
                                         </div>
                                         <div class="row">
                                             <div class="col-lg-5 col-sm-6 col-12">
@@ -92,7 +92,7 @@
                                                         @input="inputedProduct.sku = filterNumInput($event.target.value)"
                                                         :class="{ 'is-invalid': inputedProduct.sku.length !== 13 && inputedProduct.sku.length > 0 }"
                                                         required />
-                                                        <p class="mt-1 text-danger">{{ skuError }}</p>
+                                                    <p class="mt-1 text-danger">{{ skuError }}</p>
                                                     <div class="d-flex align-items-center mt-2">
                                                         <button type="button" class="btn btn-primaryadd"
                                                             @click="autoGenerateSKU">Auto Generate</button>
@@ -271,16 +271,18 @@
                                         <div class="input-blocks">
                                             <div class="image-upload">
                                                 <input type="file" @change="onFileChange" />
-                                                <div class="image-uploads" v-if="!inputedProduct.image.url">
+                                                <div class="image-uploads"
+                                                    v-if="!inputedProduct.image.url && !inputedProduct.url">
                                                     <i data-feather="plus-circle"></i>
                                                     <h4>Add Images</h4>
                                                 </div>
                                             </div>
+
                                         </div>
 
                                         <!-- Display the uploaded image if the URL is available -->
-                                        <div class="phone-img" v-if="inputedProduct.image">
-                                            <img :src="`${imageURL}${inputedProduct.image}`" alt="Product Image" />
+                                        <div class="phone-img" v-if="inputedProduct.image.url">
+                                            <img :src="inputedProduct.image.url" alt="Product Image" />
                                             <a href="javascript:void(0);" @click="removeImage">
                                                 <i data-feather="x" class="x-square-add remove-product"></i>
                                             </a>
@@ -492,14 +494,14 @@ import { useRoute } from 'vue-router';
 import axios from 'axios';
 import 'select2';
 import feather from 'feather-icons';
-import Sidebar from '/src/components/Admin/Sidebar.vue';
+
 import Navbar from '/src/components/Admin/Navbar.vue';
 import Barcode from './Barcode.vue';
 import $ from 'jquery';
 
 export default {
     components: {
-        Sidebar,
+  
         Navbar,
         Barcode
     },
@@ -530,6 +532,33 @@ export default {
         const product = ref({});
         const barcodeRef = ref(null);
         const curreSKU = ref(null);
+
+        const getSelection = async () => {
+            try {
+                const categoryResponse = await axios.get(`${apiURL}/get_category_list`);
+                const unitResponse = await axios.get(`${apiURL}/get_units_list`);
+                const brandResponse = await axios.get(`${apiURL}/brands_list`);
+
+                if (categoryResponse.data.success) {
+                    categories.value = categoryResponse.data.categories;
+                } else {
+                    Swal.fire('Error', categoryResponse.data.message, 'error');
+                }
+                if (unitResponse.data.success) {
+                    units.value = unitResponse.data.unitList;
+                } else {
+                    Swal.fire('Error', unitResponse.data.message, 'error');
+                }
+                if (brandResponse.data.success) {
+                    brands.value = brandResponse.data.brandList;
+                } else {
+                    Swal.fire('Error', brandResponse.data.message, 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Failed to fetch selection data', 'error');
+            }
+        };
+
 
 const triggerDownloadBarcode = () => {
   if (barcodeRef.value) {
@@ -633,60 +662,42 @@ const triggerDownloadBarcode = () => {
     } 
 });
 
-        const editProduct = async () => {
-            try {
-                const formData = new FormData();
+const editProduct = async () => {
+    try {
+        const formData = new FormData();
 
-           
-                formData.append('sku', inputedProduct.value.sku);
-                formData.append('name', inputedProduct.value.name);
-                formData.append('description', inputedProduct.value.description);
-                formData.append('price', inputedProduct.value.price);
-                formData.append('cost', inputedProduct.value.cost);
-                formData.append('category', inputedProduct.value.category);
-                formData.append('subCategory', inputedProduct.value.subCategory);
-                formData.append('unit', inputedProduct.value.unit);
-                formData.append('brand', inputedProduct.value.brand);
-                formData.append('variant', inputedProduct.value.variant);
-                formData.append('discount', inputedProduct.value.discount);
-                formData.append('discountType', inputedProduct.value.discountType);
-                formData.append('manufacturedDate', inputedProduct.value.manufacturedDate);
-                formData.append('expiryDate', inputedProduct.value.expiryDate);
-                formData.append('status', inputedProduct.value.status);
-                formData.append('updatedAt', new Date().toISOString());
-
-
-                // Check if there is an image and append it
-                if (inputedProduct.value.image.file) {
-                    formData.append('image', inputedProduct.value.image.file);
-                }
-
-                // Debug: Log FormData content (only shows key-value pairs)
-                formData.forEach((value, key) => {
-                    console.log(`${key}: ${value}`);
-                });
-
-                const productId = route.params.id; // Get product ID from route parameters
-
-                // Send the PUT request to update the product with the FormData
-                const response = await axios.patch(`${apiURL}/edit_products/${productId}`, formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                });
-
-                // Check if the response was successful
-                if (response.data.success) {
-                    alert('Product updated successfully!');
-                    await getProductDetails();  // Re-fetch product details
-                } else {
-                    alert('Failed to update product');
-                }
-            } catch (error) {
-                console.error('Error updating product:', error);
-                alert('An error occurred while updating the product');
+        // Append all fields except the image
+        Object.entries(inputedProduct.value).forEach(([key, value]) => {
+            if (key !== 'image') {
+                formData.append(key, value || '');
             }
-        };
+        });
+
+        // Append the image file if uploaded
+        if (inputedProduct.value.image.file) {
+            formData.append('image', inputedProduct.value.image.file);
+        } else if (!inputedProduct.value.url) {
+            // Add a flag to remove the image if it was deleted
+            formData.append('removeImage', true);
+        }
+
+        const productId = route.params.id;
+        const response = await axios.patch(`${apiURL}/edit_products/${productId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        if (response.data.success) {
+            Swal.fire('Success', 'Product updated successfully!', 'success');
+            await getProductDetails(); // Refresh product details
+        } else {
+            Swal.fire('Error', response.data.message || 'Failed to update product', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating product:', error);
+        Swal.fire('Error', 'An error occurred while updating the product', 'error');
+    }
+};
+
 
         const onFileChange = (event) => {
     const file = event.target.files[0];
@@ -696,14 +707,16 @@ const triggerDownloadBarcode = () => {
     }
 };
 
-        const removeImage = () => {
-            if (inputedProduct.image) {
-                URL.revokeObjectURL(inputedProduct.image);
-            }
-            inputedProduct.image = { file: null,};
-            nextTick(() => feather.replace());
-        };
+const removeImage = () => {
+    // Revoke the uploaded image URL if it exists
+    if (inputedProduct.value.image.url) {
+        URL.revokeObjectURL(inputedProduct.value.image.url);
+    }
 
+    // Clear both uploaded and database image references
+    inputedProduct.value.image = { file: null, url: null };
+    inputedProduct.value.url = null; // Clear the database image
+};
         return {
             inputedProduct,
             select,
@@ -716,7 +729,11 @@ const triggerDownloadBarcode = () => {
             skuError,
             curreSKU,
             imageURL,
-            apiURL
+            apiURL,
+            getSelection,
+            categories,
+            units,
+            brands,
         };
     },
     methods: {

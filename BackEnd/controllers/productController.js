@@ -8,7 +8,7 @@ const product = {
     // Get all products
     getAllProducts: asyncHandler(async (req, res) => {
         try {
-            const products = await Product.find({ status: { $ne: 'deleted' } });
+            const products = await Product.find({ status: { $ne: 'deleted' } }).sort({updatedAt: -1});
             res.json({ success: true, products });
         } catch (error) {
             res.status(500).json({ success: false, message: 'Failed to fetch products', error: error.message });
@@ -128,50 +128,75 @@ const product = {
         try {
             // Check if the product exists
             const product = await Product.findById(req.params.id);
-
+            
             if (!product) {
                 return res.status(404).json({ success: false, message: 'Product not found' });
             }
-
-            // Validate the incoming values
+    
+            // Validate the incoming values (ensure they are numbers)
             const { entryValue, quantityAlert } = req.body;
             if (isNaN(entryValue) || isNaN(quantityAlert)) {
                 return res.status(400).json({ success: false, message: 'Invalid entry value or quantity alert' });
             }
-
+    
             const prevStock = product.quantity;
             const newStock = prevStock + Number(entryValue);
             const newQuantityAlert = Number(quantityAlert);
-
-            // Update product fields
+    
+            // Update the product's stock and alert values
             product.quantity = newStock;
             product.quantityAlert = newQuantityAlert;
-            if (entryValue >  0) {
+    
+            // Update lastRestock only if entryValue is greater than 0 (indicating a restock)
+            if (entryValue > 0) {
                 product.lastRestock = Date.now();
             }
-
+    
             // Save the updated product
             const updatedProduct = await product.save();
-
-            // Create a history entry
-            const storeHistory = await History.create({
+    
+            // Create a history entry for tracking stock changes
+            await History.create({
                 sku: product.sku,
                 product: product.name,
                 prevStock: prevStock,
                 change: Number(entryValue),
                 newStock: newStock,
             });
-
+    
+            // Respond with success and updated product data
             res.status(200).json({
                 success: true,
                 updatedProduct,
                 message: 'Stock updated successfully',
             });
         } catch (error) {
+            // Error handling
+            console.error(error); // Log error for debugging
             res.status(500).json({ success: false, message: 'Failed to update stock', error: error.message });
         }
     }),
 
+    importProducts: asyncHandler(async (req, res) => {
+
+        const products = req.body.products;
+
+        if (!products || products.length === 0) {
+            return res.status(400).json({ success: false, message: 'No products to import' });
+        }
+
+        try {
+            // Insert valid products into the database
+            const insertedProducts = await Product.insertMany(products);
+
+            // Respond with success
+            res.json({ success: true, message: `${insertedProducts.length} products successfully imported` });
+        } catch (error) {
+            console.error('Error importing products:', error);
+            res.status(500).json({ success: false, message: 'Failed to import products', error: error.message });
+        }
+    }),
+    
     // Delete a product
     deleteProduct: asyncHandler(async (req, res) => {
         try {
@@ -194,7 +219,7 @@ const product = {
                     { $expr: { $lte: ["$quantity", "$quantityAlert"] } },  // Check if quantity is less than or equal to quantityAlert
                     { status: { $ne: "deleted" } }  // Check if status is not "deleted"
                 ]
-            });
+            }).sort({createdAt:-1});
 
             res.status(200).json({ success: true, lowStock });
         } catch (error) {
@@ -210,7 +235,7 @@ const product = {
                     { $expr: { $lte: ["$quantity", 0] } },
                     { status: { $ne: "deleted" } }
                 ]
-            });
+            }).sort({createdAt:-1});
 
             res.status(200).json({ success: true, noStock });
         } catch (error) {
@@ -245,7 +270,7 @@ const product = {
           products = await Product.find();
         } else {
           // Fetch products by the specific category
-          products = await Product.find({ category: category });
+          products = await Product.find({ category: category }).sort({createdAt:-1});
         }
       
         res.status(200).json({ products: products });

@@ -41,7 +41,7 @@
                     </div>
                 </div>
             </div>
-            <form @submit.prevent="addProduct">
+            <form @submit.prevent="editProduct">
                 <div class="card">
                     <div class="card-body add-product pb-0">
                         <div class="accordion-card-one accordion" id="accordionExample">
@@ -161,9 +161,9 @@
                                                         <div>
                                                             <select class="form-control" v-model="inputedProduct.brand">
                                                                 <option v-for="brand in brands" :key="brand._id"
-                                                                :value="brand.name">
-                                                                {{ brand.name }}
-                                                            </option>
+                                                                    :value="brand.name">
+                                                                    {{ brand.name }}
+                                                                </option>
                                                             </select>
                                                         </div>
                                                     </div>
@@ -210,14 +210,14 @@
                                             <div class="col-lg-4 col-sm-6 col-12">
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Price</label>
-                                                    <input type="number" class="form-control"
+                                                    <input type="number"  step="0.01"   min="0"  class="form-control"
                                                         v-model="inputedProduct.price" required placeholder="0.00" />
                                                 </div>
                                             </div>
                                             <div class="col-lg-4 col-sm-6 col-12">
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Cost</label>
-                                                    <input type="number" class="form-control"
+                                                    <input type="number"  step="0.01"  min="0"  class="form-control"
                                                         v-model="inputedProduct.cost" required placeholder="0.00" />
                                                 </div>
                                             </div>
@@ -241,27 +241,30 @@
                         <div class="accordion-body">
                             <div class="text-editor add-list add">
                                 <div class="col-lg-12">
-                                    <div class="add-choosen">
-                                        <div class="input-blocks">
-                                            <div class="image-upload">
-                                                <!-- File input field for image upload -->
-                                                <input type="file" @change="onFileChange" />
-                                                <!-- Display the placeholder when no image is uploaded -->
-                                                <div class="image-uploads" v-if="!inputedProduct.image.url">
-                                                    <i data-feather="plus-circle"></i>
-                                                    <h4>Add Images</h4>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <!-- Display the uploaded image with a remove button -->
-                                        <div class="phone-img" v-if="inputedProduct.image.url">
-                                            <img :src="inputedProduct.image.url" alt="Uploaded image" />
-                                            <a href="javascript:void(0);" @click="removeImage">
-                                                <i data-feather="x" class="x-square-add remove-product"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
+    <div class="add-choosen">
+        <div class="input-blocks">
+            <div class="image-upload">
+                <input type="file" @change="onFileChange" />
+                <div class="image-uploads" v-if="!inputedProduct.image.url && !inputedProduct.url">
+                    <i data-feather="plus-circle"></i>
+                    <h4>Add Images</h4>
+                </div>
+            </div>
+        </div>
+
+        <!-- Only show the image preview when either inputedProduct.image.url or inputedProduct.url is set -->
+        <div class="phone-img" v-if="inputedProduct.image.url || inputedProduct.url">
+            <img 
+                :src="inputedProduct.image.url ? inputedProduct.image.url : inputedProduct.url" 
+                alt="Product Image" 
+            />
+            <a href="javascript:void(0);" @click="removeImage">
+                <i data-feather="x" class="x-square-add remove-product"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
                             </div>
                         </div>
                     </div>
@@ -416,116 +419,135 @@
         </div>
     </div>
 
-    <div class="modal fade" id="add-variation">
-        <div class="modal-dialog modal-dialog-centered custom-modal-two">
-            <div class="modal-content">
-                <div class="page-wrapper-new p-0">
-                    <div class="content">
-                        <div class="modal-header border-0 custom-modal-header">
-                            <div class="page-title">
-                                <h4>Add Variation</h4>
-                            </div>
-                            <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body custom-modal-body">
-                            <div class="modal-title-head people-cust-avatar">
-                                <h6>Variant Thumbnail</h6>
-                            </div>
-                            <div class="new-employee-field">
-                                <div class="profile-pic-upload">
-                                    <div class="profile-pic">
-                                        <span><i data-feather="plus-circle" class="plus-down-add"></i>
-                                            Add Image</span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <div class="image-upload mb-0">
-                                            <input type="file" />
-                                            <div class="image-uploads">
-                                                <h4>Change Image</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer-btn">
-                                <a href="javascript:void(0);" class="btn btn-cancel me-2"
-                                    data-bs-dismiss="modal">Cancel</a>
-                                <a href="add-product.html" class="btn btn-submit">Submit</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
 </template>
 
 <script>
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import axios from 'axios';
 import 'select2';
 import feather from 'feather-icons';
-import Sidebar from '/src/components/Admin/Sidebar.vue';
+
 import Navbar from '/src/components/Admin/Navbar.vue';
 import Barcode from './Barcode.vue';
-import Swal from 'sweetalert2';
+import $ from 'jquery';
 
 export default {
     components: {
-        Sidebar,
+  
         Navbar,
         Barcode
     },
     setup() {
         const apiURL = process.env.VUE_APP_URL;
+        const imageURL = process.env.VUE_APP_IMAGE_URL;
         const inputedProduct = ref({
             sku: '',
             name: '',
             description: '',
-            price: '',
-            cost: '',
+            price: 0,
+            cost: 0,
             category: '',
+            subCategory: '',
             unit: '',
             brand: '',
-            taxType: 'vatable',
-            status: 'inactive',
-            image: '',
+            variant: '',
+            discount: 0,
+            discountType: '',
+            manufacturedDate: '',
+            expiryDate: '',
+            status: '',
+            image: {file: null , url: null},
+            url:'',
         });
         const skuError = ref(null);
-        const select = ref('.select');
-        const categories = ref([]);
-        const units = ref([]);
-        const brands = ref([]);
+        const route = useRoute();
+        const product = ref({});
         const barcodeRef = ref(null);
+        const curreSKU = ref(null);
+        const categories = ref(null);
+         const  units = ref(null);
+        const  brands = ref(null);
 
-        const triggerDownloadBarcode = () => {
-            if (barcodeRef.value) {
-                barcodeRef.value.downloadBarcode(); // Access the method on the Barcode component
-            }
-        };
         const getSelection = async () => {
             try {
                 const categoryResponse = await axios.get(`${apiURL}/get_category_list`);
                 const unitResponse = await axios.get(`${apiURL}/get_units_list`);
                 const brandResponse = await axios.get(`${apiURL}/brands_list`);
 
-                if (categoryResponse.data.success) categories.value = categoryResponse.data.categories; else Swal.fire('Error', categoryResponse.data.message, 'error');
-                if (unitResponse.data.success) units.value = unitResponse.data.unitList; else Swal.fire('Error', unitResponse.data.message, 'error');
-                if (brandResponse.data.success) brands.value = brandResponse.data.brandList; else Swal.fire('Error', brandResponse.data.message, 'error');
+                if (categoryResponse.data.success) {
+                    categories.value = categoryResponse.data.categories;
+                } else {
+                    Swal.fire('Error', categoryResponse.data.message, 'error');
+                }
+                if (unitResponse.data.success) {
+                    units.value = unitResponse.data.unitList;
+                } else {
+                    Swal.fire('Error', unitResponse.data.message, 'error');
+                }
+                if (brandResponse.data.success) {
+                    brands.value = brandResponse.data.brandList;
+                } else {
+                    Swal.fire('Error', brandResponse.data.message, 'error');
+                }
             } catch (error) {
                 Swal.fire('Error', 'Failed to fetch selection data', 'error');
             }
         };
 
 
+const triggerDownloadBarcode = () => {
+  if (barcodeRef.value) {
+    barcodeRef.value.downloadBarcode(); // Access the method on the Barcode component
+  }
+};
+const getProductDetails = async () => {
+            const productId = route.params.id; // Use 'id' to match route param
+            try {
+                const response = await axios.get(`${apiURL}/get_product/${productId}`);
+                product.value = response.data.product;
+                curreSKU.value = response.data.product.sku; // Store current SKU for comparison
+                skuError.value = '';
+                if (product.image) {
+            inputedProduct.value.image = {
+                file: null,  // No file initially
+                url: `${imageURL}${product.image}`  // Image URL
+            };
+        } else {
+            inputedProduct.value.image = { file: null, url: null };  // Handle missing image
+        }
+            } catch (error) {
+                console.error('Error fetching product details:', error);
+            }
+        };
+
+        watch(product, (newProduct) => {
+    if (newProduct) {
+        console.log(newProduct); // Check the product data
+        inputedProduct.value = {
+            ...newProduct,
+            image: {
+                file: null,
+                // Use `imageURL` as a prefix to the image filename
+                url: newProduct.image ? `${imageURL}${newProduct.image}` : null, // Check if image exists
+            },
+            // The same for the URL in case you want to handle it separately
+            url: newProduct.image ? `${imageURL}${newProduct.image}` : null,
+        };
+    }
+});
+
+
+
+
+        const select = ref('.select');
 
         onMounted(async () => {
             try {
+                await getProductDetails();
                 await $(select.value).select2();
                 await feather.replace();
-                await getSelection();
             } catch (error) {
                 console.log(error);
             }
@@ -539,16 +561,12 @@ export default {
             inputedProduct.value.status = event.target.checked ? 'active' : 'inactive';
         };
 
-        const autoGenerateSKU = async () => {
-            const generatedSku = generateEAN13();
-            inputedProduct.value.sku = generatedSku;
-
-
+        const autoGenerateSKU = () => {
+            inputedProduct.value.sku = generateEAN13();
         };
 
         const generateEAN13 = () => {
-            let digits = '4'; // Start with a fixed number (you can choose a different prefix)
-            // Generate 12 random digits
+            let digits = '4';
             for (let i = 0; i < 11; i++) {
                 digits += Math.floor(Math.random() * 10).toString();
             }
@@ -556,135 +574,129 @@ export default {
             let sumOdd = 0;
             let sumEven = 0;
 
-            // Loop through the first 12 digits and calculate the sums
             for (let i = 0; i < 12; i++) {
                 const digit = parseInt(digits[i], 10);
                 if (i % 2 === 0) {
-                    sumOdd += digit; // Odd positions (0, 2, 4, etc.)
+                    sumOdd += digit;
                 } else {
-                    sumEven += digit; // Even positions (1, 3, 5, etc.)
+                    sumEven += digit;
                 }
             }
 
-            // Calculate the total sum for checksum calculation
             const totalSum = sumOdd + (sumEven * 3);
             const checksum = (10 - (totalSum % 10)) % 10;
 
-            // Return the 12 random digits and the calculated checksum
             return digits + checksum;
         };
 
-        // Watch for changes to the SKU and update the barcode
         watch(() => inputedProduct.value.sku, async (newSku) => {
-            if (newSku.length === 13) {
-                try {
-                    // Send the SKU to the backend for existence check
-                    const response = await axios.get(`${apiURL}/check_sku/${newSku}`);
-                    console.log(response.data.exists);
-                    if (response.data.exists) {
-                        // SKU already exists, reset the SKU input and show an error message
-                        inputedProduct.value.sku = ''; // Clear the SKU input
-                        skuError.value = 'SKU already exists. Please generate a different SKU.'; // Set error message
-                    } else {
-                        // SKU does not exist, clear the error and accept the SKU
-                        skuError.value = ''; // Clear any existing error
-                    }
-                } catch (error) {
-                    // Handle Axios errors properly
-                    console.error('Error checking SKU:', error);
-                    if (error.response) {
-                        // Backend returned an error (status 400 or 500)
-                        console.error('Backend error:', error.response.data);
-                        skuError.value = `${error.response.data.message}`;
-                    } else {
-                        // Network or other issues
-                        skuError.value = 'Network error. Please check your connection.';
-                    }
+    if (newSku.length === 13) {
+        try {
+            const response = await axios.get(`${this.apiURL}/check_sku/${newSku}`);
+            console.log(response.data.exists);
+
+            if (response.data.exists) {
+                if (newSku !== curreSKU.value) {  // Compare with the previous SKU
+                    
+                    skuError.value = 'SKU already exists';  // Set error message
+                    inputedProduct.value.sku = '';
                 }
+            } else {
+                skuError.value = ''; // Clear any existing error if SKU is uniqueF
+            }
+        } catch (error) {
+            console.error('Error checking SKU:', error);
+            if (error.response) {
+                skuError.value = `${error.response.data.message}`;  // Backend error message
+            } 
+        }
+    } 
+});
+
+const editProduct = async () => {
+    try {
+        const formData = new FormData();
+
+        // Append all fields except the image
+        Object.entries(inputedProduct.value).forEach(([key, value]) => {
+            if (key !== 'image') {
+                formData.append(key, value || '');
             }
         });
 
-        const addProduct = async () => {
-            try {
-                const formData = new FormData();
-                formData.append('sku', inputedProduct.value.sku);
-                formData.append('name', inputedProduct.value.name);
-                formData.append('description', inputedProduct.value.description);
-                formData.append('price', inputedProduct.value.price);
-                formData.append('cost', inputedProduct.value.cost);
-                formData.append('category', inputedProduct.value.category);
-                formData.append('unit', inputedProduct.value.unit);
-                formData.append('brand', inputedProduct.value.brand);
-                formData.append('taxType', inputedProduct.value.taxType);
-                formData.append('status', inputedProduct.value.status);
+        // Append the image file if uploaded
+        if (inputedProduct.value.image.file) {
+            formData.append('image', inputedProduct.value.image.file);
+        } else if (!inputedProduct.value.url) {
+            // Add a flag to remove the image if it was deleted
+            formData.append('removeImage', true);
+        }
 
-                // Append image file if it exists
-                if (inputedProduct.value.image.file) {
-                    formData.append('image', inputedProduct.value.image.file);
-                }
+        const productId = route.params.id;
+        const response = await axios.patch(`${apiURL}/edit_products/${productId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
 
-                const response = await axios.post(`${apiURL}/add_products`, formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                });
+        if (response.data.success) {
+            Swal.fire('Success', 'Product updated successfully!', 'success');
+            await getProductDetails(); // Refresh product details
+        } else {
+            Swal.fire('Error', response.data.message || 'Failed to update product', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating product:', error);
+        Swal.fire('Error', 'An error occurred while updating the product', 'error');
+    }
+};
 
-
-                if (response.data.success) {
-                  await  Swal.fire('Success', 'Product added successfully!', 'succss');
-                    router.push({ name: 'ProductList' });
-                } else {
-                    Swal.fire('Error', 'Failed to add product', 'error');
-                }
-            } catch (error) {
-                console.error('Error adding product:', error);
-                alert('An error occurred while adding the product');
-            }
+const onFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        inputedProduct.value.image = {
+            file: file,
+            url: URL.createObjectURL(file) // Local preview URL
         };
+        inputedProduct.value.url = null; // Clear the database URL (image name)
+    }
+};
+const removeImage = () => {
+    if (inputedProduct.value.image.url) {
+        URL.revokeObjectURL(inputedProduct.value.image.url); // Clear the local preview URL
+    }
 
-        // Image upload and removal methods
-        const onFileChange = (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                inputedProduct.value.image = { file, url: URL.createObjectURL(file) };
-                nextTick(() => {
-                    feather.replace();
-                });
-            }
-        };
-
-        const removeImage = () => {
-            inputedProduct.value.image = { url: '' }; // Clear the image
-        };
-
+    inputedProduct.value.image = { file: null, url: null }; // Clear the uploaded image
+    inputedProduct.value.url = null; // Clear the image name from the server
+};
         return {
             inputedProduct,
             select,
-            addProduct,
+            editProduct,
             autoGenerateSKU,
             toggleStatus,
             onFileChange,
             removeImage,
-            barcodeRef,
             triggerDownloadBarcode,
             skuError,
-            categories,
+            curreSKU,
+            imageURL,
+            apiURL,
             getSelection,
+            categories,
             units,
             brands,
-
         };
     },
     methods: {
         filterTextInput(value) {
-            return value.replace(/\D/g, ''); // Remove non-numeric characters
+            return value.replace(/\D/g, '');
         },
         filterNumInput(value) {
-            return value.replace(/[^0-9.]/g, ''); // Allow only numbers and decimal points
+            return value.replace(/[^0-9.]/g, '');
         }
     }
 };
 </script>
+
 
 
 <style scoped>

@@ -1,680 +1,331 @@
 <template>
-  <Navbar/>
-  <Sidebar/>
-          <div class="page-wrapper">
-        <div class="content">
-          <div class="page-header">
-            <div class="add-item d-flex">
-              <div class="page-title">
-                <h4>Sales Return List</h4>
-                <h6>Manage your Returns</h6>
-              </div>
-            </div>
-            <ul class="table-top-head">
-              <li>
-                <a data-bs-toggle="tooltip" data-bs-placement="top" title="Pdf"
-                  ><img src="/src/assets/img/icons/pdf.svg" alt="img"
-                /></a>
-              </li>
-              <li>
-                <a
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="top"
-                  title="Excel"
-                  ><img src="/src/assets/img/icons/excel.svg" alt="img"
-                /></a>
-              </li>
-              <li>
-                <a
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="top"
-                  title="Print"
-                  ><i data-feather="printer" class="feather-rotate-ccw"></i
-                ></a>
-              </li>
-              <li>
-                <a
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="top"
-                  title="Refresh"
-                  ><i data-feather="rotate-ccw" class="feather-rotate-ccw"></i
-                ></a>
-              </li>
-              <li>
-                <a
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="top"
-                  title="Collapse"
-                  id="collapse-header"
-                  ><i data-feather="chevron-up" class="feather-chevron-up"></i
-                ></a>
-              </li>
-            </ul>
-            <div class="page-btn">
-              <a
-                href="javascript:void(0);"
-                class="btn btn-added"
-                data-bs-toggle="modal"
-                data-bs-target="#add-sales-new"
-                ><i data-feather="plus-circle" class="me-2"></i>Add New Sales
-                Return</a
-              >
-            </div>
+  <Navbar />
+  <Sidebar />
+  <div class="page-wrapper">
+    <div class="content">
+      <div class="page-header">
+        <div class="add-item d-flex">
+          <div class="page-title">
+            <h4>Returned Transaction List</h4>
+            <h6>Manage Your Returned Transaction</h6>
           </div>
+        </div>
+      </div>
+      <div class="card table-list-card">
+        <div class="card-body">
 
-          <div class="card table-list-card">
-            <div class="card-body">
-              <div class="table-top">
-                <div class="search-set">
-                  <div class="search-input">
-                    <a href="#" class="btn btn-searchset"
-                      ><i data-feather="search" class="feather-search"></i
-                    ></a>
-                  </div>
-                </div>
-                <div class="search-path">
-                  <a class="btn btn-filter" id="filter_search">
-                    <i data-feather="filter" class="filter-icon"></i>
-                    <span
-                      ><img src="/src/assets/img/icons/closes.svg" alt="img"
-                    /></span>
-                  </a>
-                </div>
-                <div class="form-sort">
-                  <i data-feather="sliders" class="info-img"></i>
-                  <select class="select">
-                    <option>Sort by Date</option>
-                    <option>Newest</option>
-                    <option>Oldest</option>
-                  </select>
-                </div>
-              </div>
 
-              <div class="card" id="filter_inputs">
-                <div class="card-body pb-0">
-                  <div class="row">
-                    <div class="col-lg-3 col-sm-6 col-12">
-                      <div class="input-blocks">
-                        <i data-feather="user" class="info-img"></i>
-                        <select class="select">
-                          <option>Choose Customer</option>
-                          <option>Thomas</option>
-                          <option>James</option>
-                          <option>Beverly</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div class="col-lg-3 col-sm-6 col-12">
-                      <div class="input-blocks">
-                        <i data-feather="zap" class="info-img"></i>
-                        <select class="select">
-                          <option>Choose Status</option>
-                          <option>Received</option>
-                          <option>Pending</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div class="col-lg-3 col-sm-6 col-12">
-                      <div class="input-blocks">
-                        <i data-feather="stop-circle" class="info-img"></i>
-                        <select class="select">
-                          <option>Choose Payment Status</option>
-                          <option>Unpaid</option>
-                          <option>Paids</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div class="col-lg-3 col-sm-6 col-12 ms-auto">
-                      <div class="input-blocks">
-                        <a class="btn btn-filters ms-auto">
-                          <i data-feather="search" class="feather-search"></i>
-                          Search
+          <div class="table-responsive">
+            <ClipLoader v-if="loading" />
+            <table v-else class="table datanew" id="transaction-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th class="text-start">Reference</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th class="text-start">Total</th>
+                  <th>Payment Method</th>
+                  <th>Biller</th>
+                  <th class="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody class="sales-list">
+                <tr v-if="transactions.length <= 0">
+                  <td colspan="8">No products available</td>
+                </tr>
+                <tr v-else v-for="trans in transactions" :key="trans.id">
+                  <td>Walk in</td>
+                  <td class="text-start">{{ trans.transactionId }}</td>
+                  <td>{{ $formatDate(trans.createdAt) }}</td>
+
+                  <td class="text-center">
+                    <span :class="{
+                      'badge': true,
+                      ' badge-bgsuccess': trans.status === 'Completed',
+                      ' badge-bgdanger': trans.status === 'Voided',
+                      ' badge-bgprimary': trans.status === 'Returned'
+                    }">
+                      {{ trans.status }}
+                    </span>
+                  </td>
+                  <td class="text-start">{{ trans.totalAmount }}</td>
+                  <td><span class="badge badge-linesuccess">{{ trans.paymentMethod }}</span></td>
+                  <td>{{ trans.employee }}</td>
+                  <td class="text-center">
+                    <a class="action-set" href="javascript:void(0);" data-bs-toggle="dropdown" aria-expanded="false">
+                      <font-awesome-icon icon="fa fa-ellipsis-v" aria-hidden="true" class="feather-eye" />
+                    </a>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a href="javascript:void(0);" class="dropdown-item" data-bs-toggle="modal"
+                          data-bs-target="#sales-details-new" @click="showSaleDetail(trans.transactionId)">
+                          <i data-feather="eye" class="info-img"></i> Sale Detail
                         </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="table-responsive">
-                <table class="table datanew">
-                  <thead>
-                    <tr>
-                      <th class="no-sort">
-                        <label class="checkboxs">
-                          <input type="checkbox" id="select-all" />
-                          <span class="checkmarks"></span>
-                        </label>
-                      </th>
-                      <th>Product Name</th>
-                      <th>Date</th>
-                      <th>Customer</th>
-                      <th>Status</th>
-                      <th>Grand Total ($)</th>
-                      <th>Paid ($)</th>
-                      <th>Due ($)</th>
-                      <th>Payment Status</th>
-                      <th class="no-sort">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>
-                        <label class="checkboxs">
-                          <input type="checkbox" />
-                          <span class="checkmarks"></span>
-                        </label>
-                      </td>
-                      <td>
-                        <div class="productimgname">
-                          <a href="javascript:void(0);" class="product-img">
-                            <img
-                              src="/src/assets/img/products/product1.jpg"
-                              alt="product"
-                            />
-                          </a>
-                          <a href="javascript:void(0);">Macbook pro</a>
-                        </div>
-                      </td>
-                      <td>19 Nov 2022</td>
-                      <td>Thomas</td>
-                      <td>
-                        <span class="badges bg-lightgreen">Received</span>
-                      </td>
-                      <td>550</td>
-                      <td>120</td>
-                      <td>550</td>
-                      <td><span class="badges bg-lightgreen">Paid</span></td>
-                      <td class="action-table-data">
-                        <div class="edit-delete-action">
-                          <a
-                            class="me-2 p-2"
-                            href="#"
-                            data-bs-toggle="modal"
-                            data-bs-target="#edit-sales-new"
-                          >
-                            <i data-feather="edit" class="feather-edit"></i>
-                          </a>
-                          <a
-                            class="confirm-text p-2"
-                            href="javascript:void(0);"
-                          >
-                            <i
-                              data-feather="trash-2"
-                              class="feather-trash-2"
-                            ></i>
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-  
-
-    <div class="modal fade" id="add-sales-new">
-      <div class="modal-dialog add-centered">
-        <div class="modal-content">
-          <div class="page-wrapper p-0 m-0">
-            <div class="content p-0">
-              <div class="modal-header border-0 custom-modal-header">
-                <div class="page-title">
-                  <h4>Add Sales Return</h4>
-                </div>
-                <button
-                  type="button"
-                  class="close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                >
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div class="card">
-                <div class="card-body">
-                  <form action="sales-returns.html">
-                    <div class="row">
-                      <div class="col-lg-4 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label class="form-label">Customer Name</label>
-                          <div class="row">
-                            <div class="col-lg-10 col-sm-10 col-10">
-                              <select class="select">
-                                <option>Choose Customer</option>
-                                <option>Thomas</option>
-                                <option>Benjamin</option>
-                                <option>Bruklin</option>
-                              </select>
-                            </div>
-                            <div class="col-lg-2 col-sm-2 col-2 ps-0">
-                              <div class="add-icon">
-                                <a href="#" class="choose-add"
-                                  ><i
-                                    data-feather="plus-circle"
-                                    class="plus"
-                                  ></i
-                                ></a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-4 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Date</label>
-                          <div class="input-groupicon calender-input">
-                            <i data-feather="calendar" class="info-img"></i>
-                            <input
-                              type="text"
-                              class="datetimepicker"
-                              placeholder="Choose"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-4 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label class="form-label">Reference No.</label>
-                          <input type="text" class="form-control" />
-                        </div>
-                      </div>
-                      <div class="col-lg-12 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Product Name</label>
-                          <div class="input-groupicon select-code">
-                            <input
-                              type="text"
-                              placeholder="Please type product code and select"
-                            />
-                            <div class="addonset">
-                              <img
-                                src="/src/assets/img/icons/qrcode-scan.svg"
-                                alt="img"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="table-responsive no-pagination">
-                      <table class="table datanew">
-                        <thead>
-                          <tr>
-                            <th>Product Name</th>
-                            <th>Net Unit Price($)</th>
-                            <th>Stock</th>
-                            <th>QTY</th>
-                            <th>Discount($)</th>
-                            <th>Tax %</th>
-                            <th>Subtotal ($)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div class="row">
-                      <div class="col-lg-6 ms-auto">
-                        <div
-                          class="total-order w-100 max-widthauto m-auto mb-4"
-                        >
-                          <ul>
-                            <li>
-                              <h4>Order Tax</h4>
-                              <h5>$ 0.00</h5>
-                            </li>
-                            <li>
-                              <h4>Discount</h4>
-                              <h5>$ 0.00</h5>
-                            </li>
-                            <li>
-                              <h4>Shipping</h4>
-                              <h5>$ 0.00</h5>
-                            </li>
-                            <li>
-                              <h4>Grand Total</h4>
-                              <h5>$ 0.00</h5>
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col-lg-3 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Order Tax</label>
-                          <div class="input-groupicon select-code">
-                            <input type="text" value="0" class="p-2" />
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-3 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Discount</label>
-                          <div class="input-groupicon select-code">
-                            <input type="text" value="0" class="p-2" />
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-3 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Shipping</label>
-                          <div class="input-groupicon select-code">
-                            <input type="text" value="0" class="p-2" />
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-3 col-sm-6 col-12">
-                        <div class="input-blocks mb-5">
-                          <label>Status</label>
-                          <select class="select">
-                            <option>Choose</option>
-                            <option>Pending</option>
-                            <option>Received</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div class="col-lg-12 text-end">
-                        <button
-                          type="button"
-                          class="btn btn-cancel add-cancel me-3"
-                          data-bs-dismiss="modal"
-                        >
-                          Cancel
-                        </button>
-                        <button type="submit" class="btn btn-submit add-sale">
-                          Submit
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
+                      </li>
+                      <li>
+                        <a href="javascript:void(0);" class="dropdown-item" data-bs-toggle="modal"
+                          data-bs-target="#edit-sales-new">
+                          <i data-feather="edit" class="info-img"></i> Edit Sale
+                        </a>
+                      </li>
+                      <li>
+                        <a href="javascript:void(0);" class="dropdown-item" @click="downloadReceipt(trans.transactionId)">
+                          <i data-feather="download" class="info-img"></i> Download Receipt
+                        </a>
+                      </li>
+                      <li>
+                        <a href="javascript:void(0);" class="dropdown-item confirm-text mb-0"
+                          @click="deleteTransaction(trans.transactionId)">
+                          <i data-feather="trash-2" class="info-img"></i> Delete Sale
+                        </a>
+                      </li>
+                    </ul>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="modal fade" id="edit-sales-new">
-      <div class="modal-dialog add-centered">
-        <div class="modal-content">
-          <div class="page-wrapper p-0 m-0">
-            <div class="content p-0">
-              <div class="modal-header border-0 custom-modal-header">
-                <div class="page-title">
-                  <h4>Add Sales Return</h4>
-                </div>
-                <button
-                  type="button"
-                  class="close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                >
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div class="card">
-                <div class="card-body">
-                  <form action="sales-returns.html">
-                    <div class="row">
-                      <div class="col-lg-4 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label class="form-label">Customer Name</label>
-                          <div class="row">
-                            <div class="col-lg-10 col-sm-10 col-10">
-                              <select class="select">
-                                <option>Thomas</option>
-                                <option>Benjamin</option>
-                                <option>Bruklin</option>
-                              </select>
-                            </div>
-                            <div class="col-lg-2 col-sm-2 col-2 ps-0">
-                              <div class="add-icon">
-                                <a href="#" class="choose-add"
-                                  ><i
-                                    data-feather="plus-circle"
-                                    class="plus"
-                                  ></i
-                                ></a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-4 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Date</label>
-                          <div class="input-groupicon calender-input">
-                            <i data-feather="calendar" class="info-img"></i>
-                            <input
-                              type="text"
-                              class="datetimepicker"
-                              placeholder="Choose"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-4 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label class="form-label">Reference No.</label>
-                          <input
-                            type="text"
-                            class="form-control"
-                            value="555444"
-                          />
-                        </div>
-                      </div>
-                      <div class="col-lg-12 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Product Name</label>
-                          <div class="input-groupicon select-code">
-                            <input
-                              type="text"
-                              placeholder="Please type product code and select"
-                            />
-                            <div class="addonset">
-                              <img
-                                src="/src/assets/img/icons/qrcode-scan.svg"
-                                alt="img"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="table-responsive no-pagination">
-                      <table class="table datanew">
-                        <thead>
-                          <tr>
-                            <th>Product Name</th>
-                            <th>Net Unit Price($)</th>
-                            <th>Stock</th>
-                            <th>QTY</th>
-                            <th>Discount($)</th>
-                            <th>Tax %</th>
-                            <th>Subtotal ($)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>
-                              <div class="productimgname">
-                                <a
-                                  href="javascript:void(0);"
-                                  class="product-img"
-                                >
-                                  <img
-                                    src="/src/assets/img/products/product6.jpg"
-                                    alt="product"
-                                  />
-                                </a>
-                                <a href="javascript:void(0);">Apple Earpods</a>
-                              </div>
-                            </td>
-                            <td>300</td>
-                            <td>400</td>
-                            <td>500</td>
-                            <td>100</td>
-                            <td>50</td>
-                            <td>300</td>
-                          </tr>
-                          <tr>
-                            <td>
-                              <div class="productimgname">
-                                <a
-                                  href="javascript:void(0);"
-                                  class="product-img"
-                                >
-                                  <img
-                                    src="/src/assets/img/products/product7.jpg"
-                                    alt="product"
-                                  />
-                                </a>
-                                <a href="javascript:void(0);">Apple Earpods</a>
-                              </div>
-                            </td>
-                            <td>150</td>
-                            <td>500</td>
-                            <td>300</td>
-                            <td>100</td>
-                            <td>50</td>
-                            <td>300</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div class="row">
-                      <div class="col-lg-6 ms-auto">
-                        <div
-                          class="total-order w-100 max-widthauto m-auto mb-4"
-                        >
-                          <ul>
-                            <li>
-                              <h4>Order Tax</h4>
-                              <h5>$ 0.00</h5>
-                            </li>
-                            <li>
-                              <h4>Discount</h4>
-                              <h5>$ 0.00</h5>
-                            </li>
-                            <li>
-                              <h4>Shipping</h4>
-                              <h5>$ 0.00</h5>
-                            </li>
-                            <li>
-                              <h4>Grand Total</h4>
-                              <h5>$ 0.00</h5>
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col-lg-3 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Order Tax</label>
-                          <div class="input-groupicon select-code">
-                            <input type="text" value="0" class="p-2" />
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-3 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Discount</label>
-                          <div class="input-groupicon select-code">
-                            <input type="text" value="0" class="p-2" />
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-3 col-sm-6 col-12">
-                        <div class="input-blocks">
-                          <label>Shipping</label>
-                          <div class="input-groupicon select-code">
-                            <input type="text" value="0" class="p-2" />
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-3 col-sm-6 col-12">
-                        <div class="input-blocks mb-5">
-                          <label>Status</label>
-                          <select class="select">
-                            <option>Choose</option>
-                            <option>Pending</option>
-                            <option>Received</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div class="col-lg-12 text-end">
-                        <button
-                          type="button"
-                          class="btn btn-cancel add-cancel me-3"
-                          data-bs-dismiss="modal"
-                        >
-                          Cancel
-                        </button>
-                        <button type="submit" class="btn btn-submit add-sale">
-                          Submit
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
+  <!-- Sale Detail Modal -->
+  <div class="modal fade" id="sales-details-new" tabindex="-1" aria-labelledby="salesDetailsModal" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="salesDetailsModal">Sale Detail</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        <div class="modal-body">
+          <!-- Transaction Information -->
+          <div class="mb-3">
+            <h6 class="mb-2"><strong>Transaction ID:</strong> {{ selectedTransaction.transactionId }}</h6>
+            <h6 class="mb-2"><strong>Cashier:</strong> {{ selectedTransaction.employee }}</h6>
+            <h6 class="mb-2"><strong>Customer:</strong> {{ selectedTransaction.customer }}</h6>
+            <h6 class="mb-2"><strong>Status:</strong> <span :class="getStatusClass(selectedTransaction.status)">{{
+                selectedTransaction.status }}</span></h6>
+            <h6 class="mb-2"><strong>Date:</strong> {{ selectedTransaction.createdAt }}</h6>
+            <h6 class="mb-2"><strong>Total Amount:</strong> ${{ selectedTransaction.totalAmount }}</h6>
+            <h6 class="mb-2"><strong>Payment Method:</strong> {{ selectedTransaction.paymentMethod }}</h6>
+          </div>
+
+          <!-- Products Table -->
+          <h6><strong>Purchased Products</strong></h6>
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="product in selectedTransaction.products" :key="product._id">
+                <td>{{ product.name }}</td>
+                <td>{{ product.sku }}</td>
+                <td>{{ product.quantity }}</td>
+                <td>{{ product.price }}</td>
+                <td>{{ product.quantity * product.price }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer d-flex justify-content-center">
+  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+</div>
       </div>
     </div>
+  </div>
+
 </template>
-
 <script>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import $ from 'jquery'; 
-import 'select2'; 
-import feather from 'feather-icons'
-import 'datatables.net-bs5'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
-
-import Sidebar from '/src/components/Admin/Sidebar.vue';
+import { ref, onMounted, onBeforeMount, nextTick } from 'vue';
+import axios from 'axios';
+import Swal from 'sweetalert2';
 import Navbar from '/src/components/Admin/Navbar.vue';
+import ClipLoader from 'vue-spinner/src/ClipLoader.vue';
+import feather from 'feather-icons'
+import $ from 'jquery';
+
 
 
 export default {
   components: {
-    Sidebar,
+    ClipLoader,
     Navbar,
   },
   setup() {
-    const select = ref('.select'); 
-    onMounted(async () => {
-        try{
-            await $(select.value).select2();
-            await feather.replace();
-            await $('.table').DataTable();
-        }catch(error){
-            console.log(error);
+    const apiURL = process.env.VUE_APP_URL;
+    const loading = ref(true);
+    const transactions = ref([]);
+
+    const selectedTransaction = ref({
+      transactionId: '',
+      customer: '',
+      status: '',
+      createdAt: '',
+      totalAmount: 0,
+      paymentMethod: '',
+      employee: '',
+      products: []
+    });
+    const initializeDataTable = () => {
+      const tableElement = $('#transaction-table');
+
+      if ($.fn.DataTable.isDataTable(tableElement)) {
+        tableElement.DataTable().destroy();
+      }
+
+      tableElement.DataTable({
+        searching: true,
+        paging: true,
+        info: true,
+        responsive: true,
+      });
+    };
+
+    const refreshDataTable = () => {
+      const table = $('#transaction-table').DataTable();
+      table.destroy();
+      initializeDataTable();
+    };
+
+    const getTransactions = async () => {
+      loading.value = true;
+      try {
+        const reponse = await axios.get(`${apiURL}/get_returned_transactions`);
+        if (reponse.data.success) {
+          transactions.value = reponse.data.transactions
+        } else {
+          Swal.fire('Eror', 'Failed to get all transaction', 'error');
         }
+        nextTick(() => refreshDataTable());
+      } catch (error) {
+        Swal.fire('Eror', 'Something went wrong', 'error');
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    // Get transaction details by ID
+    const getTransactionDetails = async (transactionId) => {
+      loading.value = true;
+      try {
+        const response = await axios.get(`${apiURL}/get_transaction_details/${transactionId}`);
+        if (response.data.success) {
+          selectedTransaction.value = response.data.transaction;
+          console.log(selectedTransaction.value);
+        } else {
+          Swal.fire('Error', 'Failed to get transaction details', 'error');
+        }
+      } catch (error) {
+        Swal.fire('Error', 'Something went wrong', 'error');
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    // Get status badge class
+    const getStatusClass = (status) => {
+      switch (status) {
+        case 'Completed':
+          return 'text-success';
+        case 'Voided':
+          return 'text-danger';
+        case 'Returned':
+          return 'text-info';
+        default:
+          return '';
+      }
+    };
+
+    onMounted(async () => {
+      try {
+        await nextTick()
+        await getTransactions();
+        initializeDataTable();
+        await feather.replace();
+
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    onBeforeMount(() => {
 
     });
-    onBeforeUnmount(() => {
-      $(select.value).select2('destroy');
+
+    const showSaleDetail = async (transactionId) => {
+      await getTransactionDetails(transactionId);
+    };
+    const deleteTransaction = async (transactionId) => {
+      // Show a confirmation alert using SweetAlert2
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: 'This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'No, cancel',
+      });
+
+      // If user confirms the deletion
+      if (result.isConfirmed) {
+        try {
+          const response = await axios.patch(`${apiURL}/delete_transaction/${transactionId}`);
+          if (response.data.success) {
+            Swal.fire(
+              'Deleted!',
+              'The transaction has been deleted.',
+              'success'
+            );
+
+            getTransactions();
+          } else {
+            Swal.fire('Error', 'Failed to delete the transaction.', 'error');
+          }
+        } catch (error) {
+          Swal.fire('Error', error.message, 'error');
+        }
+      } else {
+        Swal.fire('Cancelled', 'The transaction was not deleted.', 'info');
+      }
+    };
+    const downloadReceipt = async (transactionId) => {
+  try {
+    const response = await axios.get(`${apiURL}/download_receipt/${transactionId}`, {
+      responseType: 'blob', // This tells Axios to treat the response as a binary file
     });
+
+    // Create a link element to trigger the file download
+    const link = document.createElement('a');
+    const url = window.URL.createObjectURL(new Blob([response.data])); // Create URL from the blob
+    link.href = url;
+    link.setAttribute('download', `receipt-${transactionId}.pdf`); // Set the filename
+    document.body.appendChild(link);
+    link.click(); // Trigger the download
+
+    // Clean up the link element
+    document.body.removeChild(link);
+  } catch (error) {
+    Swal.fire('Error', error.message, 'error');
+  }
+};
+
     return {
-      select
+      transactions,
+      loading,
+      getStatusClass,
+      showSaleDetail,
+      deleteTransaction,
+      downloadReceipt,
+      selectedTransaction,
+
     };
   },
 };

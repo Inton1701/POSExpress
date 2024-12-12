@@ -60,6 +60,18 @@
                     <h6>{{ product.price }}</h6>
                   </li>
                   <li>
+                    <h4>Cost</h4>
+                    <h6>{{ product.cost }}</h6>
+                  </li>
+                  <li>
+                    <h4>Sales</h4>
+                    <h6>{{ product.sales }}</h6>
+                  </li>
+                  <li>
+                    <h4>Returns</h4>
+                    <h6>{{ product.returns }}</h6>
+                  </li>
+                  <li>
                     <h4>Status</h4>
                     <h6>{{ product.status }}</h6>
                   </li>
@@ -115,6 +127,7 @@ export default {
       try {
         const response = await axios.get(`${apiURL}/get_product/${productId}`);
         product.value = response.data.product;
+        nextTick(() => refreshDataTable());
       } catch (error) {
         console.error('Error fetching product details:', error);
       }

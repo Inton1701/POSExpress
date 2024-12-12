@@ -1,6 +1,11 @@
-"SKU","PRODUCT","CATEGORY","BRAND","PRICE","UNIT","QTY"
-1,"Wireless Mouse","Electronics","Logitech",25.99,"piece",100
-2,"Bluetooth Headphones","Electronics","Sony",89.99,"piece",50
-3,"Running Shoes","Footwear","Nike",120,"pair",200
-4,"Organic Coffee Beans","Groceries","Starbucks",15.99,"bag",300
-5,"Notebook","Stationery","Moleskine",10,"piece",500
+sku,name,price,cost
+x4001234567890,Product 1,15.99,10.5
+X4001234567891,Product 2,25.49,18.3
+x4001234567892,Product 3,45,30
+X4001234567893,Product 4,99.99,70
+x4001234567894,Product 5,5.99,3
+X4001234567895,Product 6,10.99,7.5
+x4001234567896,Product 7,12.49,8
+X4001234567897,Product 8,29.99,22.8
+x4001234567898,Product 9,50.99,35
+X4001234567899,Product 10,99.99,60

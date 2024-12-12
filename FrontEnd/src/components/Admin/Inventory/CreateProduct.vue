@@ -210,14 +210,14 @@
                                             <div class="col-lg-4 col-sm-6 col-12">
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Price</label>
-                                                    <input type="number" class="form-control"
+                                                    <input type="number"  step="0.01"   min="0"  class="form-control"
                                                         v-model="inputedProduct.price" required placeholder="0.00" />
                                                 </div>
                                             </div>
                                             <div class="col-lg-4 col-sm-6 col-12">
                                                 <div class="mb-3 add-product">
                                                     <label class="form-label">Cost</label>
-                                                    <input type="number" class="form-control"
+                                                    <input type="number"  step="0.01"  min="0"  class="form-control"
                                                         v-model="inputedProduct.cost" required placeholder="0.00" />
                                                 </div>
                                             </div>
@@ -467,14 +467,13 @@ import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import axios from 'axios';
 import 'select2';
 import feather from 'feather-icons';
-import Sidebar from '/src/components/Admin/Sidebar.vue';
 import Navbar from '/src/components/Admin/Navbar.vue';
 import Barcode from './Barcode.vue';
 import Swal from 'sweetalert2';
 
 export default {
     components: {
-        Sidebar,
+    
         Navbar,
         Barcode
     },

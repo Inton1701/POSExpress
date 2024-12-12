@@ -19,7 +19,7 @@
                 <div class="card-body">
                     <div class="table-responsive">
                         <ClipLoader v-if="loading" />
-                        <table v-else class="table datanew" id="category-table">
+                        <table v-if="!loading && categories.length" class="table datanew" id="category-table">
                             <thead>
                                 <tr>
                                     <th>Category</th>
@@ -179,14 +179,18 @@ export default {
                 paging: true,
                 info: true,
                 responsive: true,
+                destroy: true,
             });
         };
 
         const refreshDataTable = () => {
-            const table = $('#category-table').DataTable();
-            table.destroy();
-            initializeDataTable();
-        };
+  const tableElement = $('#category-table');
+  if ($.fn.DataTable.isDataTable(tableElement)) {
+    tableElement.DataTable().destroy();
+  }
+  initializeDataTable();
+};
+
          const getCategories = async () => {
             loading.value = true;
             try {

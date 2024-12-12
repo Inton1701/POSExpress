@@ -134,10 +134,6 @@
                   <li>
                     <router-link to="/"><i data-feather="grid"></i><span>Admin Dashboard</span></router-link>
                   </li>
-                  <li>
-                    <router-link to="/sales-dashboard"><i data-feather="shopping-bag"></i><span>Sales
-                        Dashboard</span></router-link>
-                  </li>
                 </ul>
 
 
@@ -209,99 +205,16 @@
               </ul>
             </li>
 
-            <li class="submenu-open">
-              <h6 class="submenu-hdr">Reports</h6>
-              <ul>
-                <li>
-                  <router-link to="sales-report"><i data-feather="bar-chart-2"></i><span>Sales
-                      Report</span></router-link>
-                </li>
-                <li>
-                  <router-link to="purchase-report"><i data-feather="pie-chart"></i><span>Purchase
-                      report</span></router-link>
-                </li>
-                <li>
-                  <router-link to="inventory-report"><i data-feather="inbox"></i><span>Inventory
-                      Report</span></router-link>
-                </li>
-                <li>
-                  <router-link to="invoice-report"><i data-feather="file"></i><span>Invoice Report</span></router-link>
-                </li>
-                <li>
-                  <router-link to="customer-report"><i data-feather="user"></i><span>Customer
-                      Report</span></router-link>
-                </li>
-                <li>
-                  <router-link to="expense-report"><i data-feather="file"></i><span>Return Report</span></router-link>
-                </li>
-                <li>
-                  <router-link to="income-report"><i data-feather="bar-chart"></i><span>Income
-                      Report</span></router-link>
-                </li>
-                <li>
-                  <router-link to="tax-reports"><i data-feather="database"></i><span>Tax Report</span></router-link>
-                </li>
-                <li>
-                  <router-link to="profit-and-loss"><i data-feather="pie-chart"></i><span>Profit &
-                      Loss</span></router-link>
-                </li>
-              </ul>
-            </li>
-            <li class="submenu-open">
-              <h6 class="submenu-hdr">User Management</h6>
-              <ul>
-                <li>
-                  <a href="users"><i data-feather="user-check"></i><span>Users</span></a>
-                </li>
-                <li>
-                  <a href="roles-permissions"><i data-feather="shield"></i><span>Roles & Permissions</span></a>
-                </li>
 
-              </ul>
-            </li>
 
             <li class="submenu-open">
               <h6 class="submenu-hdr">Settings</h6>
               <ul>
                 <li class="submenu">
-                  <a href="javascript:void(0);"><i data-feather="settings"></i><span>General Settings</span><span
-                      class="menu-arrow"></span></a>
-                  <ul>
-                    <li><a href="general-settings">Profile</a></li>
-                    <li><a href="security-settings">Security</a></li>
-                    <li><a href="notification">Notifications</a></li>
-
-                  </ul>
+                  <a href="javascript:void(0);"><i data-feather="settings"></i><span>Settings</span></a>
+      
                 </li>
 
-                <li class="submenu">
-                  <a href="javascript:void(0);"><i data-feather="smartphone"></i>
-                    <span>App Settings</span><span class="menu-arrow"></span>
-                  </a>
-                  <ul>
-                    <li><a href="invoice-settingsl">Invoice</a></li>
-                    <li><a href="printer-settings">Printer</a></li>
-                    <li><a href="pos-settings">POS</a></li>
-
-                    <li><a href="email-settings">Email</a></li>
-                  </ul>
-                </li>
-
-                <li class="submenu">
-                  <a href="javascript:void(0);"><i data-feather="dollar-sign"></i> <span>Settings</span><span
-                      class="menu-arrow"></span>
-                  </a>
-                  <ul>
-                    <li>
-                      <a href="payment-gateway-settings">Payment Gateway</a>
-                    </li>
-                    <li>
-                      <a href="bank-settings-grid">Bank Accounts</a>
-                    </li>
-                    <li><a href="tax-rates">Tax Rates</a></li>
-                    <li><a href="currency-settings">Currencies</a></li>
-                  </ul>
-                </li>
 
                 <li>
                   <a href="logout"><i data-feather="log-out"></i><span>Logout</span>
@@ -349,7 +262,7 @@ export default {
     };
 
     onMounted(() => {
-
+      feather.replace();
     });
 
     return {

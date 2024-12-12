@@ -19,8 +19,16 @@ const productSchema = new mongoose.Schema({
   },
   cost: {
     type: Number,
-    default: 'NONE',
+    default: 0,
     required: true,
+  },
+  sales:{
+    type: Number,
+    default: 0,
+  },
+  returns:{
+    type: Number,
+    default: 0,
   },
   category: {
     type: String,
@@ -53,7 +61,7 @@ const productSchema = new mongoose.Schema({
     type: String,
     enum: ["vatable", "none-vatable",],
     default: "vatable",
-    required: true
+ 
   },
   manufacturedDate: {
     type: Date,
@@ -65,7 +73,7 @@ const productSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    default: 'no-image-icon.png',
+    default: null,
 
   },
   status: {
@@ -85,7 +93,8 @@ const productSchema = new mongoose.Schema({
   },
   updatedAt: {
     type: Date,
-  }
+  },
+  
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

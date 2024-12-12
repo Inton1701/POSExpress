@@ -15,6 +15,10 @@ const transactionSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           required: true,
         },
+        sku:{
+          type: String,
+          required: true,
+        },
         name: {
           type: String,
           required: true,
@@ -98,6 +102,10 @@ const transactionSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    deleteAt:{
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true } // Automatically adds createdAt and updatedAt fields
 );

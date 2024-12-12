@@ -24,9 +24,30 @@ const gdrive = require('../controllers/gdriveController');
 const stockHistory = require("../controllers/stockHistoryController");
 const POS = require('../controllers/POSController')
 const transaction = require("../controllers/transactionController");
+const dashboard = require("../controllers/dashboardController");
+const th = require("../controllers/transactionHistoryController");
+const { generatePDFReceipt } = require('../controllers/ReceiptController');
+const user = require('../controllers/userController');
+
+router.route("/api/get_all_users").get(user.getAllUsers)
+router.route("/api/add_user").post( upload.single('image'), user.addUser);
+
+router.route("/api/open_transaction").post(th.openTransaction);
+router.route("/api/close_transaction").post(th.closeTransaction);
+router.route("/api/transaction_history").get(th.transactionHistory);
+router.route("/api/transaction_state").get(th.transactionState);
+
+router.route("/api/get_sales").get(dashboard.salesData);
+router.route("/api/get_statistics").get(dashboard.dashboardStatistics);
+router.route("/api/get_fast_moving").get(dashboard.getFastMoving);
 
 
 router.route("/api/get_all_transactions").get(transaction.getAllTransactions)
+router.route("/api/get_transaction_details/:id").get(transaction.getTransactionDetails)
+router.route("/api/delete_transaction/:id").patch(transaction.deleteTransaction)
+router.route("/api/get_returned_transactions").get(transaction.getReturnTransactions)
+router.route("/api/get_voided_transactions").get(transaction.getVoidedTransactions)
+router.route("/api/download_receipt/:id").get(generatePDFReceipt)
 
 router.route("/api/get_product_info/:id").get(POS.getProductInfo);
 router.route("/api/commit_transaction").post(POS.createTransaction);
@@ -57,10 +78,6 @@ router.route("/api/variants/:id").put(variant.editVariant);
 router.route("/api/variants/:id").delete(variant.deleteVariant);
 
 
-// Dashboard routes
-// router.route("/api/dashboard/monitor_stock").post((req, res) => dashboard.monitorStock(req.io)); 
-// router.route("/api/dashboard/summary").get(dashboard.getDashboardSummary);
-// router.route("/api/dashboard/sales_report/:period").get(dashboard.getSalesReport);
 
 
 // Product routes
@@ -75,6 +92,7 @@ router.route("/api/no_stock").get(product.getOutOfStock);
 router.route("/api/edit_stock/:id").patch(product.editStock);
 router.route("/api/get_report").get(product.generateReports);
 router.route("/api/get_products_by_category/:id").get(product.getProductsByCategory);
+router.route("/api/import_products").post(product.importProducts);
 // Discount routes
 router.route("/api/discounts").get(discount.getAllDiscounts); 
 router.route("/api/discounts").post(discount.addDiscount); 

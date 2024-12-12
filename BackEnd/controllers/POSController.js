@@ -1,10 +1,12 @@
 const Product = require("../models/Products");
 const Transaction = require('../models/Transactions');
 const asyncHandler = require("express-async-handler");
-const mongoose = require('mongoose');
-const escpos = require('escpos');
-escpos.USB = require('escpos-usb'); // For USB printers
-const usb = require('usb');
+const {printReceipt} = require('./ReceiptController');
+// const escpos = require('escpos');
+// escpos.USB = require('escpos-usb'); // For USB printers
+// const usb = require('usb');
+
+
 const POSController = {
     // Get product information by SKU
     getProductInfo: asyncHandler(async (req, res) => {
@@ -25,11 +27,12 @@ const POSController = {
         try {
             const transactionId = await generateTransactionCode();
             const { cart, paymentMethod, discounts, netAmount, VAT, totalAmount, status, employee } = req.body;
-
+    
             if (!cart || !Array.isArray(cart) || cart.length === 0) {
                 return res.status(400).json({ success: false, message: 'Cart cannot be empty' });
             }
-
+    
+            // Validate cart items stock
             for (const item of cart) {
                 const product = await Product.findById(item._id);
                 if (!product) {
@@ -39,7 +42,8 @@ const POSController = {
                     return res.status(400).json({ success: false, message: `Insufficient quantity for product ${product.name}` });
                 }
             }
-
+    
+            // Create the transaction object
             const transaction = new Transaction({
                 transactionId,
                 cart,
@@ -50,46 +54,57 @@ const POSController = {
                 totalAmount,
                 status,
                 employee,
+                transactionDate: new Date(),
             });
-
+    
             // Save transaction
             const savedTransaction = await transaction.save();
-
-            // Update product quantity
+    
+            // Update product quantities and sales depending on payment method
             for (const item of cart) {
-                await Product.findByIdAndUpdate(item._id, { $inc: { quantity: -item.quantity } });
+                const product = await Product.findById(item._id);
+    
+                // Deduct product quantity and update sales
+                await Product.findByIdAndUpdate(item._id, { 
+                    $inc: { quantity: -item.quantity, sales: item.quantity } 
+                });
             }
-
-
-            printReceipt(transaction, 'normal');  // Normal created transaction
-
+    
+            // Print the receipt
+            printReceipt(savedTransaction, 'normal');
+    
             res.status(201).json({ success: true, transaction: savedTransaction });
         } catch (error) {
             console.error("Error creating transaction:", error);
             return res.status(500).json({ success: false, message: 'Failed to create transaction', error: error.message });
         }
     }),
-
+    
     voidTransaction: asyncHandler(async (req, res) => {
         try {
-            const { transactionId, employee} = req.body;
-
+            const { transactionId, employee } = req.body;
+    
             const transaction = await Transaction.findOne({ transactionId: transactionId });
             if (!transaction) {
                 return res.status(404).json({ success: false, message: 'Transaction id not found' });
             }
-
+    
             if (transaction.status === 'void') {
                 return res.status(400).json({ success: false, message: 'Transaction is already voided' });
             }
+    
             transaction.employee = employee;
             transaction.status = 'Voided';
+            transaction.transactionDate = new Date(),
             await transaction.save();
-
+    
+            // Restore product quantities and reverse sales
             for (const item of transaction.cart) {
-                await Product.findByIdAndUpdate(item._id, { $inc: { quantity: item.quantity } });
+                await Product.findByIdAndUpdate(item._id, { 
+                    $inc: { quantity: item.quantity, sales: -item.quantity } 
+                });
             }
-
+    
             res.status(200).json({ success: true, message: 'Transaction voided successfully' });
         } catch (error) {
             console.error('Error voiding transaction:', error);
@@ -116,6 +131,7 @@ const POSController = {
             res.status(200).json({
                 success: true,
                 transactionId: transaction.transactionId,
+                sku: transaction.sku,
                 cart: transaction.cart,
                 totalAmount: transaction.totalAmount,
             });
@@ -163,7 +179,11 @@ const POSController = {
             const productUpdates = returnedItems.map(async (item) => {
                 await Product.findByIdAndUpdate(
                     item._id,
-                    { $inc: { quantity: item.returnQuantity } }
+                    { $inc: { 
+                        quantity: item.returnQuantity,
+                        sales: -item.returnQuantity,
+                        returns: item.returnQuantity
+                    } }
                 );
             });
     
@@ -194,6 +214,7 @@ const POSController = {
                 totalAmount: totalAmount,
                 status: 'Returned',
                 employee,
+                transactionDate: new Date(),
             });
     
             // Save the return transaction
@@ -216,122 +237,9 @@ const POSController = {
             res.status(500).json({ success: false, message: 'Failed to process return transaction', error: error.message });
         }
     })
-    
   
       
 
-};
-const wrapText = (text, width) => {
-    const wrappedLines = [];
-    while (text.length > width) {
-        let wrapIndex = text.lastIndexOf(" ", width);
-        if (wrapIndex === -1) wrapIndex = width; // No spaces, cut at max width
-        wrappedLines.push(text.slice(0, wrapIndex));
-        text = text.slice(wrapIndex).trim();
-    }
-    if (text.length > 0) wrappedLines.push(text);
-    return wrappedLines;
-};
-
-const maxLineWidth = 32;
-const itemNameWidth = 32; // Full width for product name
-const quantityWidth = 10;
-const priceWidth = 10;
-const totalWidth = 10;
-
-// Print header based on type
-const printReceiptHeader = (printer, type) => {
-    let title = "SALES RECEIPT";
-    if (type === "return") title = "RETURN RECEIPT";
-    if (type === "test") title = "TEST RECEIPT";
-
-    printer
-        .align("CT")
-        .style("NORMAL")
-        .text("Ariston Pogi") // Store name
-        .text("Taga saan ako?") // Tag line
-        .text("edi sa puso mo") // Tag line
-        .text("--------------------------------")
-        .text(title)
-        .text("--------------------------------");
-};
-
-// Print footer based on type
-const printReceiptFooter = (printer, type) => {
-    if (type === "test") {
-        printer.align("CT")
-            .text("Test Mode: Printer Working!")
-            .text("Ensure the printer is connected.");
-    } else {
-        printer
-            .text("--------------------------------")
-            .align("CT")
-            .text("Thank you for your purchase!");
-        if (type === "return") printer.text("Refund Processed Successfully!");
-        printer.text("Visit Again!");
-    }
-
-    printer.cut().close();
-};
-
-// Main receipt printing function
-const printReceipt = (transaction, type = "normal") => {
-    try {
-        const device = new escpos.USB();
-        const printer = new escpos.Printer(device);
-
-        device.open(() => {
-            // Print header
-            printReceiptHeader(printer, type);
-
-            if (type !== "test") {
-                // Print transaction details
-                printer.align("LT")
-                    .text(`Transaction ID: ${transaction.transactionId}`)
-                    .text(`Date: ${new Date().toLocaleString()}`)
-                    .text(`Employee: ${transaction.employee}`)
-                    .text(`Payment Method: ${transaction.paymentMethod}`)
-                    .text("Items:")
-                    .text("--------------------------------");
-
-                transaction.cart.forEach((item) => {
-                    const wrappedNameLines = wrapText(item.name, itemNameWidth);
-
-                    // Print product name first
-                    wrappedNameLines.forEach((line) => {
-                        printer.text(line.padEnd(maxLineWidth));
-                    });
-
-                    // Print price, quantity, and total on the next line
-                    const price = `${item.price.toFixed(2)}`.padStart(priceWidth);
-                    const quantity = `x${item.quantity}`.padStart(quantityWidth);
-                    const totalValue = (item.quantity * item.price).toFixed(2).padStart(totalWidth);
-
-                    printer.text(`${price}${quantity}${totalValue}`);
-                });
-
-                // Print totals
-                const VAT = transaction.VAT || 0;
-                const VATExemptSales = transaction.VATExemptSales || 0;
-                const VATSales = transaction.netAmount - VATExemptSales;
-                const additionalTax = VATSales * 0.12;
-
-                printer.text("--------------------------------")
-                    .align("LT")
-                    .text(`Subtotal: `.padEnd(24) + `${transaction.netAmount.toFixed(2).padStart(7)}`)
-                    .text(`VAT Sales: `.padEnd(24) + `${VATSales.toFixed(2).padStart(7)}`)
-                    .text(`VAT-Exempt Sales: `.padEnd(24) + `${VATExemptSales.toFixed(2).padStart(7)}`)
-                    .text(`12% VAT: `.padEnd(24) + `${additionalTax.toFixed(2).padStart(7)}`)
-                    .text(`Total: `.padEnd(24) + `${transaction.totalAmount.toFixed(2).padStart(7)}`);
-
-            }
-
-            // Print footer
-            printReceiptFooter(printer, type);
-        });
-    } catch (error) {
-        console.error(`Error printing receipt (${type}):`, error);
-    }
 };
 
 

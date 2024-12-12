@@ -1,343 +1,533 @@
 <template>
-  <Navbar/>
+  <Navbar />
 
-    <div class="page-wrapper">
-        <div class="content">
-          <div class="row">
-            <div class="col-xl-3 col-sm-6 col-12 d-flex">
-              <div class="dash-widget w-100">
-                <div class="dash-widgetimg">
-                  <span
-                    ><img src="assets/img/icons/dash1.svg" alt="img"
-                  /></span>
-                </div>
-                <div class="dash-widgetcontent">
-                  <h5>
-                    $<span class="counters" data-count="307144.00"
-                      >$307,144.00</span
-                    >
-                  </h5>
-                  <h6>Total Purchase Due</h6>
+  <div class="page-wrapper">
+    <div class="content">
+      <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-end">
+          <button @click="toggleTransaction" :class="['btn', isTransactionOpen ? 'btn-danger' : 'btn-success']">
+            {{ isTransactionOpen ? 'Close Transaction' : 'Open Transaction' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="row">
+      <!-- Total Items Sold -->
+
+      <div class="col-xl-3 col-sm-6 col-12 d-flex">
+        <div class="dash-widget w-100">
+          <div class="dash-widgetimg">
+            <span><img src="assets/img/icons/dash1.svg" alt="img" /></span>
+          </div>
+          <div class="dash-widgetcontent">
+            
+            <h5>
+              <span class="counters">{{ totalItemsSold }}</span>
+            </h5>
+            <h6>Total Items Sold</h6>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Sales -->
+      <div class="col-xl-3 col-sm-6 col-12 d-flex">
+        <div class="dash-widget dash1 w-100">
+          <div class="dash-widgetimg">
+            <span><img src="assets/img/icons/dash2.svg" alt="img" /></span>
+          </div>
+          <div class="dash-widgetcontent">
+            <h5>
+              <font-awesome-icon icon="fa-peso-sign" />
+              <span class="counters">{{ totalSales.toFixed(2) }}</span>
+            </h5>
+            <h6>Total Sales</h6>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Profit -->
+      <div class="col-xl-3 col-sm-6 col-12 d-flex">
+        <div class="dash-widget dash2 w-100">
+          <div class="dash-widgetimg">
+            <span>
+              <font-awesome-icon icon="fa-arrow-trend-up" :size="'2x'" style="color: #74C0FC;" />
+            </span>
+          </div>
+          <div class="dash-widgetcontent">
+            <h5>
+              <font-awesome-icon icon="fa-peso-sign" />
+              <span class="counters">{{ totalProfit.toFixed(2) }}</span>
+            </h5>
+            <h6>Total Profit</h6>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Lost -->
+      <div class="col-xl-3 col-sm-6 col-12 d-flex">
+        <div class="dash-widget dash3 w-100">
+          <div class="dash-widgetimg">
+            <span>
+              <font-awesome-icon icon="fa-arrow-trend-down" :size="'2x'" style="color: #ee3a5e;" />
+            </span>
+          </div>
+          <div class="dash-widgetcontent">
+            <h5>
+              <font-awesome-icon icon="fa-peso-sign" />
+              <span class="counters">{{ totalLost.toFixed(2) }}</span>
+            </h5>
+            <h6>Total Lost</h6>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Transactions -->
+      <div class="col-xl-3 col-sm-6 col-12 d-flex">
+        <div class="dash-count">
+          <div class="dash-counts">
+            <h4>{{ totalTransactions }}</h4>
+            <h5>Transactions</h5>
+          </div>
+          <div class="dash-imgs">
+            <font-awesome-icon icon="fa-handshake" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Returns -->
+      <div class="col-xl-3 col-sm-6 col-12 d-flex">
+        <div class="dash-count badge-bgprimary">
+          <div class="dash-counts">
+            <h4>{{ totalReturnedTransactions }}</h4>
+            <h5>Returns</h5>
+          </div>
+          <div class="dash-imgs">
+            <font-awesome-icon icon="fa-reply" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Purchase Invoice -->
+      <div class="col-xl-3 col-sm-6 col-12 d-flex">
+        <div class="dash-count das2 bg-danger">
+          <div class="dash-counts">
+            <h4>{{ totalVoidedTransactions }}</h4>
+            <h5>Void Purchases</h5>
+          </div>
+          <div class="dash-imgs">
+            <font-awesome-icon icon="fa-ban" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Completed Transactions -->
+      <div class="col-xl-3 col-sm-6 col-12 d-flex">
+        <div class="dash-count das3">
+          <div class="dash-counts">
+            <h4>{{ totalCompletedTransactions }}</h4>
+            <h5>Completed transactions</h5>
+          </div>
+          <div class="dash-imgs">
+            <font-awesome-icon icon="fa-clipboard-check" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+      <div class="row">
+        <div class="col-xl-7 col-sm-12 col-12 d-flex">
+          <div class="card flex-fill">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Purchase & Sales</h5>
+              <div class="graph-sets">
+
+                <div class="dropdown dropdown-wraper">
+                  <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownMenuButton"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    2023
+                  </button>
+                  <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <li>
+                      <a href="javascript:void(0);" class="dropdown-item">2023</a>
+                    </li>
+                    <li>
+                      <a href="javascript:void(0);" class="dropdown-item">2022</a>
+                    </li>
+                    <li>
+                      <a href="javascript:void(0);" class="dropdown-item">2021</a>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>
-            <div class="col-xl-3 col-sm-6 col-12 d-flex">
-              <div class="dash-widget dash1 w-100">
-                <div class="dash-widgetimg">
-                  <span
-                    ><img src="assets/img/icons/dash2.svg" alt="img"
-                  /></span>
-                </div>
-                <div class="dash-widgetcontent">
-                  <h5>
-                    $<span class="counters" data-count="4385.00"
-                      >$4,385.00</span
-                    >
-                  </h5>
-                  <h6>Total Sales Due</h6>
-                </div>
-              </div>
-            </div>
-            <div class="col-xl-3 col-sm-6 col-12 d-flex">
-              <div class="dash-widget dash2 w-100">
-                <div class="dash-widgetimg">
-                  <span
-                    ><img src="assets/img/icons/dash3.svg" alt="img"
-                  /></span>
-                </div>
-                <div class="dash-widgetcontent">
-                  <h5>
-                    $<span class="counters" data-count="385656.50"
-                      >$385,656.50</span
-                    >
-                  </h5>
-                  <h6>Total Sale Amount</h6>
-                </div>
-              </div>
-            </div>
-            <div class="col-xl-3 col-sm-6 col-12 d-flex">
-              <div class="dash-widget dash3 w-100">
-                <div class="dash-widgetimg">
-                  <span
-                    ><img src="assets/img/icons/dash4.svg" alt="img"
-                  /></span>
-                </div>
-                <div class="dash-widgetcontent">
-                  <h5>
-                    $<span class="counters" data-count="40000.00">$400.00</span>
-                  </h5>
-                  <h6>Total Expense Amount</h6>
-                </div>
-              </div>
-            </div>
-            <div class="col-xl-3 col-sm-6 col-12 d-flex">
-              <div class="dash-count">
-                <div class="dash-counts">
-                  <h4>100</h4>
-                  <h5>Customers</h5>
-                </div>
-                <div class="dash-imgs">
-                  <i data-feather="user"></i>
-                </div>
-              </div>
-            </div>
-            <div class="col-xl-3 col-sm-6 col-12 d-flex">
-              <div class="dash-count das1">
-                <div class="dash-counts">
-                  <h4>110</h4>
-                  <h5>Suppliers</h5>
-                </div>
-                <div class="dash-imgs">
-                  <i data-feather="user-check"></i>
-                </div>
-              </div>
-            </div>
-            <div class="col-xl-3 col-sm-6 col-12 d-flex">
-              <div class="dash-count das2">
-                <div class="dash-counts">
-                  <h4>150</h4>
-                  <h5>Purchase Invoice</h5>
-                </div>
-                <div class="dash-imgs">
-                  <img
-                    src="assets/img/icons/file-text-icon-01.svg"
-                    class="img-fluid"
-                    alt="icon"
-                  />
-                </div>
-              </div>
-            </div>
-            <div class="col-xl-3 col-sm-6 col-12 d-flex">
-              <div class="dash-count das3">
-                <div class="dash-counts">
-                  <h4>170</h4>
-                  <h5>Sales Invoice</h5>
-                </div>
-                <div class="dash-imgs">
-                  <i data-feather="file"></i>
-                </div>
-              </div>
+            <div class="card-body">
+              <canvas ref="chartCanvas"></canvas>
             </div>
           </div>
-
-          <div class="row">
-            <div class="col-xl-7 col-sm-12 col-12 d-flex">
-              <div class="card flex-fill">
-                <div
-                  class="card-header d-flex justify-content-between align-items-center"
-                >
-                  <h5 class="card-title mb-0">Purchase & Sales</h5>
-                  <div class="graph-sets">
-                    <ul class="mb-0">
-                      <li>
-                        <span>Sales</span>
-                      </li>
-                      <li>
-                        <span>Purchase</span>
-                      </li>
-                    </ul>
-                    <div class="dropdown dropdown-wraper">
-                      <button
-                        class="btn btn-light btn-sm dropdown-toggle"
-                        type="button"
-                        id="dropdownMenuButton"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
-                      >
-                        2023
-                      </button>
-                      <ul
-                        class="dropdown-menu"
-                        aria-labelledby="dropdownMenuButton"
-                      >
-                        <li>
-                          <a href="javascript:void(0);" class="dropdown-item"
-                            >2023</a
-                          >
-                        </li>
-                        <li>
-                          <a href="javascript:void(0);" class="dropdown-item"
-                            >2022</a
-                          >
-                        </li>
-                        <li>
-                          <a href="javascript:void(0);" class="dropdown-item"
-                            >2021</a
-                          >
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div class="card-body">
-                  <div id="sales_charts"></div>
-                </div>
+        </div>
+        <div class="col-xl-5 col-sm-12 col-12 d-flex">
+          <div class="card flex-fill default-cover mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h4 class="card-title mb-0">Recent Transactions</h4>
+              <div class="view-all-link">
+                <a href="javascript:void(0);" class="view-all d-flex align-items-center">
+                  View All<span class="ps-2 d-flex align-items-center"><i data-feather="arrow-right"
+                      class="feather-16"></i></span>
+                </a>
               </div>
-            </div>
-            <div class="col-xl-5 col-sm-12 col-12 d-flex">
-              <div class="card flex-fill default-cover mb-4">
-                <div
-                  class="card-header d-flex justify-content-between align-items-center"
-                >
-                  <h4 class="card-title mb-0">Recent Products</h4>
-                  <div class="view-all-link">
-                    <a
-                      href="javascript:void(0);"
-                      class="view-all d-flex align-items-center"
-                    >
-                      View All<span class="ps-2 d-flex align-items-center"
-                        ><i data-feather="arrow-right" class="feather-16"></i
-                      ></span>
-                    </a>
-                  </div>
-                </div>
-                <div class="card-body">
-                  <div class="table-responsive dataview">
-                    <table class="table dashboard-recent-products">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Products</th>
-                          <th>Price</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>1</td>
-                          <td class="productimgname">
-                            <a href="product-list.html" class="product-img">
-                              <img
-                                src="assets/img/products/stock-img-01.png"
-                                alt="product"
-                              />
-                            </a>
-                            <a href="product-list.html"
-                              >Lenevo 3rd Generation</a
-                            >
-                          </td>
-                          <td>$12500</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <h4 class="card-title">Expired Products</h4>
             </div>
             <div class="card-body">
               <div class="table-responsive dataview">
-                <table class="table dashboard-expired-products">
-                  <thead>
-                    <tr>
-                      <th class="no-sort">
-                        <label class="checkboxs">
-                          <input type="checkbox" id="select-all" />
-                          <span class="checkmarks"></span>
-                        </label>
-                      </th>
-                      <th>Product</th>
-                      <th>SKU</th>
-                      <th>Manufactured Date</th>
-                      <th>Expired Date</th>
-                      <th class="no-sort">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>
-                        <label class="checkboxs">
-                          <input type="checkbox" />
-                          <span class="checkmarks"></span>
-                        </label>
-                      </td>
-                      <td>
-                        <div class="productimgname">
-                          <a
-                            href="javascript:void(0);"
-                            class="product-img stock-img"
-                          >
-                            <img
-                              src="assets/img/products/stock-img-03.png"
-                              alt="product"
-                            />
-                          </a>
-                          <a href="javascript:void(0);"
-                            >Apple Series 5 Watch
-                          </a>
-                        </div>
-                      </td>
-                      <td><a href="javascript:void(0);">PT010</a></td>
-                      <td>24 Mar 2023</td>
-                      <td>26 May 2023</td>
-                      <td class="action-table-data">
-                        <div class="edit-delete-action">
-                          <a
-                            class="me-2 p-2"
-                            href="#"
-                            data-bs-toggle="modal"
-                            data-bs-target="#edit-units"
-                          >
-                            <i data-feather="edit" class="feather-edit"></i>
-                          </a>
-                          <a
-                            class="confirm-text p-2"
-                            href="javascript:void(0);"
-                          >
-                            <i
-                              data-feather="trash-2"
-                              class="feather-trash-2"
-                            ></i>
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <ClipLoader v-if="loading" />
+                <table v-else class="table datanew">
+            <thead>
+              <tr>
+                <th>Transaction ID</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody class="sales-list">
+    <tr v-if="transactions.length <= 0">
+      <td colspan="3">No transactions available</td>
+    </tr>
+    <tr v-else v-for="trans in transactions.slice(0, 5)" :key="trans.id">
+      <td>{{ trans.transactionId }}</td>
+
+      <td class="text-center">
+        <span :class="{
+          'badge': true,
+          'badge-bgsuccess': trans.status === 'Completed',
+          'badge-bgdanger': trans.status === 'Voided',
+          'badge-bgprimary': trans.status === 'Returned'
+        }">
+          {{ trans.status }}
+        </span>
+      </td>
+
+      <td>{{ $formatDate(trans.createdAt) }}</td>
+    </tr>
+  </tbody>
+</table>
               </div>
             </div>
           </div>
         </div>
       </div>
-     
+      <div class="card">
+        <div class="card-header">
+          <h4 class="card-title">Fast Moving Products</h4>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive dataview">
+            <table class="table dashboard-expired-products">
+              <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Product Name</th>
+            <th>Price</th>
+            <th>Sold</th>
+            <th>Quantity</th>
+            <th>Total Sales</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="product in products.slice(0, 5)" :key="product.sku">
+            <td>{{ product.sku }}</td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.price.toFixed(2) }}</td>
+            <td>{{ product.sales }}</td>
+            <td>{{ product.quantity }}</td>
+            <td>{{ product.totalSales.toFixed(2) }}</td>
+          </tr>
+        </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  
 </template>
+
 <script>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-
-import 'select2'; 
-import feather from 'feather-icons'
-import 'datatables.net-bs5'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
-
-import Sidebar from '/src/components/Admin/Sidebar.vue';
-import Navbar from '/src/components/Admin/Navbar.vue';
+import { ref, onMounted, onBeforeUnmount,nextTick } from "vue";
+import Chart from "chart.js/auto";
+import axios from "axios";
+import Navbar from "/src/components/Admin/Navbar.vue";
+import Swal from "sweetalert2";
+import ClipLoader from 'vue-spinner/src/ClipLoader.vue';
 
 
 export default {
   components: {
-    Sidebar,
     Navbar,
+    ClipLoader
   },
   setup() {
-    const select = ref('.select'); 
-    onMounted(async () => {
-        try{
-            await $(select.value).select2();
-            await feather.replace();
-            await $('.table').DataTable();
-        }catch(error){
-            console.log(error);
+    const chartCanvas = ref(null);
+    let chartInstance = null;
+    const apiURL = process.env.VUE_APP_URL;
+    // Initialize statistics as ref variables
+    const totalItemsSold = ref(0);
+    const totalSales = ref(0);
+    const totalProfit = ref(0);
+    const totalLost = ref(0);
+    const totalTransactions = ref(0);
+    const totalCompletedTransactions = ref(0);
+    const totalVoidedTransactions = ref(0);
+    const totalReturnedTransactions = ref(0);
+    const isTransactionOpen = ref(false);
+    const dateRange = ref({ startDate: null, endDate: null });
+    const loading = ref(false);
+    const isLoading = ref(false);
+    const transactions = ref([]);
+    const products = ref([]);
+
+    const getTransactions = async () => {
+      loading.value = true;
+      try {
+        const reponse = await axios.get(`${apiURL}/get_all_transactions`);
+        if (reponse.data.success) {
+          transactions.value = reponse.data.transactions
+        } else {
+          Swal.fire('Eror', 'Failed to get all transaction', 'error');
         }
 
+      } catch (error) {
+        console.error(error);
+        Swal.fire('Error', 'Something went wrong', 'error');
+      } finally {
+        loading.value = false;
+      }
+    }
+
+     const  getFastMovingProducts=  async () => {
+      try {
+        const response = await axios.get(`${apiURL}/get_fast_moving`); // Adjust API endpoint as necessary
+        products.value = response.data;
+      } catch (error) {
+        console.error('Error fetching fast-moving products:', error);
+      }
+    }
+    // Function to render the chart after data is fetched
+    const renderChart = (salesData) => {
+      if (salesData.length > 0 && chartCanvas.value) {
+        const labels = salesData.map((data) => data._id); // Assuming '_id' as labels
+        const totalSalesData = salesData.map((data) => data.totalSales);
+        const totalProfitData = salesData.map((data) => data.totalProfit);
+
+        const ctx = chartCanvas.value.getContext("2d"); // Get the context for the canvas element
+
+        // Destroy existing chart instance before creating a new one
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+
+        // Initialize the chart with the provided data
+        chartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Total Sales",
+                data: totalSalesData,
+                backgroundColor: "rgb(40, 199, 111)",
+                borderColor: "rgb(75, 192, 192)",
+                borderWidth: 1,
+              },
+              {
+                label: "Total Profit",
+                data: totalProfitData,
+                backgroundColor: "rgb(255, 77, 77)",
+                borderColor: "rgb(255, 99, 132)",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: "top",
+              },
+              tooltip: {
+                enabled: true,
+              },
+            },
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: "Dates",
+                },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: "Values",
+                },
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+    };
+
+    // Fetch transaction state (open or closed)
+    const updateTransactionState = async () => {
+  try {
+    const response = await axios.get(`${apiURL}/transaction_state`);
+    if (response.data.success) {
+      isTransactionOpen.value = response.data.isOpen;  // This should reflect the correct state
+    } else {
+      console.error("Failed to fetch transaction state.");
+    }
+  } catch (error) {
+    console.error("Error fetching transaction state:", error);
+    Swal.fire({
+      title: "Error!",
+      text: "Failed to update transaction state",
+      icon: "error",
+      confirmButtonText: "OK",
     });
+  }
+};
+
+const toggleTransaction = async () => {
+  const action = isTransactionOpen.value ? "close" : "open";
+  try {
+    const result = await Swal.fire({
+      title: "Confirm Action",
+      text: `Are you sure you want to ${action} the transaction?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes",
+      cancelButtonText: "No",
+    });
+
+    if (result.isConfirmed) {
+      const endpoint = `${action}_transaction`;
+      const response = await axios.post(`${apiURL}/${endpoint}`);
+
+      if (response.data.success) {
+        isTransactionOpen.value = !isTransactionOpen.value;
+        await Swal.fire({
+          title: "Success!",
+          text: `Transaction ${action}ed successfully`,
+          icon: "success",
+          confirmButtonText: "OK",
+        });
+
+        // Reset data if the transaction was opened
+        if (isTransactionOpen.value) {
+          // Reset statistics and chart data
+          totalItemsSold.value = 0;
+          totalSales.value = 0;
+          totalProfit.value = 0;
+          totalLost.value = 0;
+          totalTransactions.value = 0;
+          totalCompletedTransactions.value = 0;
+          totalVoidedTransactions.value = 0;
+          totalReturnedTransactions.value = 0;
+          dateRange.value = { startDate: null, endDate: null };
+
+          // Reload statistics and chart data
+          await fetchStatistics();
+        } else {
+          // Optionally, fetch statistics again when transaction is closed
+          await fetchStatistics();
+        }
+      } else {
+        throw new Error(response.data.message || `Failed to ${action} transaction`);
+      }
+    }
+  } catch (error) {
+    console.error(`Error ${action}ing transaction:`, error);
+    Swal.fire({
+      title: "Error!",
+      text: error.message,
+      icon: "error",
+      confirmButtonText: "OK",
+    });
+  }
+};
+
+
+const fetchStatistics = async () => {
+  try {
+    isLoading.value = true;
+
+    const response = await axios.get(`${apiURL}/get_statistics`);
+    if (response.data.success) {
+      const statistics = response.data.statistics;
+
+      // Set the statistics values
+      totalTransactions.value = statistics.totalTransactions;
+      totalCompletedTransactions.value = statistics.totalCompletedTransactions;
+      totalVoidedTransactions.value = statistics.totalVoidedTransactions;
+      totalReturnedTransactions.value = statistics.totalReturnedTransactions;
+      totalSales.value = statistics.totalSalesAmount;
+      totalProfit.value = statistics.totalProfitAmount;
+      totalLost.value = statistics.totalLossAmount;
+      totalItemsSold.value = statistics.totalItemsSold;
+      dateRange.value = statistics.dateRange || { startDate: null, endDate: null };
+    } else {
+      console.error("Failed to fetch dashboard statistics");
+    }
+
+    // Fetch the sales data for the chart
+    const chartResponse = await axios.get(`${apiURL}/get_sales`);
+    if (chartResponse.data.success) {
+      const salesData = chartResponse.data.salesDatas;
+      renderChart(salesData); // Render the chart once the data is fetched
+    } else {
+      console.error("Failed to fetch sales data for chart");
+    }
+  } catch (error) {
+    console.error("Error fetching statistics:", error);
+    Swal.fire({
+      title: "Error!",
+      text: "Failed to fetch dashboard data",
+      icon: "error",
+      confirmButtonText: "OK",
+    });
+  } finally {
+    isLoading.value = false;
+  }
+};
+    // On component mount, fetch initial data
+    onMounted(async () => {
+      await updateTransactionState();
+      await fetchStatistics();
+      await getTransactions();
+      await getFastMovingProducts();
+    });
+
+    // Clean up the chart instance when the component is unmounted
     onBeforeUnmount(() => {
-      $(select.value).select2('destroy');
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
     });
+
     return {
-      select
+      chartCanvas,
+      totalItemsSold,
+      totalSales,
+      totalProfit,
+      totalLost,
+      totalTransactions,
+      totalCompletedTransactions,
+      totalVoidedTransactions,
+      totalReturnedTransactions,
+      dateRange,
+      isTransactionOpen,
+      toggleTransaction,
+      getTransactions,
+      transactions,
+      products
     };
   },
 };

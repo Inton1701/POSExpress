@@ -1,28 +1,51 @@
 const mongoose = require('mongoose');
+
 const userSchema = new mongoose.Schema({
-    username: { 
-      type: String, 
-      required: true, 
-      unique: true 
+    firstName: { 
+        type: String, 
+        required: true, 
+    },
+    lastName: { 
+        type: String, 
+        required: true, 
+    },
+    phone: { 
+        type: String, 
+    },
+    email: { 
+        type: String, 
+        unique: true, // Enforce uniqueness for email
+        required: true, // Mark as required if needed
+    },
+    birthdate: { 
+        type: Date, 
     },
     password: { 
-      type: String, 
-      required: true 
+        type: String, 
+        required: true 
     },
     role: { 
-      type: String, 
-      enum: ['Admin', 'Cashier'], 
-      required: true 
+        type: String, 
+        enum: ['Admin', 'Cashier'], 
+        required: true 
     },
-    createdAt: { 
-      type: Date, 
-      default: Date.now 
+    login: {
+        type: Date,
+        default: null, 
     },
-    updatedAt: { 
-      type: Date, 
-      default: Date.now 
-    }
-  });
-  
-  module.exports = mongoose.model('User', userSchema);
-  
+    logout: {
+      type: Date,
+      default: null, 
+  },
+    image: {
+        type: String,
+        default: null
+    },
+    status: {
+        type: String,
+        enum: ['Online', 'Offline', 'Deleted'],
+        default: 'Offline'
+    },
+}, { timestamps: true });
+
+module.exports = mongoose.model('User', userSchema);

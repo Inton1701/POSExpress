@@ -181,13 +181,13 @@ import 'select2';
 import feather from 'feather-icons';
 import ClipLoader from 'vue-spinner/src/ClipLoader.vue';
 import Swal from 'sweetalert2';
-import Sidebar from '/src/components/Admin/Sidebar.vue';
+
 import Navbar from '/src/components/Admin/Navbar.vue';
 import $ from 'jquery';
 
 export default {
     components: {
-        Sidebar,
+
         Navbar,
         ClipLoader,
     },

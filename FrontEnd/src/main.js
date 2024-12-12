@@ -16,7 +16,8 @@ import 'slimscroll/lib/slimscroll.js';
 import 'datatables.net-bs5';
 import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
 import 'bootstrap'
-
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import $ from 'jquery';
 
 // Initialize app
 const app = createApp(App);
@@ -30,6 +31,8 @@ app.config.globalProperties.$exportToPDF = exportToPDF;
 app.config.globalProperties.$showAlert = showAlert;
 app.config.globalProperties.$csvToJson = csvToJson;
 app.config.globalProperties.$formatDate = formatDate;
+window.$ = $;           // Attach jQuery to the global window object
+window.jQuery = $; 
 
 
 
