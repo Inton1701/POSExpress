@@ -31,6 +31,9 @@ const user = require('../controllers/userController');
 
 router.route("/api/get_all_users").get(user.getAllUsers)
 router.route("/api/add_user").post( upload.single('image'), user.addUser);
+router.route("/api/get_user/:id").get(user.getUser);
+router.route("/api/edit_user/:id").patch(upload.single('image'), user.editUser);
+router.route("/api/delete_user/:id").delete(user.deleteUser);
 
 router.route("/api/open_transaction").post(th.openTransaction);
 router.route("/api/close_transaction").post(th.closeTransaction);

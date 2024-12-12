@@ -67,12 +67,7 @@ const brand = {
                 });
             }
     
-            // Add full URL for the logo
-            // const brandDetails = {
-            //     ...brand._doc,
-            //     logo: brand.logo ? `http://localhost:5000/uploads/${brand.logo}` : ''
-            // };
-    
+   
             res.status(200).json({ 
                 success: true, 
                 brand: brand 
@@ -106,7 +101,7 @@ const brand = {
                 }
             });
     
-            // Check if the logo is removed via frontend
+
             if (req.body.logoRemoved === 'true') {
                 if (brand.logo && brand.logo !== 'no-image-icon.png') {
                     const oldLogoPath = path.join(__dirname, '..', 'public', 'uploads', brand.logo);

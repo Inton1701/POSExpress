@@ -95,13 +95,8 @@
                                         </div>
                                     </td>
                                 </tr>
-
                             </tbody>
-
-
                         </table>
-
-
                     </div>
                 </div>
             </div>
@@ -280,39 +275,39 @@ export default {
         const loading = ref(false);
 
         const initializeDataTable = () => {
-    const tableElement = $('#brand-table');
+            const tableElement = $('#brand-table');
 
-    // Destroy existing DataTable instance if it exists
-    if ($.fn.DataTable.isDataTable(tableElement)) {
-        tableElement.DataTable().destroy();
-    }
-    // Reinitialize DataTable
-    tableElement.DataTable({
-        searching: true,
-        paging: true,
-        info: true,
-        responsive: true, // Optional: Makes table responsive
-    });
-};
+            // Destroy existing DataTable instance if it exists
+            if ($.fn.DataTable.isDataTable(tableElement)) {
+                tableElement.DataTable().destroy();
+            }
+            // Reinitialize DataTable
+            tableElement.DataTable({
+                searching: true,
+                paging: true,
+                info: true,
+                responsive: true, // Optional: Makes table responsive
+            });
+        };
 
 
-const refreshDataTable = () => {
-    const table = $('#brand-table').DataTable();
-    table.destroy(); // Destroy the current instance
-    initializeDataTable(); // Reinitialize with updated data
-};
+        const refreshDataTable = () => {
+            const table = $('#brand-table').DataTable();
+            table.destroy(); // Destroy the current instance
+            initializeDataTable(); // Reinitialize with updated data
+        };
 
         const getBrands = async () => {
 
             loading.value = true;
-            
+
             try {
                 const response = await axios.get(`${apiURL}/brands_list`);
                 brands.value = response.data.brandList;
 
                 if (!response.data.success) {
                     Swal.fire('Error', response.data.message, 'error');
-                }else{
+                } else {
                     nextTick(() => refreshDataTable());
                 }
             } catch (error) {
@@ -334,7 +329,7 @@ const refreshDataTable = () => {
                 const response = await axios.post(`${apiURL}/add_brand`, formData);
 
                 if (response.data.success) {
-                   
+
                     Swal.fire('Success', 'Brand successfully added!', 'success').then(() => {
                         document.querySelector('#add-brand .btn-cancel').click();
 
@@ -348,7 +343,7 @@ const refreshDataTable = () => {
                 Swal.fire('Error', 'Failed to add brand', 'error');
             }
         };
-   
+
         const openEditModal = async (id) => {
             const response = await axios.get(`${apiURL}/get_brand/${id}`);
             const brand = response.data.brand;
@@ -449,7 +444,7 @@ const refreshDataTable = () => {
             try {
                 await nextTick();
                 await getBrands();
-                initializeDataTable(); 
+                initializeDataTable();
                 await feather.replace();
             } catch (error) {
                 console.error(error);

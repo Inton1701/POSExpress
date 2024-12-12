@@ -45,225 +45,115 @@ addUser: asyncHandler(async (req, res) => {
     }
 }),
     // Get a single product by ID
-    getProduct: asyncHandler(async (req, res) => {
+    getUser: asyncHandler(async (req, res) => {
         try {
-            const product = await Product.findById(req.params.id);
-            if (!product) {
-                return res.status(404).json({ success: false, message: 'Product not found' });
+            const user = await User.findById(req.params.id);
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
             }
-            res.status(200).json({ success: true, product });
+            res.status(200).json({ success: true, user });
         } catch (error) {
-            res.status(500).json({ success: false, message: 'Failed to fetch product', error: error.message });
+            res.status(500).json({ success: false, message: 'Failed to fetch user', error: error.message });
         }
     }),
 
     // Update a product
-    editProduct: asyncHandler(async (req, res) => {
+    editUser: asyncHandler(async (req, res) => {
         try {
-            const product = await Product.findById(req.params.id);
-            if (!product) {
-                return res.status(404).json({ success: false, message: 'Product not found' });
+            const user = await User.findById(req.params.id);
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found",
+                });
             }
-
-            // Define fields that can be updated from request body
-            const allowedUpdates = [
-                'sku', 'name', 'description', 'price', 'cost', 'category',
-                'unit', 'brand', 'variant', 'discount', 'discountType',
-                'manufacturedDate', 'expiryDate', 'status'
-            ];
-
-            // Update allowed fields
-            allowedUpdates.forEach(key => {
+    
+            // Update other fields
+            const allowedUpdates = ['firstName', 'lastName', 'email', 'phone', 'birthdate', 'role', 'userStatus'];
+            allowedUpdates.forEach((key) => {
                 if (req.body[key] !== undefined) {
-                    product[key] = req.body[key];
+                    user[key] = req.body[key];
                 }
             });
-
-            // Handle new image upload if 
-            
-            if(req.file.filename !== 'no-image-icon.png'){
-                if (req.file) {
-                    // Optional: delete old image if it exists
-                    if (product.image) {
-                        const oldImagePath = path.join(__dirname, '..', 'public', 'uploads', product.image);
+    
+            // Update password only if it's provided and not empty
+            if (req.body.password && req.body.password.trim() !== "") {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash(req.body.password, salt);
+                user.password = hashedPassword;
+            }
+    
+            // Handle image removal
+            if (req.body.imageRemoved === 'true') {
+                if (user.image && user.image !== 'no-image-icon.png') {
+                    const oldImagePath = path.join(__dirname, '..', 'public', 'uploads', user.image);
+                    if (fs.existsSync(oldImagePath)) {
                         fs.unlink(oldImagePath, (err) => {
-                            if (err) console.error('Error deleting old image:', err);
+                            if (err) console.error("Error deleting old image:", err);
                         });
                     }
-    
-                    // Update product's image field with new filename
-                    product.image = req.file.filename;
                 }
-            }   
-            
-
-            // Save updated product data
-            await product.save();
-
-            // Prepare the response with full image URL
-            const updatedProduct = {
-                ...product._doc,
-                image: product.image ? product.image : null,
-            };
-
-            res.status(200).json({ success: true, updatedProduct });
-        } catch (error) {
-            res.status(500).json({ success: false, message: 'Failed to update product', error: error.message });
-        }
-    }),
-
-    // Update stock
-    editStock: asyncHandler(async (req, res) => {
-        try {
-            // Check if the product exists
-            const product = await Product.findById(req.params.id);
-            
-            if (!product) {
-                return res.status(404).json({ success: false, message: 'Product not found' });
+                user.image = null; // Set to default image
             }
     
-            // Validate the incoming values (ensure they are numbers)
-            const { entryValue, quantityAlert } = req.body;
-            if (isNaN(entryValue) || isNaN(quantityAlert)) {
-                return res.status(400).json({ success: false, message: 'Invalid entry value or quantity alert' });
+            // Handle new image upload
+            if (req.file && req.file.filename) {
+                if (user.image && user.image !== 'no-image-icon.png') {
+                    const oldImagePath = path.join(__dirname, '..', 'public', 'uploads', user.image);
+                    if (fs.existsSync(oldImagePath)) {
+                        fs.unlink(oldImagePath, (err) => {
+                            if (err) console.error("Error deleting old image:", err);
+                        });
+                    }
+                }
+                user.image = req.file.filename; // Update image with uploaded file
             }
     
-            const prevStock = product.quantity;
-            const newStock = prevStock + Number(entryValue);
-            const newQuantityAlert = Number(quantityAlert);
+            await user.save();
     
-            // Update the product's stock and alert values
-            product.quantity = newStock;
-            product.quantityAlert = newQuantityAlert;
-    
-            // Update lastRestock only if entryValue is greater than 0 (indicating a restock)
-            if (entryValue > 0) {
-                product.lastRestock = Date.now();
-            }
-    
-            // Save the updated product
-            const updatedProduct = await product.save();
-    
-            // Create a history entry for tracking stock changes
-            await History.create({
-                sku: product.sku,
-                product: product.name,
-                prevStock: prevStock,
-                change: Number(entryValue),
-                newStock: newStock,
-            });
-    
-            // Respond with success and updated product data
             res.status(200).json({
                 success: true,
-                updatedProduct,
-                message: 'Stock updated successfully',
+                message: "User updated successfully",
+                updatedUser: {
+                    ...user._doc,
+                    image: user.image || null,
+                },
             });
         } catch (error) {
-            // Error handling
-            console.error(error); // Log error for debugging
-            res.status(500).json({ success: false, message: 'Failed to update stock', error: error.message });
+            console.error("Error in editUser:", error);
+            res.status(500).json({
+                success: false,
+                message: "Internal Server Error",
+                error: error.message,
+            });
         }
     }),
 
-    importProducts: asyncHandler(async (req, res) => {
-
-        const products = req.body.products;
-
-        if (!products || products.length === 0) {
-            return res.status(400).json({ success: false, message: 'No products to import' });
-        }
-
+     // Delete user by ID
+     deleteUser: asyncHandler(async (req, res) => {
         try {
-            // Insert valid products into the database
-            const insertedProducts = await Product.insertMany(products);
-
-            // Respond with success
-            res.json({ success: true, message: `${insertedProducts.length} products successfully imported` });
-        } catch (error) {
-            console.error('Error importing products:', error);
-            res.status(500).json({ success: false, message: 'Failed to import products', error: error.message });
-        }
-    }),
-    
-    // Delete a product
-    deleteProduct: asyncHandler(async (req, res) => {
-        try {
-            const product = await Product.findById(req.params.id);
-            if (!product) {
-                return res.status(404).json({ success: false, message: 'Product not found' });
+            const user = await User.findById(req.params.id);
+            if (!user) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: "user not found" 
+                });
             }
-            await Product.findByIdAndDelete(req.params.id);
-            res.status(200).json({ success: true, message: 'Product deleted successfully' });
+            await User.deleteOne({ _id: req.params.id });
+            res.status(200).json({ 
+                success: true, 
+                message: `user with ID ${req.params.id} has been successfully deleted` 
+            });
         } catch (error) {
-            res.status(500).json({ success: false, message: 'Failed to delete product', error: error.message });
+            res.status(500).json({ 
+                success: false, 
+                message: "Failed to delete user", 
+                error: error.message 
+            });
         }
     }),
 
-    // Get low stock products
-    getLowStock: asyncHandler(async (req, res) => {
-        try {
-            const lowStock = await Product.find({
-                $and: [
-                    { $expr: { $lte: ["$quantity", "$quantityAlert"] } },  // Check if quantity is less than or equal to quantityAlert
-                    { status: { $ne: "deleted" } }  // Check if status is not "deleted"
-                ]
-            }).sort({createdAt:-1});
 
-            res.status(200).json({ success: true, lowStock });
-        } catch (error) {
-            res.status(500).json({ success: false, message: 'Failed to fetch low stock products', error: error.message });
-        }
-    }),
-
-    // Get out of stock products
-    getOutOfStock: asyncHandler(async (req, res) => {
-        try {
-            const noStock = await Product.find({
-                $and: [
-                    { $expr: { $lte: ["$quantity", 0] } },
-                    { status: { $ne: "deleted" } }
-                ]
-            }).sort({createdAt:-1});
-
-            res.status(200).json({ success: true, noStock });
-        } catch (error) {
-            res.status(500).json({ success: false, message: 'Failed to fetch out of stock products', error: error.message });
-        }
-    }),
-
-    generateReports: asyncHandler(async (req,res)=>{
-        try{
-            const products = await Product.find(
-                {}, // Find all products
-                {
-                    _id: 0,
-                    description: 0,
-                    variant: 0,
-                    discount: 0,
-                    discountType: 0,
-                    image: 0,
-                }
-            )
-            res.status(200).json({ success:true, products: products })
-        }catch(error){
-            res.status(500).json({ success: false, message: error.message });
-        }
-    }),
-      getProductsByCategory: asyncHandler(async (req, res) => {
-        const category = req.params.id; // Retrieve category from the URL params
-        let products;
-      
-        if (category === 'all') {
-          // Fetch all products if category is 'all'
-          products = await Product.find();
-        } else {
-          // Fetch products by the specific category
-          products = await Product.find({ category: category }).sort({createdAt:-1});
-        }
-      
-        res.status(200).json({ products: products });
-      })
 };
 
 module.exports = product;
