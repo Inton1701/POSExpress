@@ -1,8 +1,17 @@
 <template>
   <div class="main-wrapper">
     <div class="header">
-      <h1>POSExpress</h1>
+    <div class="d-flex justify-content-between align-items-center">
+      <!-- Logo / Title -->
+      <div class="logo">
+      <img src="assets/img/logo.png" alt="POSExpress"     class="img-fluid "
+      style="width: 200px; height: 60px;" />
     </div>
+
+      <!-- Logout Button -->
+      <button class="btn btn-primary" @click="logout()">LOGOUT</button>
+    </div>
+  </div>
 
     <div class="page-wrapper pos-pg-wrapper ms-0">
       <div class="content pos-design p-0">
@@ -352,13 +361,14 @@
 </template>
 <script>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 import { modalController } from '@/utils/modalController';
 import axios from 'axios';
 import 'sweetalert2'
 
 export default {
   setup() {
-    // Reactive Variables
+    const router = useRouter();
     const apiURL = process.env.VUE_APP_URL;
     const imgURL = process.env.VUE_APP_IMAGE_URL;
     const selectedCategory = ref('all');
@@ -385,7 +395,7 @@ export default {
     const focusedCartIndex = ref(0);
     const isNewTransaction = ref(true);
     const isTransactionOpen = ref(false);
-    // Computed Variables
+
     const total = computed(() =>
       subtotal.value + (subtotal.value * VAT.value) / 100 - discount.value
     );
@@ -553,7 +563,12 @@ export default {
             returnItems.value = []; // Clear previously selected items
             transactionError.value = null; // Clear any previous errors
           }
-
+          break;
+          case 'l': // Check for Ctrl + L
+          if (event.ctrlKey) {
+            event.preventDefault();
+            router.push('/lockscreen'); // Redirect to lock screen
+          }
           break;
         default:
           break;
@@ -650,7 +665,7 @@ export default {
           cash: clientPayment.value,
           change: change.value,
           status: "Completed", // Transaction status
-          employee: "JohnDoe", // Example employee, replace with actual
+          employee: localStorage.getItem("user"), // Example employee, replace with actual
         };
 
         // Send transaction data to the backend
@@ -811,7 +826,7 @@ export default {
         // Await the axios call to get the response properly
         const response = await axios.post(`${apiURL}/return_transaction/${transactionId.value}`, {
           returnedItems: itemsToReturn,
-          employee: 'JhonDoe'
+          employee: localStorage.getItem("user")
         });
 
         console.log(response.data); // This will now log the actual response data
@@ -1067,7 +1082,53 @@ const checkState = async () => {
   }
 };
 
+const logout =  () =>{
+      Swal.fire({
+        title: 'Are you sure?',
+        text: "You will be logged out of your account.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, logout!',
+        cancelButtonText: 'Cancel'
+      }).then( async(result) => {
+        if (result.isConfirmed) {
+          try{
+            const userId = localStorage.getItem('id');
+          const response = await axios.patch(`${apiURL}/logout/${userId}`)
+          if(response.data.success) {
+          // Clear local storage
+          localStorage.removeItem('token');
+          localStorage.removeItem('role');
+          localStorage.removeItem('id');
+          localStorage.removeItem('user');
+          localStorage.removeItem('emails');
+          localStorage.removeItem("image");
+          
+          // Redirect to home
+          router.push('/');
+          
+          Swal.fire(
+            'Logged Out',
+            'You have been successfully logged out.',
+            'success'
+          );
+          }else{
+            Swal.fire(
+            'Logged Out',
+            'An error occurred during logout',
+            'error'
+          );
+          router.push('/');
+          }
 
+          }catch(error){
+            Swal.fire('Error','An error occurred during logout','error'); 
+            console.log(error);
+          }
+         
+        }
+      });
+    };
 
     // Assuming `processReturn` and `transactionError` are defined somewhere in your code.
 
@@ -1130,7 +1191,8 @@ const checkState = async () => {
       openPaymentModal,
       openVoidModal,
       openReturnModal,
-      processPayment
+      processPayment,
+      logout
     };
   },
 };

@@ -73,37 +73,37 @@
         </li>
 
         <li class="nav-item nav-item-box">
-          <a href="general-settings.html"><i data-feather="settings"></i></a>
+          <router-link to="/settings" ><i data-feather="settings"></i></router-link>
         </li>
         <li class="nav-item dropdown has-arrow main-drop">
           <a href="javascript:void(0);" class="dropdown-toggle nav-link userset" data-bs-toggle="dropdown">
             <span class="user-info">
               <span class="user-letter">
-                <img src="assets/img/profiles/avator1.jpg" alt class="img-fluid" />
+                <img :src="image ? `${imageURL}${image}` : '/img/icons/no-image-icon.png'" alt="User image" class="img-fluid" />
+
               </span>
               <span class="user-detail">
-                <span class="user-name">Ariston Pogi</span>
-                <span class="user-role">Super Admin</span>
+                <span class="user-name">{{ user }}</span>
+                <span class="user-role">{{  role }}</span>
               </span>
             </span>
           </a>
           <div class="dropdown-menu menu-drop-user">
             <div class="profilename">
               <div class="profileset">
-                <span class="user-img"><img src="assets/img/profiles/avator1.jpg" alt />
+                <span class="user-img">   <img :src="image ? `${imageURL}${image}` : '/img/icons/no-image-icon.png'" alt="User image" class="img-fluid" />
                   <span class="status online"></span></span>
                 <div class="profilesets">
-                  <h6>Ariston Pogi</h6>
-                  <h5>Super Admin</h5>
+                  <h6>{{ user }}</h6>
+                  <h5>{{  role }}</h5>
                 </div>
               </div>
               <hr class="m-0" />
-              <a class="dropdown-item" href="profile.html">
-                <i class="me-2" data-feather="user"></i> My Profile</a>
-              <a class="dropdown-item" href="general-settings.html"><i class="me-2"
-                  data-feather="settings"></i>Settings</a>
+           
+              <router-link class="dropdown-item" to="/settings"><i class="me-2"
+                  data-feather="settings"></i>Settings</router-link>
               <hr class="m-0" />
-              <a class="dropdown-item logout pb-0" href="signin.html"><img src="/src/assets/img/icons/log-out.svg"
+              <a class="dropdown-item logout pb-0" href="#"  @click="logout"><img src="assets/img/icons/log-out.svg"
                   class="me-2" alt="img" />Logout</a>
             </div>
           </div>
@@ -114,14 +114,12 @@
         <a href="javascript:void(0);" class="nav-link dropdown-toggle" data-bs-toggle="dropdown"
           aria-expanded="false"><i class="fa fa-ellipsis-v"></i></a>
         <div class="dropdown-menu dropdown-menu-right">
-          <a class="dropdown-item" href="profile.html">My Profile</a>
+
           <a class="dropdown-item" href="general-settings.html">Settings</a>
-          <a class="dropdown-item" href="signin.html">Logout</a>
+          <a class="dropdown-item" href="/">Logout</a>
         </div>
       </div>
-
     </div>
-
     <div class="sidebar" id="sidebar">
       <div class="sidebar-inner slimscroll">
         <div id="sidebar-menu" class="sidebar-menu">
@@ -129,14 +127,11 @@
             <li class="submenu-open">
               <h6 class="submenu-hdr">Main</h6>
               <ul>
-
                 <ul>
                   <li>
-                    <router-link to="/"><i data-feather="grid"></i><span>Admin Dashboard</span></router-link>
+                    <router-link to="/dashboard"><i data-feather="grid"></i><span>Admin Dashboard</span></router-link>
                   </li>
                 </ul>
-
-
               </ul>
             </li>
             <li class="submenu-open">
@@ -217,7 +212,7 @@
 
 
                 <li>
-                  <a href="logout"><i data-feather="log-out"></i><span>Logout</span>
+                  <a href="#" @click="logout"><i data-feather="log-out"></i><span>Logout</span>
                   </a>
                 </li>
               </ul>
@@ -234,11 +229,18 @@
 <script>
 import { ref, onMounted, nextTick } from 'vue';
 import feather from 'feather-icons';
-
+import { useRouter } from 'vue-router';
+import axios from 'axios';
 export default {
   name: 'Navbar',
   setup() {
+    const imageURL = process.env.VUE_APP_IMAGE_URL;
+    const apiURL = process.env.VUE_APP_URL;
     const isFullScreen = ref(false);
+    const user = localStorage.getItem("user"); 
+    const role = localStorage.getItem("role");
+    const image = localStorage.getItem("image");
+    const router = useRouter();
 
     const toggleFullScreen = async () => {
       try {
@@ -261,13 +263,66 @@ export default {
       }
     };
 
+    const logout =  () =>{
+      Swal.fire({
+        title: 'Are you sure?',
+        text: "You will be logged out of your account.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, logout!',
+        cancelButtonText: 'Cancel'
+      }).then( async(result) => {
+        if (result.isConfirmed) {
+          try{
+            const userId = localStorage.getItem('id');
+          const response = await axios.patch(`${apiURL}/logout/${userId}`)
+          if(response.data.success) {
+          // Clear local storage
+          localStorage.removeItem('token');
+          localStorage.removeItem('role');
+          localStorage.removeItem('id');
+          localStorage.removeItem('user');
+          localStorage.removeItem('emails');
+          localStorage.removeItem('image');
+          // Redirect to home
+          router.push('/');
+          
+          Swal.fire(
+            'Logged Out',
+            'You have been successfully logged out.',
+            'success'
+          );
+          }else{
+            Swal.fire(
+            'Logged Out',
+            'An error occurred during logout',
+            'error'
+          );
+          router.push('/');
+          }
+
+          }catch(error){
+            Swal.fire('Error','An error occurred during logout','error'); 
+            console.log(error);
+          }
+         
+        }
+      });
+    };
+
     onMounted(() => {
       feather.replace();
     });
 
     return {
       isFullScreen,
-      toggleFullScreen
+      toggleFullScreen,
+      user,
+      logout,
+      role,
+      imageURL,
+      image,
+
     };
   }
 };

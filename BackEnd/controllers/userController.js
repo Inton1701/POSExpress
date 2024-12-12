@@ -1,6 +1,7 @@
 const User = require("../models/Users");
 const History = require("../models/StocksHistory");
 const asyncHandler = require("express-async-handler");
+const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
@@ -152,7 +153,100 @@ addUser: asyncHandler(async (req, res) => {
             });
         }
     }),
-
+    login:asyncHandler(async (req, res) => {
+        try {
+          const { email, password } = req.body;
+      
+          // Find user by email
+          const user = await User.findOne({ email: email });
+          if (!user) {
+            return res.status(404).json({
+              success: false,
+              message: "Email not found",
+            });
+          }
+          if(user.userStatus === 'Disabled') {
+            return res.status(404).json({
+            success: false,
+            message: "Your account is disabled",
+           })
+          }
+      
+          user.status = 'Online';
+          user.login = new Date();
+          await user.save();
+          // Compare provided password with stored hashed password
+          const isMatch = await bcrypt.compare(password, user.password);
+          if (!isMatch) {
+            return res.status(401).json({
+              success: false,
+              message: "Invalid credentials",
+            });
+          }
+      
+          // Generate JWT token
+          const token = jwt.sign(
+            {
+              id: user._id,
+              role: user.role,
+              user: `${user.firstName} ${user.lastName}`,
+              email : user.email,
+              image: user.image,
+            },
+            process.env.JWT_SECRET, 
+            { expiresIn: "12h" } 
+          );
+      
+          // Respond with token and user role
+          res.status(200).json({
+            success: true,
+            message: "Login successful",
+            token: token,
+            role: user.role, 
+            user: `${user.firstName} ${user.lastName}`,
+            id: user._id,
+            emails : user.email,
+            image: user.image,
+          });
+        } catch (error) {
+          res.status(500).json({
+            success: false,
+            message: "An error occurred during login",
+            error: error.message,
+          });
+        }
+      }),
+      logout: asyncHandler(async (req, res) => {
+        try {
+          const { id } = req.params; // Correctly destructuring `id` from `req.params`
+      
+          // Find the user by ID
+          const user = await User.findOne({ _id: id });
+          if (!user) {
+            return res.status(404).json({
+              success: false,
+              message: "User not found",
+            });
+          }
+      
+          // Update user status and logout time
+          user.status = 'Offline'; // Corrected to lowercase for consistency
+          user.logout = new Date();
+          await user.save();
+      
+          res.status(200).json({
+            success: true,
+            message: "Logout successful",
+          });
+        } catch (error) {
+          res.status(500).json({
+            success: false,
+            message: "An error occurred during logout",
+            error: error.message,
+          });
+        }
+      })
+      
 
 };
 
