@@ -38,3 +38,16 @@ __screenshots__/
 node_modules
 public
 .env
+
+# System files
+.DS_Store
+thumbs.db
+# Production build files
+dist/
+dist-electron/
+*.exe
+*.AppImage
+
+# Sensitive Info
+.env
+.env.local

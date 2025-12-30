@@ -1,0 +1,94 @@
+{
+  "name": "pos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "docker compose up --build -d && wait-on http://posexpress.app && cd frontend && npm run electron:dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "vite build && electron-builder",
+    "test:unit": "vitest",
+    "prepare": "cypress install",
+    "test:e2e": "start-server-and-test preview http://localhost:4173 'cypress run --e2e'",
+    "test:e2e:dev": "start-server-and-test 'vite dev --port 4173' http://localhost:4173 'cypress open --e2e'",
+    "lint:oxlint": "oxlint . --fix -D correctness --ignore-path .gitignore",
+    "lint:eslint": "eslint . --fix --cache",
+    "lint": "run-s lint:*",
+    "format": "prettier --write --experimental-cli src/"
+  },
+  "build": {
+    "appId": "com.rfidpos.app",
+    "productName": "RFID POS System",
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/posxpress-logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.1.0",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/vue-fontawesome": "^3.1.2",
+    "axios": "^1.13.2",
+    "bwip-js": "^4.8.0",
+    "chart.js": "^4.5.1",
+    "dotenv": "^17.2.3",
+    "jsbarcode": "^3.12.1",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.25",
+    "vue-router": "^4.6.3",
+    "xmldom": "^0.6.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@prettier/plugin-oxc": "^0.0.5",
+    "@vitejs/plugin-vue": "^6.0.2",
+    "@vitest/eslint-plugin": "^1.5.0",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/test-utils": "^2.4.6",
+    "autoprefixer": "^10.4.23",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "cypress": "^15.7.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "electron-pos-printer": "^1.3.8",
+    "eslint": "^9.39.1",
+    "eslint-plugin-cypress": "^5.2.0",
+    "eslint-plugin-oxlint": "~1.29.0",
+    "eslint-plugin-vue": "~10.5.1",
+    "globals": "^16.5.0",
+    "jsdom": "^27.2.0",
+    "npm-run-all2": "^8.0.4",
+    "oxlint": "~1.29.0",
+    "postcss": "^8.5.6",
+    "prettier": "3.6.2",
+    "start-server-and-test": "^2.1.3",
+    "tailwindcss": "^3.4.19",
+    "vite": "^7.2.4",
+    "vite-plugin-vue-devtools": "^8.0.5",
+    "vitest": "^4.0.14",
+    "wait-on": "^9.0.3"
+  }
+}
