@@ -18,13 +18,35 @@ function createWindow() {
     }
   })
 
+  // Set global API URL before loading the app
+  global.API_URL = process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api' : 'http://localhost:5000/api')
+
   // Load your Vue app
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools() // Open dev tools in development
   } else {
+    // In production, load from dist folder
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    
+    // Check if running from AppImage or portable executable
+    const isAppImage = process.env.APPIMAGE
+    const isPortable = process.env.PORTABLE_EXECUTABLE_DIR
+    
+    // For packaged app, set API URL based on environment
+    if (isAppImage || isPortable || process.platform === 'linux' || process.platform === 'win32') {
+      global.API_URL = process.env.API_URL || 'http://localhost:5000/api'
+    }
   }
+
+  // Inject API URL into preload
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.executeJavaScript(`
+      window.__APP_CONFIG__ = {
+        API_URL: '${global.API_URL}'
+      }
+    `).catch(() => {}) // Ignore errors from this injection
+  })
 }
 
 app.whenReady().then(createWindow)
