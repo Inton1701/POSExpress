@@ -1,0 +1,351 @@
+const User = require("../models/User");
+const asyncHandler = require("express-async-handler");
+const bcrypt = require("bcrypt");
+
+const user = {
+    // Get all users
+    getAllUsers: asyncHandler(async (req, res) => {
+        try {
+            const users = await User.find().select('-password').populate('store', 'storeName address contact');
+            res.status(200).json({ success: true, users });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Failed to fetch users', error: error.message });
+        }
+    }),
+
+    // Create a user
+    createUser: asyncHandler(async (req, res) => {
+        try {
+            let { username, password, role, store, rfid } = req.body;
+
+            // Validate required fields
+            if (!username || !password || !role) {
+                return res.status(400).json({ success: false, message: "Username, password, and role are required" });
+            }
+
+            // Role-based validation and store assignment
+            if (req.user) {
+                if (req.user.role === 'Co-Admin') {
+                    // Co-Admin can only create Cashiers
+                    if (role !== 'Cashier') {
+                        return res.status(403).json({ 
+                            success: false, 
+                            message: "Co-Admin can only create Cashier users" 
+                        });
+                    }
+                    // Automatically assign to Co-Admin's store
+                    store = req.user.store._id;
+                } else if (req.user.role === 'Admin') {
+                    // Admin can create Co-Admin, Cashier, and Accounting
+                    if (role !== 'Co-Admin' && role !== 'Cashier' && role !== 'Admin' && role !== 'Accounting') {
+                        return res.status(400).json({ 
+                            success: false, 
+                            message: "Invalid role. Must be Admin, Co-Admin, Cashier, or Accounting" 
+                        });
+                    }
+                    // Admin must specify store
+                    if (!store) {
+                        return res.status(400).json({ 
+                            success: false, 
+                            message: "Store is required for user assignment" 
+                        });
+                    }
+                } else {
+                    return res.status(403).json({ 
+                        success: false, 
+                        message: "You don't have permission to create users" 
+                    });
+                }
+            } else {
+                // If no user context (e.g., initial setup), require store
+                if (!store) {
+                    return res.status(400).json({ success: false, message: "Store is required" });
+                }
+            }
+
+            // Check if username already exists
+            const existingUser = await User.findOne({ username });
+            if (existingUser) {
+                return res.status(400).json({ success: false, message: "Username already exists" });
+            }
+
+            // Hash password
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            const createdUser = await User.create({
+                username,
+                password: hashedPassword,
+                role,
+                store,
+                rfid: rfid || undefined // Only set if provided
+            });
+
+            // Populate store information
+            await createdUser.populate('store', 'storeName address contact');
+
+            // Return user without password
+            const userResponse = {
+                _id: createdUser._id,
+                username: createdUser.username,
+                role: createdUser.role,
+                store: createdUser.store,
+                createdAt: createdUser.createdAt,
+                updatedAt: createdUser.updatedAt
+            };
+
+            res.status(201).json({ success: true, user: userResponse });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Failed to create user', error: error.message });
+        }
+    }),
+
+    // Login user
+    loginUser: asyncHandler(async (req, res) => {
+        try {
+            const { username, password, rfid } = req.body;
+
+            let user;
+
+            // Login with RFID
+            if (rfid) {
+                user = await User.findOne({ rfid }).populate('store', 'storeName address contact');
+                
+                if (!user) {
+                    return res.status(401).json({ success: false, message: 'Invalid RFID' });
+                }
+            } 
+            // Login with username and password
+            else if (username && password) {
+                user = await User.findOne({ username }).populate('store', 'storeName address contact');
+                
+                if (!user) {
+                    return res.status(401).json({ success: false, message: 'Invalid username or password' });
+                }
+
+                // Check password using bcrypt
+                const isPasswordValid = await bcrypt.compare(password, user.password);
+                if (!isPasswordValid) {
+                    return res.status(401).json({ success: false, message: 'Invalid username or password' });
+                }
+            } 
+            // Missing required fields
+            else {
+                return res.status(400).json({ success: false, message: "Username and password, or RFID are required" });
+            }
+
+            // Return user without password
+            const userResponse = {
+                _id: user._id,
+                username: user.username,
+                role: user.role,
+                store: user.store,
+                rfid: user.rfid,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt
+            };
+
+            res.status(200).json({ success: true, user: userResponse, message: 'Login successful' });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Login failed', error: error.message });
+        }
+    }),
+
+    // Get a single user by ID
+    getUser: asyncHandler(async (req, res) => {
+        try {
+            const user = await User.findById(req.params.id).select('-password').populate('store', 'storeName address contact');
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            res.status(200).json({ success: true, user });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Failed to fetch user', error: error.message });
+        }
+    }),
+
+    // Update a user
+    updateUser: asyncHandler(async (req, res) => {
+        try {
+            const user = await User.findById(req.params.id);
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            // If updating username, check if new username already exists
+            if (req.body.username && req.body.username !== user.username) {
+                const existingUser = await User.findOne({ username: req.body.username });
+                if (existingUser) {
+                    return res.status(400).json({ success: false, message: "Username already exists" });
+                }
+            }
+
+            // Validate role if being updated
+            if (req.body.role) {
+                const validRoles = ['Admin', 'Cashier', 'Co-Admin', 'Accounting'];
+                if (!validRoles.includes(req.body.role)) {
+                    return res.status(400).json({ success: false, message: "Invalid role. Must be Admin, Cashier, Co-Admin, or Accounting" });
+                }
+            }
+
+            // Handle password change with current password verification
+            if (req.body.newPassword && req.body.currentPassword) {
+                // Verify current password
+                const isPasswordValid = await bcrypt.compare(req.body.currentPassword, user.password);
+                if (!isPasswordValid) {
+                    return res.status(400).json({ success: false, message: "Current password is incorrect" });
+                }
+                
+                // Hash new password
+                const salt = await bcrypt.genSalt(10);
+                user.password = await bcrypt.hash(req.body.newPassword, salt);
+            } else if (req.body.password) {
+                // Legacy password update (for admin updating other users)
+                const salt = await bcrypt.genSalt(10);
+                user.password = await bcrypt.hash(req.body.password, salt);
+            }
+
+            // Update other fields (exclude password fields from body)
+            const allowedUpdates = ['username', 'email', 'role', 'store', 'rfid'];
+            allowedUpdates.forEach(key => {
+                if (req.body[key] !== undefined) {
+                    user[key] = req.body[key];
+                }
+            });
+            
+            user.updatedAt = Date.now();
+            await user.save();
+
+            // Remove password from response
+            const userResponse = user.toObject();
+            delete userResponse.password;
+
+            res.status(200).json({ success: true, user: userResponse, message: 'User updated successfully' });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Failed to update user', error: error.message });
+        }
+    }),
+
+    // Delete a user
+    deleteUser: asyncHandler(async (req, res) => {
+        try {
+            const user = await User.findById(req.params.id);
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            await User.findByIdAndDelete(req.params.id);
+
+            res.status(200).json({ success: true, message: 'User deleted successfully' });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Failed to delete user', error: error.message });
+        }
+    }),
+
+    // Update print preferences
+    updatePrintPreferences: asyncHandler(async (req, res) => {
+        try {
+            const user = await User.findById(req.params.id);
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            const { selectedPrinter, printMode } = req.body;
+
+            // Validate printMode if provided
+            if (printMode && !['auto', 'manual', 'off'].includes(printMode)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Invalid print mode. Must be auto, manual, or off' 
+                });
+            }
+
+            // Update print preferences
+            if (!user.printPreferences) {
+                user.printPreferences = {};
+            }
+            
+            if (selectedPrinter !== undefined) {
+                user.printPreferences.selectedPrinter = selectedPrinter;
+            }
+            if (printMode !== undefined) {
+                user.printPreferences.printMode = printMode;
+            }
+
+            user.updatedAt = Date.now();
+            await user.save();
+
+            res.status(200).json({ 
+                success: true, 
+                printPreferences: user.printPreferences,
+                message: 'Print preferences updated successfully' 
+            });
+        } catch (error) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Failed to update print preferences', 
+                error: error.message 
+            });
+        }
+    }),
+
+    // Get print preferences
+    getPrintPreferences: asyncHandler(async (req, res) => {
+        try {
+            const user = await User.findById(req.params.id).select('printPreferences');
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            res.status(200).json({ 
+                success: true, 
+                printPreferences: user.printPreferences || { selectedPrinter: null, printMode: 'manual' }
+            });
+        } catch (error) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Failed to fetch print preferences', 
+                error: error.message 
+            });
+        }
+    }),
+
+    // Verify password for POS lock/unlock
+    verifyPassword: asyncHandler(async (req, res) => {
+        try {
+            const { userId, password } = req.body;
+
+            if (!userId || !password) {
+                return res.status(400).json({ success: false, message: 'User ID and password are required' });
+            }
+
+            const user = await User.findById(userId);
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            const isMatch = await bcrypt.compare(password, user.password);
+            
+            if (isMatch) {
+                res.status(200).json({ success: true, message: 'Password verified' });
+            } else {
+                res.status(401).json({ success: false, message: 'Invalid password' });
+            }
+        } catch (error) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Failed to verify password', 
+                error: error.message 
+            });
+        }
+    })
+};
+
+module.exports = user;

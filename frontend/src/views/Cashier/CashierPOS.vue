@@ -1,0 +1,2657 @@
+<template>
+  <div class="bg-gray-100 h-screen flex flex-col" style="touch-action: manipulation;" @click="handlePageClick">
+    <!-- Hidden barcode input for scanning -->
+    <input 
+      ref="barcodeInput" 
+      v-model="barcodeValue" 
+      @keyup.enter="handleBarcodeScanned" 
+      @blur="handleBarcodeBlur"
+      type="text" 
+      class="absolute opacity-0" 
+      style="position: fixed; top: -100px; left: -100px;"
+      aria-hidden="true"
+    />
+    <header class="bg-white shadow-lg p-3">
+      <div class="flex justify-between items-center">
+        <div class="flex-1 flex items-center gap-2">
+          <!-- Session Status Indicator -->
+          <div class="flex items-center gap-2 px-3 py-1 rounded-full" :class="sessionActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+            <div class="w-2 h-2 rounded-full" :class="sessionActive ? 'bg-green-600' : 'bg-red-600'"></div>
+            <span class="text-xs font-semibold">{{ sessionActive ? 'Session Active' : 'Session Inactive' }}</span>
+          </div>
+        </div>
+        <div class="flex-1 flex justify-center">
+          <img src="/posxpress-logo.png" alt="PosXpress" class="h-12" />
+        </div>
+        <div class="flex-1 flex justify-end relative">
+          <button @click="toggleMenu" class=" text-gray font-bold py-2 px-4 border shadow">
+            <font-awesome-icon :icon="isMenuOpen ? 'times' : 'bars'" class="text-xl" />
+          </button>
+          <!-- Popover Menu -->
+          <div v-if="isMenuOpen" class="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-300 shadow-lg z-50">
+            <button @click="openBalanceModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 border-b">
+              <font-awesome-icon icon="wallet" class="text-blue-500" />
+              <span>Check Balance</span>
+            </button>
+            <button @click="openCashInModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 border-b">
+              <font-awesome-icon icon="money-bill-wave" class="text-yellow-500" />
+              <span>Cash In</span>
+            </button>
+            <button @click="goToCustomerTransactions" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 border-b">
+              <font-awesome-icon icon="users" class="text-purple-500" />
+              <span>Customer Transactions</span>
+            </button>
+            <button @click="goToTransactions" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 border-b">
+              <font-awesome-icon icon="receipt" class="text-blue-500" />
+              <span>Transactions</span>
+            </button>
+            <button @click="goToSales" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 border-b">
+              <font-awesome-icon icon="chart-line" class="text-green-500" />
+              <span>Sales Report</span>
+            </button>
+            <button @click="openSettingsModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 border-b">
+              <font-awesome-icon icon="cog" class="text-gray-600" />
+              <span>Settings</span>
+            </button>
+            <button v-if="isCoAdmin" @click="goToAdminPanel" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 border-b">
+              <font-awesome-icon icon="user-shield" class="text-purple-500" />
+              <span>Admin Panel</span>
+            </button>
+            <button @click="openLockConfirmModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 border-b text-orange-600">
+              <font-awesome-icon icon="lock" />
+              <span>Lock POS</span>
+            </button>
+            <button @click="openLogoutModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-red-600">
+              <font-awesome-icon icon="sign-out-alt" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+      <!-- Order List (Left) -->
+      <div class="w-56 sm:w-64 md:w-72 lg:w-80 bg-white border-r  flex flex-col">
+        <div class="flex-1 overflow-y-auto p-3">
+          <div class="flex  b-2 justify-between items-center mb-3">
+            <h3 class="font-bold text-lg">Order Items</h3>
+            <div class="flex gap-2">
+              <button @click="openBarcodeModal" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 text-sm flex items-center gap-1">
+                <font-awesome-icon icon="barcode" />
+              </button>
+              <button @click="openClearAllModal" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-3 text-sm flex items-center gap-1">
+                <font-awesome-icon icon="times" />
+              </button>
+            </div>
+          </div>
+          <div v-if="barcodeError" class="mb-2 p-2 bg-red-100 border border-red-400 text-red-700 text-sm">
+            {{ barcodeError }}
+          </div>
+          <div v-for="(item, index) in orderItems" :key="index" :class="index === orderItems.length - 1 ? 'bg-blue-100 border-blue-300' : 'bg-gray-50 border-gray-300'" class="mb-2 p-2 border">
+            <div class="flex justify-between items-start mb-1">
+              <div class="flex-1">
+                <span class="font-semibold text-sm">{{ item.name }}</span>
+                <span v-if="item.isVattable" class="ml-2 text-xs text-green-600 font-semibold">(VAT)</span>
+                <!-- Display addons -->
+                <div v-if="item.addons && item.addons.length > 0" class="ml-3 mt-1">
+                  <div v-for="addon in item.addons" :key="addon.addonId" class="text-xs text-gray-600 italic">
+                    + {{ addon.name }} (₱{{ addon.price.toFixed(2) }} x {{ addon.quantity }})
+                  </div>
+                </div>
+              </div>
+              <span class="font-bold">₱{{ (getItemPrice(item) * item.quantity).toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-1">
+                <button @click="adjustQuantity(index, -1)" class="bg-red-500 hover:bg-red-600 text-white w-6 h-6 text-sm">-</button>
+                <span class="text-sm font-semibold px-2">{{ item.quantity }}</span>
+                <button @click="adjustQuantity(index, 1)" class="bg-green-500 hover:bg-green-600 text-white w-6 h-6 text-sm">+</button>
+              </div>
+              <button @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-xs">Remove</button>
+            </div>
+          </div>
+          <div v-if="orderItems.length === 0" class="text-center text-gray-500 py-6 text-sm">
+            No items
+          </div>
+        </div>
+        
+        <div class="border-t p-3 bg-white">
+          <div class="flex justify-between items-center text-2xl font-bold mb-2">
+            <span>Total:</span>
+            <span>₱{{ totalAmount.toFixed(2) }}</span>
+          </div>
+          <div v-if="showChange" class="flex justify-between items-center text-lg border-t pt-2">
+            <span>Change:</span>
+            <span class="font-bold text-purple-600">₱{{ changeAmount.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Products Grid (Center) -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Search Bar -->
+        <div class="p-2 bg-white border-b">
+          <input v-model="searchQuery" type="text" placeholder="Search products..." class="w-full p-3 border border-gray-300 text-lg" />
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-2">
+          <!-- Back Button (when viewing variants) -->
+          <div v-if="viewingVariants" class="mb-2 flex justify-end">
+            <button @click="backToProducts" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 text-sm">
+              ← Back to Products
+            </button>
+          </div>
+          
+          <!-- Products View -->
+          <div v-if="!viewingVariants" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+          <!-- Loading state -->
+          <div v-if="isLoading" class="col-span-full text-center py-12 text-gray-500">
+            Loading products...
+          </div>
+          <!-- No products found -->
+          <div v-else-if="filteredProducts.length === 0" class="col-span-full text-center py-12 text-gray-500">
+            No products found
+          </div>
+          <!-- Product buttons -->
+          <button 
+            v-else
+            v-for="product in filteredProducts" 
+            :key="product._id" 
+            @click="handleProductClick(product)" 
+            :disabled="getStockStatus(product) === 'out'"
+            :class="[
+              'relative font-bold py-8 px-2 flex items-center justify-center min-h-[80px]',
+              getStockStatus(product) === 'out' ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'
+            ]"
+          >
+            <span class="text-sm text-center">{{ product.name }}</span>
+            <!-- Stock indicator -->
+            <div v-if="getStockStatus(product) !== 'ok'" class="absolute top-1 right-1">
+              <span v-if="getStockStatus(product) === 'out'" class="bg-red-600 text-white text-xs px-2 py-1 font-bold">SOLD OUT</span>
+              <span v-else-if="getStockStatus(product) === 'low'" class="bg-yellow-500 text-white text-xs px-2 py-1 font-bold">!</span>
+            </div>
+          </button>
+        </div>
+        
+        <!-- Variants View -->
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+          <button 
+            v-for="variant in selectedProductVariants" 
+            :key="variant._id" 
+            @click="addVariantToOrder(variant)"
+            :disabled="getVariantStockStatus(variant) === 'out'"
+            :class="[
+              'relative font-bold py-8 px-2 flex items-center justify-center min-h-[80px]',
+              getVariantStockStatus(variant) === 'out' ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'
+            ]"
+          >
+            <span class="text-sm text-center">{{ variant.value }} - ₱{{ variant.price.toFixed(2) }}</span>
+            <!-- Variant stock indicator -->
+            <div v-if="getVariantStockStatus(variant) !== 'ok'" class="absolute top-1 right-1">
+              <span v-if="getVariantStockStatus(variant) === 'out'" class="bg-red-600 text-white text-xs px-2 py-1 font-bold">SOLD OUT</span>
+              <span v-else-if="getVariantStockStatus(variant) === 'low'" class="bg-yellow-500 text-white text-xs px-2 py-1 font-bold">!</span>
+            </div>
+          </button>
+        </div>
+        </div>
+      </div>
+
+      <!-- Categories (Right Sidebar) -->
+      <div class="w-40 bg-orange-500 flex flex-col">
+        <!-- Quick Adjust for Last Item -->
+        <div class="bg-orange-600 border-b border-orange-700 flex">
+          <button 
+            @click="adjustLastItem(-1)" 
+            :disabled="orderItems.length === 0"
+            :class="orderItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'"
+            class="bg-red-500 text-white font-bold flex-1 py-3 text-xl"
+          >
+            -
+          </button>
+          <button 
+            @click="adjustLastItem(1)" 
+            :disabled="orderItems.length === 0"
+            :class="orderItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'"
+            class="bg-green-500 text-white font-bold flex-1 py-3 text-xl"
+          >
+            +
+          </button>
+        </div>
+        
+        <!-- Category Buttons -->
+        <div class="flex-1 overflow-y-auto">
+          <button 
+            v-for="category in categories" 
+            :key="category._id"
+            @click="selectedCategory = category._id"
+            :class="selectedCategory === category._id ? 'bg-orange-700' : 'bg-orange-500 hover:bg-orange-600'"
+            class="w-full text-white font-bold py-6 px-4 border-b border-orange-600 text-sm"
+          >
+            {{ category.name }}
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Action Buttons at Bottom (Static) -->
+    <div class="bg-white border-t p-2">
+      <div class="grid grid-cols-3 gap-2">
+        <button @click="openVoidModal" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 text-base">
+          Void
+        </button>
+        <button @click="openRefundModal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 text-base">
+          Refund
+        </button>
+        <button 
+          @click="openPayModal" 
+          :disabled="orderItems.length === 0"
+          :class="orderItems.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'"
+          class="text-white font-bold py-4 text-base"
+        >
+          Pay
+        </button>
+      </div>
+    </div>
+
+    <!-- Pay Modal -->
+    <Modal :is-open="isPayModalOpen" title="Select Payment Method" @close="closePayModal">
+      <p class="mb-4 text-center text-gray-600">Choose payment method:</p>
+      <p class="text-2xl font-bold text-center mb-6">Total: ₱{{ totalAmount.toFixed(2) }}</p>
+      <div class="grid grid-cols-2 gap-4">
+        <button @click="selectPaymentMethod('Cash')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-6 px-4 rounded-xl flex flex-col items-center gap-2">
+          <font-awesome-icon icon="money-bill-wave" class="text-3xl" />
+          <span>Cash</span>
+        </button>
+        <button @click="selectPaymentMethod('E-wallet')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 px-4 rounded-xl flex flex-col items-center gap-2">
+          <font-awesome-icon icon="credit-card" class="text-3xl" />
+          <span>E-wallet/RFID</span>
+        </button>
+      </div>
+    </Modal>
+
+    <!-- Cash Payment Modal -->
+    <Modal :is-open="isCashPaymentModalOpen" title="Cash Payment" size="full" @close="closeCashPaymentModal">
+      <div class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left side: Amount Details -->
+        <div class="flex flex-col justify-center space-y-6">
+          <div>
+            <p class="text-lg text-gray-600 mb-2">Total Amount</p>
+            <p class="text-5xl font-bold text-blue-600">₱{{ totalAmount.toFixed(2) }}</p>
+          </div>
+          
+          <div>
+            <p class="text-lg text-gray-600 mb-2">Cash Received</p>
+            <div class="bg-gray-100 p-4 rounded-xl">
+              <p class="text-5xl font-bold text-green-600">₱{{ cashAmount || '0.00' }}</p>
+            </div>
+          </div>
+          
+          <div>
+            <p class="text-lg text-gray-600 mb-2">Change</p>
+            <div class="bg-gray-100 p-4 rounded-xl">
+              <p class="text-5xl font-bold" :class="changeAmount >= 0 ? 'text-purple-600' : 'text-red-600'">
+                ₱{{ changeAmount.toFixed(2) }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right side: Number Pad and Buttons -->
+        <div class="flex flex-col justify-between">
+          <!-- Number Pad -->
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <button v-for="num in [1,2,3,4,5,6,7,8,9]" :key="num" @click="addToCashAmount(num.toString())" 
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">
+              {{ num }}
+            </button>
+            <button @click="addToCashAmount('.')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">.</button>
+            <button @click="addToCashAmount('0')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">0</button>
+            <button @click="deleteCashAmount" class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl">
+              <font-awesome-icon icon="backspace" />
+            </button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-4">
+            <button @click="processCashPayment" :disabled="changeAmount < 0" 
+              :class="changeAmount < 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'"
+              class="w-full text-white font-bold py-5 text-2xl rounded-xl">
+              Complete Payment
+            </button>
+            <button @click="closeCashPaymentModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- RFID Payment Modal -->
+    <Modal :is-open="isRfidPaymentModalOpen" title="RFID Payment" @close="closeRfidPaymentModal">
+      <div v-if="!rfidCustomer" class="text-center">
+        <p class="mb-4 text-lg">Please tap your RFID card to continue</p>
+        <p class="text-2xl font-bold text-blue-600 mb-4">Total: ₱{{ totalAmount.toFixed(2) }}</p>
+        <div class="flex justify-center mb-4">
+          <font-awesome-icon icon="credit-card" class="text-6xl text-blue-500 animate-pulse" />
+        </div>
+        <input 
+          ref="rfidPaymentInput" 
+          v-model="rfidPaymentValue" 
+          @keyup.enter="handleRfidPayment" 
+          type="text" 
+          class="w-full p-3 border border-gray-300 rounded-xl"
+          placeholder="Tap RFID or enter manually"
+        />
+        <p v-if="rfidPaymentError" class="mt-2 text-red-600">{{ rfidPaymentError }}</p>
+      </div>
+
+      <div v-else class="text-center">
+        <div class="mb-4">
+          <font-awesome-icon icon="check-circle" class="text-6xl text-green-500 mb-2" />
+          <p class="text-xl font-bold mb-2">{{ rfidCustomer.fullName }}</p>
+          <p class="text-lg">Current Balance: <span class="font-bold text-blue-600">₱{{ rfidCustomer.balance.toFixed(2) }}</span></p>
+          <p class="text-lg">Total Amount: <span class="font-bold text-purple-600">₱{{ totalAmount.toFixed(2) }}</span></p>
+          <p class="text-lg mt-2">
+            Remaining Balance: 
+            <span class="font-bold" :class="(rfidCustomer.balance - totalAmount) >= 0 ? 'text-green-600' : 'text-red-600'">
+              ₱{{ (rfidCustomer.balance - totalAmount).toFixed(2) }}
+            </span>
+          </p>
+        </div>
+
+        <div v-if="rfidCustomer.balance < totalAmount" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4">
+          <p class="font-bold">Insufficient Balance!</p>
+          <p>Please add funds or use another payment method.</p>
+        </div>
+      </div>
+
+      <div class="flex gap-4 mt-4">
+        <button @click="closeRfidPaymentModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button v-if="rfidCustomer" @click="processRfidPayment" 
+          :disabled="rfidCustomer.balance < totalAmount"
+          :class="rfidCustomer.balance < totalAmount ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'"
+          class="flex-1 text-white font-bold py-2 px-4 rounded-2xl">
+          Confirm Payment
+        </button>
+      </div>
+    </Modal>
+
+    <!-- Balance Modal -->
+    <Modal :is-open="isBalanceModalOpen" title="Check Balance" @close="closeBalanceModal">
+      <div v-if="!balanceCustomer">
+        <p class="mb-4 text-center">Please tap your RFID card</p>
+        <div class="flex justify-center mb-4">
+          <font-awesome-icon icon="wallet" class="text-6xl text-blue-500 animate-pulse" />
+        </div>
+        <input 
+          ref="balanceRfidInput" 
+          v-model="balanceRfid" 
+          @keyup.enter="handleBalanceRfid" 
+          type="text" 
+          class="w-full p-3 border border-gray-300 rounded-xl text-center"
+          placeholder="Tap RFID or enter manually"
+        />
+        <p v-if="balanceError" class="mt-2 text-red-600 text-center">{{ balanceError }}</p>
+      </div>
+      
+      <div v-else>
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+          <p class="text-center font-bold text-lg mb-2">{{ balanceCustomer.fullName }}</p>
+          <p class="text-center text-gray-600 text-sm mb-1">RFID: {{ balanceCustomer.rfid }}</p>
+          <div class="text-center mt-4">
+            <p class="text-gray-600 text-sm">Current Balance</p>
+            <p class="text-4xl font-bold text-blue-600">₱{{ balanceCustomer.balance.toFixed(2) }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex gap-4">
+        <button @click="closeBalanceModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Close</button>
+        <button v-if="balanceCustomer" @click="printBalanceReceipt" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-2xl flex items-center justify-center gap-2">
+          <font-awesome-icon icon="print" />
+          Print
+        </button>
+      </div>
+    </Modal>
+
+    <!-- Cash In Modal -->
+    <Modal :is-open="isCashInModalOpen" title="Cash In" size="full" @close="closeCashInModal">
+      <div v-if="!cashInCustomer">
+        <p class="mb-4 text-center">Please tap your RFID card</p>
+        <div class="flex justify-center mb-4">
+          <font-awesome-icon icon="credit-card" class="text-6xl text-yellow-500 animate-pulse" />
+        </div>
+        <input 
+          ref="cashInRfidInput" 
+          v-model="cashInRfid" 
+          @keyup.enter="handleCashInRfid" 
+          type="text" 
+          class="w-full p-3 border border-gray-300 rounded-xl text-center"
+          placeholder="Tap RFID or enter manually"
+        />
+        <p v-if="cashInError" class="mt-2 text-red-600 text-center">{{ cashInError }}</p>
+      </div>
+      
+      <div v-else class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left Column: Customer Info and Amount -->
+        <div class="flex flex-col space-y-6 justify-start">
+          <div class="bg-green-50 border-2 border-green-300 rounded-xl p-6">
+            <p class="text-center font-bold text-3xl mb-3">{{ cashInCustomer.fullName }}</p>
+            <p class="text-center text-xl text-gray-700">Current Balance</p>
+            <p class="text-center font-bold text-4xl text-green-600 mt-2">₱{{ cashInCustomer.balance.toFixed(2) }}</p>
+          </div>
+          
+          <div>
+            <p class="mb-3 font-semibold text-2xl">Amount to Add:</p>
+            <input v-model="cashInAmount" type="text" readonly placeholder="0.00" class="w-full p-6 rounded-xl border-2 border-gray-300 text-right text-4xl font-bold bg-gray-50" />
+          </div>
+        </div>
+        
+        <!-- Right Column: Number Pad and Buttons -->
+        <div class="flex flex-col justify-between">
+          <!-- Number Pad -->
+          <div class="grid grid-cols-3 gap-3">
+            <button v-for="num in [1,2,3,4,5,6,7,8,9]" :key="num" 
+              @click="appendToCashIn(num)" 
+              class="bg-gray-200 hover:bg-gray-300 text-3xl font-bold py-6 rounded-xl transition">
+              {{ num }}
+            </button>
+            <button @click="appendToCashIn('.')" class="bg-gray-200 hover:bg-gray-300 text-3xl font-bold py-6 rounded-xl transition">.</button>
+            <button @click="appendToCashIn(0)" class="bg-gray-200 hover:bg-gray-300 text-3xl font-bold py-6 rounded-xl transition">0</button>
+            <button @click="deleteCashInDigit" class="bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-6 rounded-xl transition">
+              <font-awesome-icon icon="delete-left" />
+            </button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-4 mt-6">
+            <button @click="processCashIn" :disabled="!cashInAmount || parseFloat(cashInAmount) <= 0" 
+              :class="!cashInAmount || parseFloat(cashInAmount) <= 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'"
+              class="w-full text-white font-bold py-4 px-6 rounded-2xl text-xl">Add Funds</button>
+            <button @click="closeCashInModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 px-6 rounded-2xl text-xl">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons for RFID Screen -->
+      <div v-if="!cashInCustomer" class="flex justify-center mt-6">
+        <button @click="closeCashInModal" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+      </div>
+    </Modal>
+
+    <!-- Void Modal -->
+    <Modal :is-open="isVoidModalOpen" title="Void Transaction" @close="isVoidModalOpen = false">
+      <p class="mb-4 text-red-600">Are you sure you want to void this transaction? This action cannot be undone.</p>
+      <div class="flex gap-4">
+        <button @click="isVoidModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="processVoid" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-2xl">Void</button>
+      </div>
+    </Modal>
+
+    <!-- Manual Barcode Modal -->
+    <Modal :is-open="isBarcodeModalOpen" title="Manual Barcode Entry" @close="isBarcodeModalOpen = false">
+      <p class="mb-4">Enter product barcode/SKU:</p>
+      <input 
+        ref="manualBarcodeInput"
+        v-model="manualBarcode" 
+        @keyup.enter="processManualBarcode"
+        type="text" 
+        placeholder="Enter barcode" 
+        class="w-full p-3 rounded-xl border border-gray-300 mb-4" 
+      />
+      <div class="flex gap-4">
+        <button @click="isBarcodeModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="processManualBarcode" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-2xl">Add Item</button>
+      </div>
+    </Modal>
+
+    <!-- Lock Confirmation Modal -->
+    <Modal :is-open="isLockConfirmModalOpen" title="Lock POS" @close="isLockConfirmModalOpen = false">
+      <p class="mb-4">Are you sure you want to lock the POS? You will need to enter your password or scan your RFID to unlock.</p>
+      <div class="flex gap-4">
+        <button @click="isLockConfirmModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="lockPOS" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-2xl">Lock</button>
+      </div>
+    </Modal>
+
+    <!-- Lockscreen Overlay -->
+    <div v-if="isPOSLocked" class="fixed inset-0 bg-gray-900 bg-opacity-95 z-[9999] flex items-center justify-center">
+      <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+        <div class="text-center mb-6">
+          <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-orange-100 mb-4">
+            <font-awesome-icon icon="lock" class="text-orange-600 text-2xl" />
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">POS Locked</h2>
+          <p class="text-sm text-gray-600">Enter your password or scan your RFID to unlock</p>
+          <p class="text-xs text-gray-500 mt-2">Locked by: {{ lockedByUser }}</p>
+        </div>
+
+        <!-- Tab Selection -->
+        <div class="flex gap-2 mb-4">
+          <button 
+            @click="unlockMethod = 'password'" 
+            :class="unlockMethod === 'password' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
+            class="flex-1 py-2 rounded-lg font-semibold transition"
+          >
+            Password
+          </button>
+          <button 
+            @click="unlockMethod = 'rfid'" 
+            :class="unlockMethod === 'rfid' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
+            class="flex-1 py-2 rounded-lg font-semibold transition"
+          >
+            RFID
+          </button>
+        </div>
+
+        <!-- Password Input -->
+        <div v-if="unlockMethod === 'password'" class="space-y-4">
+          <div>
+            <label class="block text-sm font-bold mb-2 text-gray-700">Password</label>
+            <input 
+              v-model="unlockPassword" 
+              type="password" 
+              ref="unlockPasswordInput"
+              @keyup.enter="attemptUnlock"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your password"
+              autofocus
+            />
+          </div>
+          <button 
+            @click="attemptUnlock" 
+            :disabled="!unlockPassword"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            Unlock
+          </button>
+        </div>
+
+        <!-- RFID Input -->
+        <div v-if="unlockMethod === 'rfid'" class="space-y-4">
+          <div>
+            <label class="block text-sm font-bold mb-2 text-gray-700">RFID</label>
+            <input 
+              v-model="unlockRFID" 
+              type="text" 
+              ref="unlockRFIDInput"
+              @keyup.enter="attemptUnlock"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Scan your RFID card"
+              autofocus
+            />
+          </div>
+          <button 
+            @click="attemptUnlock" 
+            :disabled="!unlockRFID"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            Unlock
+          </button>
+        </div>
+
+        <div v-if="unlockError" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+          {{ unlockError }}
+        </div>
+
+        <!-- Logout Button -->
+        <div class="mt-6 pt-6 border-t">
+          <button 
+            @click="confirmLogout"
+            class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
+          >
+            <font-awesome-icon icon="sign-out-alt" />
+            <span>Logout</span>
+          </button>
+          <p class="text-xs text-center text-gray-500 mt-2">Can't unlock? Logout and login as a different user</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <Modal :is-open="isLogoutModalOpen" title="Confirm Logout" @close="isLogoutModalOpen = false">
+      <p class="mb-4">Are you sure you want to logout?</p>
+      <div class="flex gap-4">
+        <button @click="isLogoutModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="confirmLogout" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-2xl">Logout</button>
+      </div>
+    </Modal>
+
+    <!-- Clear All Confirmation Modal -->
+    <Modal :is-open="isClearAllModalOpen" title="Clear All Items" @close="isClearAllModalOpen = false">
+      <p class="mb-4 text-orange-600">Are you sure you want to clear all items from the order?</p>
+      <div class="flex gap-4">
+        <button @click="isClearAllModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="confirmClearAll" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-2xl">Clear All</button>
+      </div>
+    </Modal>
+
+    <!-- Settings Modal -->
+    <Modal :is-open="isSettingsModalOpen" title="Settings" @close="isSettingsModalOpen = false" size="lg">
+      <div class="space-y-6">
+        <!-- Printer Settings Section -->
+        <div class="border-b pb-4">
+          <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <font-awesome-icon icon="print" class="text-blue-600" />
+            Thermal Printer Settings
+          </h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2">Select Printer</label>
+              <div class="flex gap-2">
+                <select 
+                  v-model="selectedPrinter" 
+                  class="flex-1 p-2 border rounded-lg"
+                >
+                  <option :value="null">Auto-detect</option>
+                  <option v-for="printer in availablePrinters" :key="printer.name" :value="printer.name">
+                    {{ printer.name }} {{ printer.isDefault ? '(Default)' : '' }}
+                  </option>
+                </select>
+                <button 
+                  @click="refreshPrinters" 
+                  class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"
+                >
+                  <font-awesome-icon icon="sync-alt" :class="{ 'animate-spin': isRefreshingPrinters }" />
+                  Refresh
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-semibold mb-2">Print Mode</label>
+              <div class="space-y-2">
+                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="{ 'border-blue-500 bg-blue-50': printMode === 'auto' }">
+                  <input type="radio" v-model="printMode" value="auto" class="mr-3" />
+                  <div>
+                    <div class="font-semibold">Automatic</div>
+                    <div class="text-sm text-gray-600">Print receipt immediately without confirmation</div>
+                  </div>
+                </label>
+                
+                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="{ 'border-blue-500 bg-blue-50': printMode === 'manual' }">
+                  <input type="radio" v-model="printMode" value="manual" class="mr-3" />
+                  <div>
+                    <div class="font-semibold">Manual (Recommended)</div>
+                    <div class="text-sm text-gray-600">Show confirmation dialog before printing</div>
+                  </div>
+                </label>
+                
+                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="{ 'border-blue-500 bg-blue-50': printMode === 'off' }">
+                  <input type="radio" v-model="printMode" value="off" class="mr-3" />
+                  <div>
+                    <div class="font-semibold">Disabled</div>
+                    <div class="text-sm text-gray-600">Do not print receipts</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex gap-4 mt-6">
+        <button @click="isSettingsModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="saveSettings" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-2xl">Save Settings</button>
+      </div>
+    </Modal>
+
+    <!-- Print Confirmation Modal -->
+    <Modal :is-open="isPrintConfirmModalOpen" title="Print Receipt" @close="cancelPrint">
+      <div class="text-center py-4">
+        <div class="mb-4">
+          <font-awesome-icon icon="print" class="text-6xl text-blue-500" />
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Transaction Successful!</h3>
+        <p class="text-gray-600 mb-4">Would you like to print a receipt?</p>
+      </div>
+      <div class="flex gap-4">
+        <button @click="cancelPrint" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Skip</button>
+        <button @click="confirmPrint" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-2xl flex items-center justify-center gap-2">
+          <font-awesome-icon icon="print" />
+          Print Receipt
+        </button>
+      </div>
+    </Modal>
+
+    <!-- Refund Transaction Lookup Modal -->
+    <Modal :is-open="isRefundModalOpen" title="Refund Transaction" size="full" @close="closeRefundModal">
+      <div class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left side: Transaction ID and Error -->
+        <div class="flex flex-col justify-start space-y-4">
+          <div>
+            <p class="text-base text-gray-600 mb-2">Enter or scan the Transaction ID from the receipt</p>
+            <label class="block text-base font-bold mb-2">Transaction ID</label>
+            <input 
+              v-model="refundTransactionId"
+              type="text"
+              placeholder="Enter transaction ID"
+              class="w-full p-4 rounded-xl border-2 border-gray-300 text-center text-2xl font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
+            />
+            <button 
+              @click="pasteTransactionId"
+              class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold px-4 py-3 text-xl rounded-xl"
+              title="Paste Transaction ID"
+            >
+              <font-awesome-icon icon="paste" class="mr-2" /> Paste
+            </button>
+          </div>
+
+          <!-- Error Message -->
+          <div v-if="refundError" class="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p class="text-base text-red-600 font-semibold">{{ refundError }}</p>
+          </div>
+        </div>
+
+        <!-- Right side: Number Pad and Buttons -->
+        <div class="flex flex-col justify-between">
+          <!-- Number Pad -->
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <button v-for="num in [1, 2, 3, 4, 5, 6, 7, 8, 9]" :key="num" 
+              @click="addToRefundTransactionId(num.toString())"
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">
+              {{ num }}
+            </button>
+            <button @click="addToRefundTransactionId('.')" 
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">
+              .
+            </button>
+            <button @click="addToRefundTransactionId('0')" 
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">
+              0
+            </button>
+            <button @click="deleteRefundTransactionId" 
+              class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl">
+              <font-awesome-icon icon="backspace" />
+            </button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-4">
+            <button @click="searchRefundTransaction" :disabled="!refundTransactionId || isLoading"
+              class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-5 text-2xl rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ isLoading ? 'Searching...' : 'Search' }}
+            </button>
+            <button @click="closeRefundModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- Refund Details Modal -->
+    <Modal :is-open="isRefundDetailsModalOpen" title="Process Refund" size="lg" @close="closeRefundDetailsModal">
+      <div v-if="refundTransaction" class="space-y-4 max-h-[70vh] overflow-y-auto">
+        <!-- Transaction Info -->
+        <div class="bg-gray-50 rounded-xl p-4 space-y-2">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p class="text-gray-600">Transaction ID</p>
+              <p class="font-bold text-gray-800">{{ refundTransaction.transactionId }}</p>
+            </div>
+            <div>
+              <p class="text-gray-600">Date</p>
+              <p class="font-bold text-gray-800">{{ new Date(refundTransaction.createdAt).toLocaleString() }}</p>
+            </div>
+            <div>
+              <p class="text-gray-600">Payment Method</p>
+              <p class="font-bold text-gray-800">{{ refundTransaction.paymentMethod }}</p>
+            </div>
+            <div>
+              <p class="text-gray-600">Original Amount</p>
+              <p class="font-bold text-green-600">₱{{ refundTransaction.totalAmount.toFixed(2) }}</p>
+            </div>
+          </div>
+          
+          <!-- Customer Info (if RFID payment) -->
+          <div v-if="refundTransaction.customerDetails" class="border-t pt-2 mt-2">
+            <p class="text-gray-600 text-sm mb-1">Customer</p>
+            <p class="font-bold text-gray-800">{{ refundTransaction.customerDetails.fullName }}</p>
+            <p class="text-xs text-gray-500">RFID: {{ refundTransaction.customerDetails.rfid }}</p>
+            <p class="text-xs text-gray-500">Balance: ₱{{ refundTransaction.customerDetails.balance.toFixed(2) }}</p>
+          </div>
+        </div>
+
+        <!-- Items to Refund -->
+        <div>
+          <h3 class="font-bold text-gray-800 mb-2">Items to Refund</h3>
+          <div class="space-y-2">
+            <div v-for="(item, index) in refundItems" :key="index" 
+              class="bg-white border rounded-xl p-3 flex items-center justify-between">
+              <div class="flex-1">
+                <p class="font-semibold text-gray-800">{{ item.name }}</p>
+                <p class="text-xs text-gray-500">₱{{ item.price.toFixed(2) }} each</p>
+                <p class="text-xs text-gray-600">Max: {{ item.maxQuantity }}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button @click="adjustRefundQuantity(index, -1)" 
+                  class="bg-red-500 hover:bg-red-600 text-white font-bold w-8 h-8 rounded-lg">
+                  -
+                </button>
+                <span class="font-bold text-lg w-12 text-center">{{ item.refundQuantity }}</span>
+                <button @click="adjustRefundQuantity(index, 1)" 
+                  class="bg-green-500 hover:bg-green-600 text-white font-bold w-8 h-8 rounded-lg">
+                  +
+                </button>
+                <div class="text-right ml-2">
+                  <p class="font-bold text-gray-800">₱{{ (item.price * item.refundQuantity).toFixed(2) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Refund Summary -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div class="flex justify-between items-center">
+            <p class="text-lg font-bold text-gray-800">Total Refund Amount</p>
+            <p class="text-2xl font-bold text-blue-600">₱{{ refundAmount.toFixed(2) }}</p>
+          </div>
+          <p v-if="refundTransaction.paymentMethod === 'E-wallet'" class="text-sm text-gray-600 mt-2">
+            Amount will be refunded to customer's account
+          </p>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button @click="closeRefundDetailsModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl">
+            Cancel
+          </button>
+          <button @click="processRefund" :disabled="isLoading || refundAmount === 0"
+            class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+            {{ isLoading ? 'Processing...' : 'Process Refund' }}
+          </button>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- Alert/Message Modal -->
+    <Modal :is-open="isAlertModalOpen" :title="alertModalTitle" @close="isAlertModalOpen = false">
+      <div class="text-center py-4">
+        <p class="text-lg text-gray-700 whitespace-pre-line">{{ alertModalMessage }}</p>
+      </div>
+      <div class="flex justify-center mt-4">
+        <button @click="isAlertModalOpen = false" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-8 rounded-2xl">OK</button>
+      </div>
+    </Modal>
+
+    <!-- Toast Notification Component -->
+    <Toast ref="toastRef" />
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import Modal from '../../components/Modal.vue'
+import Toast from '../../components/Toast.vue'
+import axios from 'axios'
+import { printThermalReceipt, getAvailablePrinters } from '../../utils/printReceipt.js'
+
+const router = useRouter()
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+const searchQuery = ref('')
+const selectedCategory = ref('all')
+const orderItems = ref([])
+const viewingVariants = ref(false)
+const selectedProduct = ref(null)
+const selectedProductVariants = ref([])
+const isPayModalOpen = ref(false)
+const isCashPaymentModalOpen = ref(false)
+const isRfidPaymentModalOpen = ref(false)
+const cashAmount = ref('')
+const rfidPaymentValue = ref('')
+const rfidPaymentInput = ref(null)
+const rfidCustomer = ref(null)
+const rfidPaymentError = ref('')
+const showChange = ref(false)
+const isBalanceModalOpen = ref(false)
+const isCashInModalOpen = ref(false)
+const isVoidModalOpen = ref(false)
+const isBarcodeModalOpen = ref(false)
+const isLogoutModalOpen = ref(false)
+const isRefundModalOpen = ref(false)
+const isRefundDetailsModalOpen = ref(false)
+const isLockConfirmModalOpen = ref(false)
+const isPOSLocked = ref(false)
+const lockedByUser = ref('')
+const unlockMethod = ref('password')
+const unlockPassword = ref('')
+const unlockRFID = ref('')
+const unlockError = ref('')
+const unlockPasswordInput = ref(null)
+const unlockRFIDInput = ref(null)
+const refundTransactionId = ref('')
+const refundTransaction = ref(null)
+const refundItems = ref([])
+const refundError = ref('')
+const cashInAmount = ref('')
+const cashInRfid = ref('')
+const cashInRfidInput = ref(null)
+const cashInCustomer = ref(null)
+const cashInError = ref('')
+const balanceRfid = ref('')
+const balanceRfidInput = ref(null)
+const balanceCustomer = ref(null)
+const balanceError = ref('')
+const currentUser = ref(null)
+const currentStore = ref(null)
+const isLoading = ref(false)
+const barcodeValue = ref('')
+const manualBarcode = ref('')
+const barcodeError = ref('')
+const barcodeInput = ref(null)
+const manualBarcodeInput = ref(null)
+const isMenuOpen = ref(false)
+const isSettingsModalOpen = ref(false)
+const isPrintConfirmModalOpen = ref(false)
+const pendingPrintData = ref(null)
+const availablePrinters = ref([])
+const selectedPrinter = ref(null)
+const isRefreshingPrinters = ref(false)
+const printMode = ref('manual')
+const toastRef = ref(null)
+const sessionActive = ref(false)
+
+// Alert modal state
+const isAlertModalOpen = ref(false)
+const alertModalTitle = ref('')
+const alertModalMessage = ref('')
+
+// Data from backend
+const categories = ref([])
+const products = ref([])
+const allAddons = ref([])
+const vatConfig = ref({ type: 'percent', value: 0 })
+
+const showToast = (message, type = 'info', title = '') => {
+  if (toastRef.value) {
+    toastRef.value.addToast(message, type, title)
+  }
+}
+
+const showAlertModal = (message, title = 'Alert') => {
+  alertModalTitle.value = title
+  alertModalMessage.value = message
+  isAlertModalOpen.value = true
+}
+
+const checkSessionStatus = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/transactions/session/status`)
+    if (response.data.success) {
+      sessionActive.value = response.data.session?.isActive || false
+      return sessionActive.value
+    }
+    return false
+  } catch (error) {
+    console.error('Error checking session status:', error)
+    return false
+  }
+}
+
+// Fetch data from backend
+const fetchCurrentUser = async () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    currentUser.value = user
+    console.log('Current User:', user)
+    console.log('User Role:', user.role)
+    
+    if (user.store) {
+      currentStore.value = user.store
+    }
+  } catch (error) {
+    console.error('Error fetching user:', error)
+  }
+}
+
+const fetchCategories = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/categories`)
+    if (response.data.success) {
+      // Filter active categories and by store
+      let activeCategories = response.data.categories.filter(cat => cat.status === 'active')
+      
+      // Filter by store - show only global categories or categories for current store
+      if (currentStore.value) {
+        activeCategories = activeCategories.filter(cat => {
+          if (cat.isGlobal) return true
+          if (cat.stores && cat.stores.length > 0) {
+            return cat.stores.some(store => 
+              (typeof store === 'string' ? store : store._id) === currentStore.value._id
+            )
+          }
+          return false
+        })
+      }
+      
+      categories.value = [
+        { _id: 'all', name: 'All' },
+        ...activeCategories
+      ]
+    }
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+  }
+}
+
+const fetchProducts = async () => {
+  try {
+    isLoading.value = true
+    const response = await axios.get(`${API_URL}/products`)
+    if (response.data.success) {
+      products.value = response.data.products
+    }
+  } catch (error) {
+    console.error('Error fetching products:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const fetchAddons = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/addons`)
+    if (response.data.success) {
+      allAddons.value = response.data.addons.filter(addon => addon.status === 'active')
+    }
+  } catch (error) {
+    console.error('Error fetching addons:', error)
+  }
+}
+
+const fetchVATConfig = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/settings/vat-config`)
+    if (response.data.success) {
+      vatConfig.value = response.data.vatConfig
+    }
+  } catch (error) {
+    console.error('Error fetching VAT config:', error)
+  }
+}
+
+const fetchVariants = async (productId) => {
+  try {
+    const response = await axios.get(`${API_URL}/variants/product/${productId}`)
+    if (response.data.success) {
+      return response.data.variants.filter(v => v.status === 'active')
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching variants:', error)
+    return []
+  }
+}
+
+const filteredProducts = computed(() => {
+  let filtered = products.value
+  
+  // Filter by store - show only products for current store or global products
+  if (currentStore.value) {
+    filtered = filtered.filter(product => {
+      if (product.isGlobal) return true
+      if (product.stores && product.stores.length > 0) {
+        return product.stores.some(store => 
+          (typeof store === 'string' ? store : store._id) === currentStore.value._id
+        )
+      }
+      return false
+    })
+  }
+  
+  // Filter by active status
+  filtered = filtered.filter(product => product.status === 'active')
+  
+  // Filter by category - only show if no category or category is active
+  filtered = filtered.filter(product => {
+    if (!product.category) return true // No category assigned
+    
+    // Find the category in categories list (which already contains only active categories)
+    const category = categories.value.find(cat => cat.name === product.category)
+    return !!category // Category must exist in our active categories list
+  })
+  
+  // Filter by selected category
+  if (selectedCategory.value !== 'all') {
+    const selectedCat = categories.value.find(cat => cat._id === selectedCategory.value)
+    if (selectedCat) {
+      filtered = filtered.filter(product => product.category === selectedCat.name)
+    }
+  }
+  
+  // Filter by search
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(product => 
+      product.name.toLowerCase().includes(query) || 
+      product.sku?.toLowerCase().includes(query)
+    )
+  }
+  
+  return filtered
+})
+
+// Helper function to get item price with VAT applied
+const getItemPrice = (item) => {
+  let price = item.price
+  
+  if (item.isVattable) {
+    if (vatConfig.value.type === 'percent') {
+      price = price * (1 + vatConfig.value.value / 100)
+    } else if (vatConfig.value.type === 'fixed') {
+      price = price + vatConfig.value.value
+    }
+  }
+  
+  return price
+}
+
+const totalAmount = computed(() => {
+  return orderItems.value.reduce((sum, item) => {
+    // Get price with VAT applied if vattable
+    let itemTotal = getItemPrice(item) * item.quantity
+    
+    // Add addon prices
+    if (item.addons && item.addons.length > 0) {
+      const addonTotal = item.addons.reduce((addonSum, addon) => {
+        return addonSum + (addon.price * addon.quantity)
+      }, 0)
+      itemTotal += addonTotal
+    }
+    
+    return sum + itemTotal
+  }, 0)
+})
+
+const changeAmount = computed(() => {
+  const cash = parseFloat(cashAmount.value) || 0
+  return cash - totalAmount.value
+})
+
+const lastItemQuantity = computed(() => {
+  if (orderItems.value.length === 0) return 0
+  return orderItems.value[orderItems.value.length - 1].quantity
+})
+
+const isCoAdmin = computed(() => {
+  const result = currentUser.value && (currentUser.value.role === 'Co-Admin' || currentUser.value.role === 'Admin')
+  console.log('isCoAdmin computed:', result, 'currentUser:', currentUser.value)
+  return result
+})
+
+const isElectron = computed(() => {
+  return typeof window !== 'undefined' && window.electronAPI !== undefined
+})
+
+const refundAmount = computed(() => {
+  return refundItems.value.reduce((sum, item) => {
+    return sum + (item.price * item.refundQuantity)
+  }, 0)
+})
+
+const adjustLastItem = (change) => {
+  if (orderItems.value.length === 0) return
+  const lastIndex = orderItems.value.length - 1
+  adjustQuantity(lastIndex, change)
+}
+
+// Check if product has stock issues
+const getStockStatus = (product) => {
+  // Don't check stock for products with variants - check variant stock instead
+  return 'ok'
+}
+
+// Check variant stock status
+const getVariantStockStatus = (variant) => {
+  const quantity = variant.quantity || 0
+  const alert = variant.quantityAlert || 5
+  
+  if (quantity <= 0) return 'out'
+  if (quantity <= alert) return 'low'
+  return 'ok'
+}
+
+const handleProductClick = async (product) => {
+  // Check if product has variants
+  const variants = await fetchVariants(product._id)
+  
+  if (variants && variants.length > 0) {
+    // Show variants (stock will be checked per variant)
+    selectedProduct.value = product
+    selectedProductVariants.value = variants
+    viewingVariants.value = true
+  } else {
+    // For products without variants, check stock
+    const quantity = product.quantity || 0
+    if (quantity <= 0) {
+      return // Don't allow adding out of stock products
+    }
+    addToOrder(product)
+  }
+}
+
+const backToProducts = () => {
+  viewingVariants.value = false
+  selectedProduct.value = null
+  selectedProductVariants.value = []
+}
+
+const addVariantToOrder = (variant) => {
+  // Check variant stock before adding
+  const quantity = variant.quantity || 0
+  if (quantity <= 0) {
+    showAlertModal(`${selectedProduct.value.name} - ${variant.value} is out of stock`, 'Out of Stock')
+    return // Don't allow adding out of stock variants
+  }
+  
+  const productId = `variant-${variant._id}`
+  const existingItem = orderItems.value.find(item => item.id === productId)
+  
+  if (existingItem) {
+    // Check if there's enough stock before increasing quantity
+    const currentQuantityInCart = existingItem.quantity
+    const availableStock = variant.quantity || 0
+    
+    if (currentQuantityInCart >= availableStock) {
+      showAlertModal(`Insufficient stock for ${selectedProduct.value.name} - ${variant.value}. Available: ${availableStock}`, 'Out of Stock')
+      return
+    }
+    
+    existingItem.quantity += 1
+    // Update addon quantities
+    updateAddonsForItem(existingItem)
+  } else {
+    const newItem = { 
+      id: productId, 
+      sku: variant.sku || selectedProduct.value.sku,
+      name: `${selectedProduct.value.name} - ${variant.value}`, 
+      price: variant.price, 
+      quantity: 1,
+      isVariant: true,
+      variantId: variant._id,
+      productId: selectedProduct.value._id,
+      isVattable: selectedProduct.value.isVattable || false,
+      addons: []
+    }
+    
+    // Add product addons using selectedProduct
+    if (selectedProduct.value.addons && selectedProduct.value.addons.length > 0) {
+      addAddonsToItem(newItem, selectedProduct.value.addons)
+    }
+    
+    orderItems.value.push(newItem)
+  }
+}
+
+const addToOrder = (product) => {
+  const existingItem = orderItems.value.find(item => item.id === product._id)
+  
+  if (existingItem) {
+    // Check if there's enough stock before increasing quantity
+    const currentQuantityInCart = existingItem.quantity
+    const availableStock = product.quantity || 0
+    
+    if (currentQuantityInCart >= availableStock) {
+      showAlertModal(`Insufficient stock for ${product.name}. Available: ${availableStock}`, 'Out of Stock')
+      return
+    }
+    
+    existingItem.quantity += 1
+    // Update addon quantities
+    updateAddonsForItem(existingItem)
+  } else {
+    const newItem = { 
+      id: product._id, 
+      sku: product.sku,
+      name: product.name, 
+      price: product.price, 
+      quantity: 1,
+      isVariant: false,
+      productId: product._id,
+      isVattable: product.isVattable || false,
+      addons: []
+    }
+    
+    // Add product addons
+    if (product.addons && product.addons.length > 0) {
+      addAddonsToItem(newItem, product.addons)
+    }
+    
+    orderItems.value.push(newItem)
+  }
+}
+
+// Add addons to a new order item
+const addAddonsToItem = (item, productAddons) => {
+  productAddons.forEach(addonRef => {
+    const addonId = typeof addonRef === 'string' ? addonRef : addonRef._id
+    const addon = allAddons.value.find(a => a._id === addonId)
+    
+    if (addon && addon.status === 'active') {
+      // Check addon stock availability
+      const addonStock = addon.quantity || 0
+      if (addonStock >= item.quantity) {
+        item.addons.push({
+          addonId: addon._id,
+          name: addon.name,
+          price: addon.price || 0,
+          quantity: item.quantity // Match product quantity
+        })
+      } else {
+        // If addon stock insufficient, add available quantity or skip
+        if (addonStock > 0) {
+          item.addons.push({
+            addonId: addon._id,
+            name: addon.name,
+            price: addon.price || 0,
+            quantity: addonStock
+          })
+          showAlertModal(`Limited stock for ${addon.name}. Only ${addonStock} available.`, 'Limited Stock')
+        } else {
+          showAlertModal(`${addon.name} is out of stock and will not be added.`, 'Out of Stock')
+        }
+      }
+    }
+  })
+}
+
+// Update addon quantities when product quantity changes
+const updateAddonsForItem = (item) => {
+  if (item.addons && item.addons.length > 0) {
+    item.addons.forEach(addon => {
+      // Find the addon to check stock
+      const addonData = allAddons.value.find(a => a._id === addon.addonId)
+      if (addonData) {
+        const availableStock = addonData.quantity || 0
+        // Limit addon quantity to available stock
+        addon.quantity = Math.min(item.quantity, availableStock)
+        
+        if (addon.quantity < item.quantity) {
+          showAlertModal(`Limited stock for ${addon.name}. Only ${addon.quantity} available.`, 'Limited Stock')
+        }
+      } else {
+        addon.quantity = item.quantity
+      }
+    })
+  }
+}
+
+const adjustQuantity = (index, change) => {
+  const item = orderItems.value[index]
+  const newQuantity = item.quantity + change
+  
+  // If decreasing quantity or removing item
+  if (newQuantity <= 0) {
+    orderItems.value.splice(index, 1)
+    return
+  }
+  
+  // If increasing quantity, check stock availability
+  if (change > 0) {
+    // Find the original product/variant to check stock
+    let availableStock = 0
+    
+    if (item.isVariant) {
+      const variant = allProducts.value.flatMap(p => p.variants || []).find(v => v._id === item.variantId)
+      availableStock = variant ? variant.quantity || 0 : 0
+    } else {
+      const product = allProducts.value.find(p => p._id === item.productId)
+      availableStock = product ? product.quantity || 0 : 0
+    }
+    
+    if (newQuantity > availableStock) {
+      showAlertModal(`Insufficient stock for ${item.name}. Available: ${availableStock}`, 'Out of Stock')
+      return
+    }
+  }
+  
+  item.quantity = newQuantity
+  // Update addon quantities to match product quantity
+  updateAddonsForItem(item)
+}
+
+const removeItem = (index) => {
+  orderItems.value.splice(index, 1)
+  saveCartToLocalStorage()
+}
+
+const openRefundModal = () => {
+  if (orderItems.value.length > 0) {
+    showAlertModal('Please clear the current order before processing a refund.', 'Warning')
+    return
+  }
+  refundTransactionId.value = ''
+  refundError.value = ''
+  isRefundModalOpen.value = true
+}
+
+const openPayModal = () => {
+  if (orderItems.value.length === 0) {
+    showAlertModal('Please add items to order first', 'No Items')
+    return
+  }
+  isPayModalOpen.value = true
+}
+
+const closePayModal = () => {
+  isPayModalOpen.value = false
+}
+
+const selectPaymentMethod = (method) => {
+  isPayModalOpen.value = false
+  
+  if (method === 'Cash') {
+    cashAmount.value = ''
+    showChange.value = false
+    isCashPaymentModalOpen.value = true
+  } else if (method === 'E-wallet') {
+    rfidPaymentValue.value = ''
+    rfidCustomer.value = null
+    rfidPaymentError.value = ''
+    isRfidPaymentModalOpen.value = true
+    // Delay focus to ensure modal is fully rendered and barcode blur handler won't interfere
+    setTimeout(() => {
+      if (rfidPaymentInput.value) {
+        rfidPaymentInput.value.focus()
+      }
+    }, 150)
+  }
+}
+
+const addToCashAmount = (value) => {
+  // Prevent multiple dots
+  if (value === '.' && cashAmount.value.includes('.')) return
+  
+  cashAmount.value += value
+}
+
+const deleteCashAmount = () => {
+  cashAmount.value = cashAmount.value.slice(0, -1)
+}
+
+const closeCashPaymentModal = () => {
+  isCashPaymentModalOpen.value = false
+  cashAmount.value = ''
+  showChange.value = false
+}
+
+const closeRfidPaymentModal = () => {
+  isRfidPaymentModalOpen.value = false
+  rfidPaymentValue.value = ''
+  rfidCustomer.value = null
+  rfidPaymentError.value = ''
+}
+
+const handleRfidPayment = async () => {
+  const rfid = rfidPaymentValue.value.trim()
+  if (!rfid) return
+  
+  rfidPaymentError.value = ''
+  
+  try {
+    const response = await axios.get(`${API_URL}/customers/rfid/${rfid}`)
+    if (response.data.success) {
+      rfidCustomer.value = response.data.customer
+      
+      if (rfidCustomer.value.status === 'disabled') {
+        rfidPaymentError.value = 'This card is disabled. Please contact support.'
+        rfidCustomer.value = null
+      }
+    }
+  } catch (error) {
+    rfidPaymentError.value = 'RFID not found. Please check and try again.'
+    rfidPaymentValue.value = ''
+  }
+}
+
+const processCashPayment = async () => {
+  if (changeAmount.value < 0) {
+    showAlertModal('Insufficient cash amount', 'Payment Error')
+    return
+  }
+
+  // Check session status
+  const isSessionActive = await checkSessionStatus()
+  if (!isSessionActive) {
+    showAlertModal('Transaction session is not active. Please contact administrator to start the session.', 'Session Inactive')
+    return
+  }
+
+  try {
+    const cash = parseFloat(cashAmount.value)
+    const change = changeAmount.value
+
+    // Prepare cart items for transaction
+    const cartItems = orderItems.value.map(item => ({
+      _id: item.id,
+      sku: item.sku || 'N/A',
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      total: item.price * item.quantity,
+      isVariant: item.isVariant || false,
+      variantId: item.variantId || null,
+      productId: item.productId || item.id,
+      addons: item.addons || []
+    }))
+
+    const transactionData = {
+      cart: cartItems,
+      paymentMethod: 'Cash',
+      discounts: 0,
+      netAmount: totalAmount.value,
+      VAT: 0,
+      totalAmount: totalAmount.value,
+      cash: cash,
+      change: change,
+      employee: currentUser.value?.username || 'cashier'
+    }
+
+    const response = await axios.post(`${API_URL}/transactions`, transactionData)
+    
+    if (response.data.success) {
+      // Show change display
+      showChange.value = true
+      
+      // Print receipt with transaction ID based on print mode
+      if (printMode.value !== 'off' && window.electronAPI) {
+        // Convert to plain serializable objects for IPC
+        const printableCart = cartItems.map(item => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          total: item.total,
+          isVattable: item.isVattable || false,
+          addons: item.addons ? item.addons.map(addon => ({
+            name: addon.name,
+            price: addon.price,
+            quantity: addon.quantity
+          })) : []
+        }))
+        
+        const printData = {
+          transactionType: 'SALE',
+          transactionId: response.data.transactionId,
+          cart: printableCart,
+          paymentMethod: 'Cash',
+          totalAmount: Number(totalAmount.value),
+          cash: Number(cash),
+          change: Number(change),
+          employee: currentUser.value?.username || 'cashier',
+          date: new Date().toISOString(),
+          storeName: currentStore.value?.storeName || '',
+          address: currentStore.value?.address || '',
+          contact: currentStore.value?.contact || '',
+          vatConfig: {
+            type: vatConfig.value.type,
+            value: Number(vatConfig.value.value)
+          }
+        }
+        
+        if (printMode.value === 'auto') {
+          // Auto print immediately
+          await printThermalReceipt(printData, selectedPrinter.value)
+        } else if (printMode.value === 'manual') {
+          // Show confirmation modal
+          pendingPrintData.value = printData
+          isPrintConfirmModalOpen.value = true
+        }
+      }
+
+      showAlertModal(`Payment successful!\nChange: ₱${change.toFixed(2)}`, 'Success')
+      
+      // Clear order
+      orderItems.value = []
+      localStorage.removeItem('cashierCart')
+      isCashPaymentModalOpen.value = false
+      cashAmount.value = ''
+      
+      setTimeout(() => {
+        showChange.value = false
+      }, 3000)
+    }
+  } catch (error) {
+    console.error('Payment error:', error)
+    showAlertModal('Payment failed: ' + (error.response?.data?.message || error.message), 'Payment Error')
+  }
+}
+
+const processRfidPayment = async () => {
+  if (!rfidCustomer.value) return
+  
+  if (rfidCustomer.value.balance < totalAmount.value) {
+    showAlertModal('Insufficient balance', 'Payment Error')
+    return
+  }
+
+  // Check session status
+  const isSessionActive = await checkSessionStatus()
+  if (!isSessionActive) {
+    showAlertModal('Transaction session is not active. Please contact administrator to start the session.', 'Session Inactive')
+    return
+  }
+
+  try {
+    // Prepare cart items for transaction
+    const cartItems = orderItems.value.map(item => ({
+      _id: item.id,
+      sku: item.sku || 'N/A',
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      total: item.price * item.quantity,
+      isVariant: item.isVariant || false,
+      variantId: item.variantId || null,
+      productId: item.productId || item.id,
+      addons: item.addons || []
+    }))
+
+    const transactionData = {
+      cart: cartItems,
+      paymentMethod: 'E-wallet',
+      discounts: 0,
+      netAmount: totalAmount.value,
+      VAT: 0,
+      totalAmount: totalAmount.value,
+      cash: 0,
+      change: 0,
+      employee: currentUser.value?.username || 'cashier',
+      customerId: rfidCustomer.value._id,
+      customerRfid: rfidCustomer.value.rfid
+    }
+
+    const response = await axios.post(`${API_URL}/transactions`, transactionData)
+    
+    if (response.data.success) {
+      // Update customer balance
+      const newBalance = rfidCustomer.value.balance - totalAmount.value
+      await axios.put(`${API_URL}/customers/${rfidCustomer.value._id}/balance`, {
+        amount: newBalance
+      })
+
+      // Log customer transaction
+      await axios.post(`${API_URL}/customer-transactions`, {
+        rfid: rfidCustomer.value.rfid,
+        username: rfidCustomer.value.username,
+        amount: totalAmount.value,
+        transactionType: 'Purchased',
+        balanceBefore: rfidCustomer.value.balance,
+        balanceAfter: newBalance
+      })
+
+      // Print receipt with transaction ID based on print mode
+      if (printMode.value !== 'off' && window.electronAPI) {
+        // Convert to plain serializable objects for IPC
+        const printableCart = cartItems.map(item => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          total: item.total,
+          isVattable: item.isVattable || false,
+          addons: item.addons ? item.addons.map(addon => ({
+            name: addon.name,
+            price: addon.price,
+            quantity: addon.quantity
+          })) : []
+        }))
+        
+        const printData = {
+          transactionType: 'SALE',
+          transactionId: response.data.transactionId,
+          cart: printableCart,
+          paymentMethod: 'E-wallet/RFID',
+          customerName: rfidCustomer.value.fullName,
+          totalAmount: Number(totalAmount.value),
+          cash: 0,
+          change: 0,
+          previousBalance: Number(rfidCustomer.value.balance),
+          remainingBalance: Number(newBalance),
+          employee: currentUser.value?.username || 'cashier',
+          date: new Date().toISOString(),
+          storeName: currentStore.value?.storeName || '',
+          address: currentStore.value?.address || '',
+          contact: currentStore.value?.contact || '',
+          vatConfig: {
+            type: vatConfig.value.type,
+            value: Number(vatConfig.value.value)
+          }
+        }
+        
+        if (printMode.value === 'auto') {
+          // Auto print immediately
+          await printThermalReceipt(printData, selectedPrinter.value)
+        } else if (printMode.value === 'manual') {
+          // Show confirmation modal
+          pendingPrintData.value = printData
+          isPrintConfirmModalOpen.value = true
+        }
+      }
+
+      showAlertModal(`Payment successful!\nTransaction ID: ${response.data.transactionId}\nAmount Paid: ₱${totalAmount.value.toFixed(2)}\nRemaining Balance: ₱${newBalance.toFixed(2)}`, 'Success')
+      
+      // Clear order
+      orderItems.value = []
+      localStorage.removeItem('cashierCart')
+      isRfidPaymentModalOpen.value = false
+      rfidCustomer.value = null
+      rfidPaymentValue.value = ''
+    }
+  } catch (error) {
+    console.error('Payment error:', error)
+    showAlertModal('Payment failed: ' + (error.response?.data?.message || error.message), 'Payment Error')
+  }
+}
+
+const openBalanceModal = () => {
+  isMenuOpen.value = false
+  balanceRfid.value = ''
+  balanceCustomer.value = null
+  balanceError.value = ''
+  isBalanceModalOpen.value = true
+  nextTick(() => {
+    balanceRfidInput.value?.focus()
+  })
+}
+
+const closeBalanceModal = () => {
+  isBalanceModalOpen.value = false
+  balanceCustomer.value = null
+  balanceRfid.value = ''
+  balanceError.value = ''
+}
+
+const handleBalanceRfid = async () => {
+  if (!balanceRfid.value.trim()) {
+    balanceError.value = 'Please enter or scan RFID'
+    return
+  }
+
+  try {
+    const response = await axios.get(`${API_URL}/customers/rfid/${balanceRfid.value.trim()}`)
+    if (response.data.success && response.data.customer) {
+      balanceCustomer.value = response.data.customer
+      balanceError.value = ''
+      
+      // Log balance inquiry transaction
+      await axios.post(`${API_URL}/customer-transactions`, {
+        rfid: balanceCustomer.value.rfid,
+        username: currentUser.value?.username || 'Cashier',
+        amount: 0,
+        transactionType: 'Balance Inquiry',
+        balanceBefore: balanceCustomer.value.balance,
+        balanceAfter: balanceCustomer.value.balance
+      })
+    } else {
+      balanceError.value = 'Customer not found'
+      balanceRfid.value = ''
+    }
+  } catch (error) {
+    balanceError.value = error.response?.data?.message || 'Customer not found'
+    balanceRfid.value = ''
+  }
+}
+
+const printBalanceReceipt = async () => {
+  if (!balanceCustomer.value) return
+
+  const receiptData = {
+    transactionType: 'Balance Inquiry',
+    amount: 0,
+    previousBalance: balanceCustomer.value.balance,
+    currentBalance: balanceCustomer.value.balance,
+    customerName: balanceCustomer.value.fullName,
+    date: new Date().toISOString(),
+    storeName: String(currentStore.value?.storeName || ''),
+    address: String(currentStore.value?.address || ''),
+    contact: String(currentStore.value?.contact || '')
+  }
+
+  try {
+    if (printMode.value === 'auto' && selectedPrinter.value) {
+      await printThermalReceipt(receiptData, selectedPrinter.value)
+      showToast('Receipt printed successfully', 'success')
+    } else if (printMode.value === 'manual') {
+      pendingPrintData.value = receiptData
+      isPrintConfirmModalOpen.value = true
+    } else {
+      await printThermalReceipt(receiptData, selectedPrinter.value)
+      showToast('Receipt printed successfully', 'success')
+    }
+  } catch (error) {
+    console.error('Print error:', error)
+    showToast('Failed to print receipt', 'error')
+  }
+}
+
+const openCashInModal = () => {
+  isMenuOpen.value = false
+  cashInAmount.value = ''
+  cashInRfid.value = ''
+  cashInCustomer.value = null
+  cashInError.value = ''
+  isCashInModalOpen.value = true
+  nextTick(() => {
+    cashInRfidInput.value?.focus()
+  })
+}
+
+const closeCashInModal = () => {
+  isCashInModalOpen.value = false
+  cashInCustomer.value = null
+  cashInRfid.value = ''
+  cashInAmount.value = ''
+  cashInError.value = ''
+}
+
+const handleCashInRfid = async () => {
+  if (!cashInRfid.value.trim()) {
+    cashInError.value = 'Please enter or scan RFID'
+    return
+  }
+
+  try {
+    const response = await axios.get(`${API_URL}/customers/rfid/${cashInRfid.value.trim()}`)
+    if (response.data.success && response.data.customer) {
+      cashInCustomer.value = response.data.customer
+      cashInError.value = ''
+    } else {
+      cashInError.value = 'Customer not found'
+      cashInRfid.value = ''
+    }
+  } catch (error) {
+    cashInError.value = error.response?.data?.message || 'Customer not found'
+    cashInRfid.value = ''
+  }
+}
+
+const appendToCashIn = (value) => {
+  const current = cashInAmount.value
+  // Prevent multiple dots
+  if (value === '.' && current.includes('.')) return
+  // Prevent starting with multiple zeros
+  if (value === 0 && current === '0') return
+  // Limit to 2 decimal places
+  if (current.includes('.')) {
+    const [, decimal] = current.split('.')
+    if (decimal && decimal.length >= 2) return
+  }
+  cashInAmount.value = current + String(value)
+}
+
+const deleteCashInDigit = () => {
+  cashInAmount.value = cashInAmount.value.slice(0, -1)
+}
+
+const openVoidModal = () => {
+  if (orderItems.value.length === 0) {
+    showAlertModal('No items to void', 'Void Transaction')
+    return
+  }
+  isVoidModalOpen.value = true
+}
+
+const processPayment = () => {
+  // This function is no longer used - replaced by processCashPayment and processRfidPayment
+  showAlertModal('Please select a payment method', 'Payment Method')
+  isPayModalOpen.value = true
+}
+
+const processCashIn = async () => {
+  // Check session status
+  const isSessionActive = await checkSessionStatus()
+  if (!isSessionActive) {
+    showAlertModal('Transaction session is not active. Cash-in operations are disabled.', 'Session Inactive')
+    return
+  }
+
+  const amount = parseFloat(cashInAmount.value)
+  if (!amount || amount <= 0) {
+    showAlertModal('Please enter a valid amount', 'Invalid Amount')
+    return
+  }
+
+  if (!cashInCustomer.value) {
+    showAlertModal('No customer selected', 'Error')
+    return
+  }
+
+  try {
+    isLoading.value = true
+    const previousBalance = cashInCustomer.value.balance
+    const newBalance = previousBalance + amount
+    
+    const response = await axios.put(`${API_URL}/customers/${cashInCustomer.value._id}/balance`, {
+      amount: newBalance
+    })
+    
+    if (response.data.success) {
+      // Log the transaction
+      await axios.post(`${API_URL}/customer-transactions`, {
+        rfid: cashInCustomer.value.rfid,
+        username: currentUser.value?.username || 'Cashier',
+        amount: amount,
+        transactionType: 'Cash-in',
+        balanceBefore: previousBalance,
+        balanceAfter: newBalance
+      })
+      
+      // Prepare receipt data
+      const receiptData = {
+        transactionType: 'CASH-IN',
+        amount: amount,
+        previousBalance: previousBalance,
+        currentBalance: newBalance,
+        customerName: cashInCustomer.value.fullName,
+        date: new Date().toISOString(),
+        storeName: String(currentStore.value?.storeName || ''),
+        address: String(currentStore.value?.address || ''),
+        contact: String(currentStore.value?.contact || '')
+      }
+      
+      // Print receipt based on mode
+      try {
+        if (printMode.value === 'auto' && selectedPrinter.value) {
+          await printThermalReceipt(receiptData, selectedPrinter.value)
+          showToast(`₱${amount.toFixed(2)} added successfully. Receipt printed.`, 'success')
+        } else if (printMode.value === 'manual') {
+          pendingPrintData.value = receiptData
+          isPrintConfirmModalOpen.value = true
+          showToast(`₱${amount.toFixed(2)} added successfully`, 'success')
+        } else {
+          showToast(`₱${amount.toFixed(2)} added successfully`, 'success')
+        }
+      } catch (printError) {
+        console.error('Print error:', printError)
+        showToast(`₱${amount.toFixed(2)} added successfully (print failed)`, 'warning')
+      }
+      
+      closeCashInModal()
+    }
+  } catch (error) {
+    console.error('Error processing cash in:', error)
+    showAlertModal(error.response?.data?.message || 'Failed to process cash in', 'Error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const processVoid = () => {
+  orderItems.value = []
+  localStorage.removeItem('cashierCart')
+  showAlertModal('Transaction voided successfully!', 'Void Complete')
+  isVoidModalOpen.value = false
+}
+
+const addToRefundTransactionId = (value) => {
+  refundTransactionId.value += value
+}
+
+const deleteRefundTransactionId = () => {
+  refundTransactionId.value = refundTransactionId.value.slice(0, -1)
+}
+
+const pasteTransactionId = async () => {
+  try {
+    const text = await navigator.clipboard.readText()
+    refundTransactionId.value = text
+    refundError.value = ''
+  } catch (error) {
+    console.error('Error pasting transaction ID:', error)
+    showAlertModal('Failed to paste from clipboard. Please enter manually.', 'Paste Error')
+  }
+}
+
+const closeRefundModal = () => {
+  isRefundModalOpen.value = false
+  refundTransactionId.value = ''
+  refundError.value = ''
+}
+
+const searchRefundTransaction = async () => {
+  if (!refundTransactionId.value) {
+    refundError.value = 'Please enter a transaction ID'
+    return
+  }
+
+  try {
+    isLoading.value = true
+    refundError.value = ''
+
+    const response = await axios.get(`${API_URL}/transactions/by-transaction-id/${refundTransactionId.value}`)
+    
+    if (response.data.success) {
+      const transaction = response.data.transaction
+      
+      // Check if already refunded
+      if (transaction.status === 'Returned') {
+        refundError.value = 'This transaction has already been refunded'
+        return
+      }
+      
+      if (transaction.status === 'Voided' || transaction.status === 'Canceled') {
+        refundError.value = 'Cannot refund a voided or canceled transaction'
+        return
+      }
+
+      // Fetch customer details if RFID payment
+      if (transaction.customerId) {
+        try {
+          const customerResponse = await axios.get(`${API_URL}/customers/${transaction.customerId}`)
+          transaction.customerDetails = customerResponse.data.customer
+        } catch (error) {
+          console.error('Error fetching customer:', error)
+        }
+      }
+
+      refundTransaction.value = transaction
+      refundItems.value = transaction.cart.map(item => ({
+        ...item,
+        maxQuantity: item.quantity,
+        refundQuantity: item.quantity // Default to full refund
+      }))
+
+      isRefundModalOpen.value = false
+      isRefundDetailsModalOpen.value = true
+    }
+  } catch (error) {
+    console.error('Error fetching transaction:', error)
+    refundError.value = error.response?.data?.message || 'Transaction not found'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const closeRefundDetailsModal = () => {
+  isRefundDetailsModalOpen.value = false
+  refundTransaction.value = null
+  refundItems.value = []
+}
+
+const adjustRefundQuantity = (index, change) => {
+  const item = refundItems.value[index]
+  const newQuantity = item.refundQuantity + change
+  
+  if (newQuantity >= 0 && newQuantity <= item.maxQuantity) {
+    item.refundQuantity = newQuantity
+  }
+}
+
+const processRefund = async () => {
+  // Check session status
+  const isSessionActive = await checkSessionStatus()
+  if (!isSessionActive) {
+    showAlertModal('Transaction session is not active. Refund operations are disabled.', 'Session Inactive')
+    return
+  }
+
+  try {
+    // Validate at least one item is being refunded
+    const itemsToRefund = refundItems.value.filter(item => item.refundQuantity > 0)
+    
+    if (itemsToRefund.length === 0) {
+      showAlertModal('Please select at least one item to refund', 'Error')
+      return
+    }
+
+    isLoading.value = true
+
+    const refundData = {
+      originalTransactionId: refundTransaction.value._id,
+      transactionId: refundTransaction.value.transactionId,
+      refundItems: itemsToRefund.map(item => ({
+        _id: item._id,
+        sku: item.sku,
+        name: item.name,
+        price: item.price,
+        quantity: item.refundQuantity,
+        total: item.price * item.refundQuantity,
+        isVariant: item.isVariant,
+        variantId: item.variantId,
+        productId: item.productId,
+        addons: item.addons
+      })),
+      refundAmount: refundAmount.value,
+      paymentMethod: refundTransaction.value.paymentMethod,
+      customerId: refundTransaction.value.customerId,
+      customerRfid: refundTransaction.value.customerRfid,
+      employee: currentUser.value?.username || 'unknown'
+    }
+
+    // Process refund on backend
+    const response = await axios.post(`${API_URL}/transactions/refund`, refundData)
+
+    if (response.data.success) {
+      // Show success message with balance for E-wallet refunds
+      if (refundTransaction.value.paymentMethod === 'E-wallet' && response.data.newCustomerBalance !== null) {
+        showAlertModal(`Refund processed successfully!\nRefund Amount: ₱${refundAmount.value.toFixed(2)}\nNew Balance: ₱${response.data.newCustomerBalance.toFixed(2)}`, 'Success')
+      }
+
+      // Print refund receipt - serialize all data to avoid cloning issues
+      const printData = {
+        type: 'refund',
+        transactionId: response.data.refundTransactionId,
+        originalTransactionId: refundTransaction.value.transactionId,
+        items: itemsToRefund.map(item => ({
+          name: String(item.name),
+          price: Number(item.price),
+          quantity: Number(item.refundQuantity),
+          sku: String(item.sku || ''),
+          isVattable: Boolean(item.isVattable || false),
+          addons: Array.isArray(item.addons) ? item.addons.map(addon => ({
+            name: String(addon.name),
+            price: Number(addon.price),
+            quantity: Number(addon.quantity || 1)
+          })) : []
+        })),
+        refundAmount: Number(refundAmount.value),
+        paymentMethod: String(refundTransaction.value.paymentMethod),
+        customer: refundTransaction.value.customerDetails ? {
+          fullName: String(refundTransaction.value.customerDetails.fullName),
+          rfid: String(refundTransaction.value.customerDetails.rfid || ''),
+          balance: Number(refundTransaction.value.customerDetails.balance || 0)
+        } : null,
+        date: new Date().toISOString(),
+        cashier: String(currentUser.value?.username || 'Cashier'),
+        storeName: String(currentStore.value?.storeName || ''),
+        address: String(currentStore.value?.address || ''),
+        contact: String(currentStore.value?.contact || ''),
+        vatConfig: {
+          type: String(vatConfig.value.type),
+          value: Number(vatConfig.value.value)
+        }
+      }
+
+      try {
+        if (printMode.value === 'auto' && selectedPrinter.value) {
+          await printThermalReceipt(printData, selectedPrinter.value)
+          if (refundTransaction.value.paymentMethod !== 'E-wallet') {
+            showToast('Refund processed and receipt printed', 'success')
+          }
+        } else {
+          pendingPrintData.value = printData
+          isPrintConfirmModalOpen.value = true
+          if (refundTransaction.value.paymentMethod !== 'E-wallet') {
+            showToast('Refund processed successfully', 'success')
+          }
+        }
+      } catch (printError) {
+        console.error('Print error:', printError)
+        showAlertModal('Refund processed but failed to print receipt: ' + printError.message, 'Print Error')
+      }
+
+      closeRefundDetailsModal()
+    }
+  } catch (error) {
+    console.error('Error processing refund:', error)
+    showAlertModal(error.response?.data?.message || 'Failed to process refund', 'Error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const openBarcodeModal = () => {
+  isBarcodeModalOpen.value = true
+  // Delay focus to ensure modal is fully rendered and barcode blur handler won't interfere
+  setTimeout(() => {
+    if (manualBarcodeInput.value) {
+      manualBarcodeInput.value.focus()
+    }
+  }, 150)
+}
+
+const findProductByBarcode = (barcode) => {
+  // Search in products by SKU
+  const product = products.value.find(p => 
+    p.sku && p.sku.toLowerCase() === barcode.toLowerCase() &&
+    p.status === 'active'
+  )
+  
+  if (product) {
+    // Check if product belongs to current store
+    if (currentStore.value) {
+      if (product.isGlobal) return product
+      if (product.stores && product.stores.length > 0) {
+        const belongsToStore = product.stores.some(store => 
+          (typeof store === 'string' ? store : store._id) === currentStore.value._id
+        )
+        if (belongsToStore) return product
+      }
+      return null
+    }
+    return product
+  }
+  
+  return null
+}
+
+const handleBarcodeScanned = async () => {
+  const barcode = barcodeValue.value.trim()
+  if (!barcode) return
+  
+  barcodeError.value = ''
+  
+  const product = findProductByBarcode(barcode)
+  
+  if (product) {
+    // Check if product has variants
+    const variants = await fetchVariants(product._id)
+    
+    if (variants && variants.length > 0) {
+      // For products with variants, add the first available variant
+      const availableVariant = variants.find(v => v.quantity > 0)
+      if (availableVariant) {
+        addVariantToOrder(availableVariant)
+      } else {
+        barcodeError.value = 'Item not registered or out of stock'
+        setTimeout(() => { barcodeError.value = '' }, 3000)
+      }
+    } else {
+      // Check stock for products without variants
+      const quantity = product.quantity || 0
+      if (quantity > 0) {
+        addToOrder(product)
+      } else {
+        barcodeError.value = 'Item not registered or out of stock'
+        setTimeout(() => { barcodeError.value = '' }, 3000)
+      }
+    }
+  } else {
+    barcodeError.value = 'Item not registered'
+    setTimeout(() => { barcodeError.value = '' }, 3000)
+  }
+  
+  barcodeValue.value = ''
+  refocusBarcodeInput()
+}
+
+const processManualBarcode = async () => {
+  const barcode = manualBarcode.value.trim()
+  if (!barcode) return
+  
+  barcodeError.value = ''
+  
+  const product = findProductByBarcode(barcode)
+  
+  if (product) {
+    // Check if product has variants
+    const variants = await fetchVariants(product._id)
+    
+    if (variants && variants.length > 0) {
+      // For products with variants, add the first available variant
+      const availableVariant = variants.find(v => v.quantity > 0)
+      if (availableVariant) {
+        addVariantToOrder(availableVariant)
+        manualBarcode.value = ''
+        isBarcodeModalOpen.value = false
+      } else {
+        barcodeError.value = 'Item not registered or out of stock'
+        setTimeout(() => { barcodeError.value = '' }, 3000)
+      }
+    } else {
+      // Check stock for products without variants
+      const quantity = product.quantity || 0
+      if (quantity > 0) {
+        addToOrder(product)
+        manualBarcode.value = ''
+        isBarcodeModalOpen.value = false
+      } else {
+        barcodeError.value = 'Item not registered or out of stock'
+        setTimeout(() => { barcodeError.value = '' }, 3000)
+      }
+    }
+  } else {
+    barcodeError.value = 'Item not registered'
+    setTimeout(() => { barcodeError.value = '' }, 3000)
+  }
+  
+  refocusBarcodeInput()
+}
+
+const refocusBarcodeInput = () => {
+  nextTick(() => {
+    if (barcodeInput.value) {
+      barcodeInput.value.focus()
+    }
+  })
+}
+
+const handlePageClick = (event) => {
+  // Don't refocus if any modal is open
+  if (isSettingsModalOpen.value || isPrintConfirmModalOpen.value || isPayModalOpen.value || 
+      isCashPaymentModalOpen.value || isRfidPaymentModalOpen.value || isBarcodeModalOpen.value ||
+      isBalanceModalOpen.value || isCashInModalOpen.value || isVoidModalOpen.value ||
+      isLogoutModalOpen.value) {
+    return
+  }
+  
+  // Don't refocus if clicking on an input, textarea, button, select, or any interactive element
+  const target = event.target
+  const isInteractive = target.tagName === 'INPUT' || 
+                        target.tagName === 'TEXTAREA' || 
+                        target.tagName === 'BUTTON' ||
+                        target.tagName === 'SELECT' ||
+                        target.tagName === 'A' ||
+                        target.closest('button') !== null ||
+                        target.closest('input') !== null ||
+                        target.closest('textarea') !== null ||
+                        target.closest('select') !== null
+  
+  if (!isInteractive) {
+    refocusBarcodeInput()
+  }
+}
+
+const handleBarcodeBlur = () => {
+  // Small delay before refocusing to allow other inputs to receive focus
+  setTimeout(() => {
+    // Don't refocus if any modal is open
+    if (isSettingsModalOpen.value || isPrintConfirmModalOpen.value || isPayModalOpen.value || 
+        isCashPaymentModalOpen.value || isRfidPaymentModalOpen.value || isBarcodeModalOpen.value ||
+        isBalanceModalOpen.value || isCashInModalOpen.value || isVoidModalOpen.value ||
+        isLogoutModalOpen.value || isAlertModalOpen.value ||
+        isRefundModalOpen.value || isRefundDetailsModalOpen.value) {
+      return
+    }
+    
+    // Only refocus if no other input/select is currently focused
+    const activeElement = document.activeElement
+    const isInputFocused = activeElement && 
+                          (activeElement.tagName === 'INPUT' || 
+                           activeElement.tagName === 'TEXTAREA' ||
+                           activeElement.tagName === 'SELECT')
+    
+    if (!isInputFocused) {
+      refocusBarcodeInput()
+    }
+  }, 100)
+}
+
+const toggleMenu = () => {
+  isMenuOpen.value = !isMenuOpen.value
+}
+
+const openLockConfirmModal = () => {
+  isLockConfirmModalOpen.value = true
+  isMenuOpen.value = false
+}
+
+const lockPOS = () => {
+  isPOSLocked.value = true
+  isLockConfirmModalOpen.value = false
+  lockedByUser.value = currentUser.value.username || 'Unknown User'
+  unlockPassword.value = ''
+  unlockRFID.value = ''
+  unlockError.value = ''
+  
+  // Focus the appropriate input after a short delay
+  setTimeout(() => {
+    if (unlockMethod.value === 'password' && unlockPasswordInput.value) {
+      unlockPasswordInput.value.focus()
+    } else if (unlockMethod.value === 'rfid' && unlockRFIDInput.value) {
+      unlockRFIDInput.value.focus()
+    }
+  }, 100)
+}
+
+const attemptUnlock = async () => {
+  unlockError.value = ''
+  
+  try {
+    const user = currentUser.value
+    
+    if (unlockMethod.value === 'password') {
+      if (!unlockPassword.value) {
+        unlockError.value = 'Please enter your password'
+        return
+      }
+      
+      // Verify password
+      const response = await axios.post(`${API_URL}/users/verify-password`, {
+        userId: user._id,
+        password: unlockPassword.value
+      })
+      
+      if (response.data.success) {
+        isPOSLocked.value = false
+        unlockPassword.value = ''
+        showToast('POS unlocked successfully', 'success')
+      } else {
+        unlockError.value = 'Invalid password'
+      }
+    } else if (unlockMethod.value === 'rfid') {
+      if (!unlockRFID.value) {
+        unlockError.value = 'Please scan your RFID card'
+        return
+      }
+      
+      // Verify RFID
+      if (user.rfid && user.rfid === unlockRFID.value) {
+        isPOSLocked.value = false
+        unlockRFID.value = ''
+        showToast('POS unlocked successfully', 'success')
+      } else {
+        unlockError.value = 'Invalid RFID'
+        unlockRFID.value = ''
+      }
+    }
+  } catch (error) {
+    console.error('Error verifying credentials:', error)
+    unlockError.value = error.response?.data?.message || 'Failed to verify credentials'
+  }
+}
+
+const openLogoutModal = () => {
+  isMenuOpen.value = false
+  isLogoutModalOpen.value = true
+}
+
+const confirmLogout = () => {
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
+
+
+const goToAdminPanel = () => {
+  isMenuOpen.value = false
+  router.push('/admin')
+}
+
+const goToCustomerTransactions = () => {
+  isMenuOpen.value = false
+  router.push('/pos/customer-transactions')
+}
+
+const goToTransactions = () => {
+  isMenuOpen.value = false
+  router.push('/pos/transactions')
+}
+
+const goToSales = () => {
+  isMenuOpen.value = false
+  router.push('/pos/sales')
+}
+
+const logout = () => {
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
+const openSettingsModal = () => {
+  console.log('openSettingsModal called')
+  isMenuOpen.value = false
+  isSettingsModalOpen.value = true
+  console.log('isSettingsModalOpen:', isSettingsModalOpen.value)
+}
+
+const saveSettings = async () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'))
+    if (!user || !user._id) {
+      showToast('User not found', 'error')
+      return
+    }
+
+    // Save to backend
+    const response = await axios.put(`${API_URL}/users/${user._id}/print-preferences`, {
+      selectedPrinter: selectedPrinter.value,
+      printMode: printMode.value
+    })
+
+    if (response.data.success) {
+      // Also save to localStorage as backup
+      localStorage.setItem('selectedPrinter', selectedPrinter.value || '')
+      localStorage.setItem('printMode', printMode.value)
+      
+      showToast('Settings saved successfully', 'success')
+      isSettingsModalOpen.value = false
+    }
+  } catch (error) {
+    showToast('Failed to save settings', 'error')
+  }
+}
+
+const refreshPrinters = async () => {
+  if (!window.electronAPI) {
+    showToast('Printer management only available in desktop app', 'warning')
+    return
+  }
+  
+  isRefreshingPrinters.value = true
+  try {
+    const printersData = await getAvailablePrinters()
+    availablePrinters.value = printersData.allPrinters || []
+  } catch (error) {
+    showToast('Failed to refresh printers', 'error')
+  } finally {
+    isRefreshingPrinters.value = false
+  }
+}
+
+const loadPrinterPreference = async () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'))
+    if (user && user._id) {
+      // Try to load from backend first
+      try {
+        const response = await axios.get(`${API_URL}/users/${user._id}/print-preferences`)
+        if (response.data.success) {
+          selectedPrinter.value = response.data.preferences.selectedPrinter || null
+          printMode.value = response.data.preferences.printMode || 'manual'
+        }
+      } catch (error) {
+        // Fallback to localStorage if backend fails
+        const saved = localStorage.getItem('selectedPrinter')
+        if (saved) {
+          selectedPrinter.value = saved
+        }
+        const savedMode = localStorage.getItem('printMode')
+        if (savedMode) {
+          printMode.value = savedMode
+        }
+      }
+    } else {
+      // Fallback to localStorage if no user
+      const saved = localStorage.getItem('selectedPrinter')
+      if (saved) {
+        selectedPrinter.value = saved
+      }
+      const savedMode = localStorage.getItem('printMode')
+      if (savedMode) {
+        printMode.value = savedMode
+      }
+    }
+    
+    // Load available printers if in Electron
+    if (window.electronAPI) {
+      await refreshPrinters()
+    }
+  } catch (error) {
+    console.error('Failed to load printer preferences:', error)
+  }
+}
+
+const confirmPrint = async () => {
+  if (pendingPrintData.value) {
+    try {
+      await printThermalReceipt(pendingPrintData.value, selectedPrinter.value)
+      showToast('Receipt printed successfully', 'success')
+    } catch (error) {
+      console.error('Print error:', error)
+      showAlertModal('Failed to print receipt: ' + error.message, 'Print Error')
+    }
+    isPrintConfirmModalOpen.value = false
+    pendingPrintData.value = null
+  }
+}
+
+const cancelPrint = () => {
+  isPrintConfirmModalOpen.value = false
+  pendingPrintData.value = null
+}
+
+// Initialize data on component mount
+// Save cart to localStorage
+const saveCartToLocalStorage = () => {
+  try {
+    localStorage.setItem('cashierCart', JSON.stringify(orderItems.value))
+  } catch (error) {
+    console.error('Error saving cart to localStorage:', error)
+  }
+}
+
+// Load cart from localStorage
+const loadCartFromLocalStorage = () => {
+  try {
+    const savedCart = localStorage.getItem('cashierCart')
+    if (savedCart) {
+      orderItems.value = JSON.parse(savedCart)
+    }
+  } catch (error) {
+    console.error('Error loading cart from localStorage:', error)
+    localStorage.removeItem('cashierCart')
+  }
+}
+
+// Watch orderItems for changes and save to localStorage
+watch(orderItems, () => {
+  saveCartToLocalStorage()
+}, { deep: true })
+
+// Watch unlockMethod to refocus input
+watch(unlockMethod, () => {
+  if (isPOSLocked.value) {
+    setTimeout(() => {
+      if (unlockMethod.value === 'password' && unlockPasswordInput.value) {
+        unlockPasswordInput.value.focus()
+      } else if (unlockMethod.value === 'rfid' && unlockRFIDInput.value) {
+        unlockRFIDInput.value.focus()
+      }
+    }, 100)
+  }
+})
+
+onMounted(async () => {
+  await fetchCurrentUser()
+  await Promise.all([
+    fetchCategories(),
+    fetchProducts(),
+    fetchAddons(),
+    fetchVATConfig(),
+    loadPrinterPreference(),
+    checkSessionStatus()
+  ])
+  
+  // Load saved cart from localStorage
+  loadCartFromLocalStorage()
+  
+  // Check session status every 30 seconds
+  setInterval(checkSessionStatus, 30000)
+  
+  // Focus barcode input for automatic scanning
+  refocusBarcodeInput()
+})</script>
