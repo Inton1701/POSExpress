@@ -1,14 +1,12 @@
 <script setup>
 import { RouterView } from 'vue-router'
 import { ref, provide, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
 import Toast from './components/Toast.vue'
 
 const toastRef = ref(null)
 const serverStatus = ref('checking')
 let statusCheckInterval = null
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const showToast = (message, type = 'info', title = '', duration = 3000) => {
   if (toastRef.value) {
@@ -18,7 +16,7 @@ const showToast = (message, type = 'info', title = '', duration = 3000) => {
 
 const checkServerConnection = async () => {
   try {
-    const response = await axios.get(`${API_URL}/health`, { timeout: 3000 })
+    const response = await api.get('/health', { timeout: 3000 })
     const wasOffline = serverStatus.value === 'offline'
     serverStatus.value = 'connected'
     

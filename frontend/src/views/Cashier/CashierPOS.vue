@@ -572,10 +572,83 @@
 
           <!-- Action Buttons -->
           <div class="flex flex-col gap-4">
-            <button @click="processCashIn" :disabled="!cashInAmount || parseFloat(cashInAmount) <= 0" 
-              :class="!cashInAmount || parseFloat(cashInAmount) <= 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'"
-              class="w-full text-white font-bold py-5 text-2xl rounded-xl">Complete Cash In</button>
+            <button @click="showCashInVerification" :disabled="!cashInAmount || parseFloat(cashInAmount) <= 0" 
+              :class="!cashInAmount || parseFloat(cashInAmount) <= 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'"
+              class="w-full text-white font-bold py-5 text-2xl rounded-xl">Continue to Verification</button>
             <button @click="closeCashInModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- Cash In RFID Verification Modal -->
+    <Modal :is-open="isCashInVerificationModalOpen" title="Verify Cash-In Transaction" size="full" @close="closeCashInVerificationModal">
+      <div class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left Column: Verification Instructions -->
+        <div class="flex flex-col justify-center items-center space-y-6">
+          <div class="text-center">
+            <p class="text-3xl font-bold text-purple-600 mb-4">Verify with RFID</p>
+            <p class="text-xl text-gray-600 mb-6">Please tap the same RFID card again to confirm</p>
+          </div>
+          
+          <div class="flex justify-center">
+            <font-awesome-icon icon="credit-card" class="text-9xl text-purple-500 animate-pulse" />
+          </div>
+          
+          <input 
+            ref="cashInVerificationRfidInput" 
+            v-model="cashInVerificationRfid" 
+            @keyup.enter="verifyCashInRfid" 
+            type="text" 
+            class="w-full p-4 border-2 border-purple-300 rounded-xl text-center text-xl"
+            placeholder="Tap RFID to verify"
+          />
+          
+          <p v-if="cashInVerificationError" class="text-red-600 text-center text-xl font-semibold">{{ cashInVerificationError }}</p>
+          
+          <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 w-full">
+            <p class="text-center text-yellow-800">
+              <font-awesome-icon icon="exclamation-triangle" class="mr-2" />
+              Security verification required
+            </p>
+          </div>
+          
+          <button 
+            @click="closeCashInVerificationModal" 
+            class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-xl">
+            Back to Amount
+          </button>
+        </div>
+        
+        <!-- Right Column: Transaction Summary -->
+        <div class="flex flex-col justify-center space-y-6 bg-gray-50 p-6 rounded-xl">
+          <h3 class="text-2xl font-bold text-gray-800 border-b-2 pb-3">Transaction Summary</h3>
+          
+          <div class="space-y-4">
+            <div>
+              <p class="text-gray-600">Customer</p>
+              <p class="text-2xl font-bold text-blue-600">{{ cashInCustomer.fullName }}</p>
+            </div>
+            
+            <div>
+              <p class="text-gray-600">RFID</p>
+              <p class="text-xl font-mono text-gray-800">{{ cashInCustomer.rfid }}</p>
+            </div>
+            
+            <div class="border-t-2 pt-4">
+              <p class="text-gray-600">Current Balance</p>
+              <p class="text-3xl font-bold text-green-600">₱{{ cashInCustomer.balance.toFixed(2) }}</p>
+            </div>
+            
+            <div>
+              <p class="text-gray-600">Amount to Add</p>
+              <p class="text-3xl font-bold text-purple-600">+₱{{ cashInAmount }}</p>
+            </div>
+            
+            <div class="border-t-2 pt-4">
+              <p class="text-gray-600">New Balance</p>
+              <p class="text-4xl font-bold text-green-700">₱{{ (cashInCustomer.balance + parseFloat(cashInAmount || 0)).toFixed(2) }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -993,11 +1066,11 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '../../components/Modal.vue'
 import Toast from '../../components/Toast.vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import { printThermalReceipt, getAvailablePrinters } from '../../utils/printReceipt.js'
 
 const router = useRouter()
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const searchQuery = ref('')
 const selectedCategory = ref('all')
@@ -1040,6 +1113,10 @@ const cashInRfid = ref('')
 const cashInRfidInput = ref(null)
 const cashInCustomer = ref(null)
 const cashInError = ref('')
+const isCashInVerificationModalOpen = ref(false)
+const cashInVerificationRfid = ref('')
+const cashInVerificationRfidInput = ref(null)
+const cashInVerificationError = ref('')
 const balanceRfid = ref('')
 const balanceRfidInput = ref(null)
 const balanceCustomer = ref(null)
@@ -1089,7 +1166,7 @@ const showAlertModal = (message, title = 'Alert') => {
 
 const checkSessionStatus = async () => {
   try {
-    const response = await axios.get(`${API_URL}/transactions/session/status`)
+    const response = await api.get('/transactions/session/status')
     if (response.data.success) {
       sessionActive.value = response.data.session?.isActive || false
       return sessionActive.value
@@ -1104,10 +1181,8 @@ const checkSessionStatus = async () => {
 // Fetch data from backend
 const fetchCurrentUser = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = auth.getUser() || {}
     currentUser.value = user
-    console.log('Current User:', user)
-    console.log('User Role:', user.role)
     
     if (user.store) {
       currentStore.value = user.store
@@ -1119,7 +1194,7 @@ const fetchCurrentUser = async () => {
 
 const fetchCategories = async () => {
   try {
-    const response = await axios.get(`${API_URL}/categories`)
+    const response = await api.get('/categories')
     if (response.data.success) {
       // Filter active categories and by store
       let activeCategories = response.data.categories.filter(cat => cat.status === 'active')
@@ -1150,7 +1225,7 @@ const fetchCategories = async () => {
 const fetchProducts = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`${API_URL}/products`)
+    const response = await api.get('/products')
     if (response.data.success) {
       products.value = response.data.products
       // Fetch which products have variants
@@ -1165,7 +1240,7 @@ const fetchProducts = async () => {
 
 const fetchProductsWithVariants = async () => {
   try {
-    const response = await axios.get(`${API_URL}/variants`)
+    const response = await api.get('/variants')
     if (response.data.success) {
       const productIds = new Set()
       response.data.variants.forEach(variant => {
@@ -1184,7 +1259,7 @@ const fetchProductsWithVariants = async () => {
 
 const fetchAddons = async () => {
   try {
-    const response = await axios.get(`${API_URL}/addons`)
+    const response = await api.get('/addons')
     if (response.data.success) {
       allAddons.value = response.data.addons.filter(addon => addon.status === 'active')
     }
@@ -1195,7 +1270,7 @@ const fetchAddons = async () => {
 
 const fetchVATConfig = async () => {
   try {
-    const response = await axios.get(`${API_URL}/settings/vat-config`)
+    const response = await api.get('/settings/vat-config')
     if (response.data.success) {
       vatConfig.value = response.data.vatConfig
     }
@@ -1206,7 +1281,7 @@ const fetchVATConfig = async () => {
 
 const fetchVariants = async (productId) => {
   try {
-    const response = await axios.get(`${API_URL}/variants/product/${productId}`)
+    const response = await api.get(`/variants/product/${productId}`)
     if (response.data.success) {
       return response.data.variants.filter(v => v.status === 'active')
     }
@@ -1309,7 +1384,6 @@ const lastItemQuantity = computed(() => {
 
 const isCoAdmin = computed(() => {
   const result = currentUser.value && (currentUser.value.role === 'Co-Admin' || currentUser.value.role === 'Admin')
-  console.log('isCoAdmin computed:', result, 'currentUser:', currentUser.value)
   return result
 })
 
@@ -1684,7 +1758,7 @@ const handleRfidPayment = async () => {
   rfidPaymentError.value = ''
   
   try {
-    const response = await axios.get(`${API_URL}/customers/rfid/${rfid}`)
+    const response = await api.get(`/customers/rfid/${rfid}`)
     if (response.data.success) {
       rfidCustomer.value = response.data.customer
       
@@ -1743,7 +1817,7 @@ const processCashPayment = async () => {
       store: currentStore.value?._id || currentUser.value?.store?._id
     }
 
-    const response = await axios.post(`${API_URL}/transactions`, transactionData)
+    const response = await api.post('/transactions', transactionData)
     
     if (response.data.success) {
       // Show change display
@@ -1857,17 +1931,17 @@ const processRfidPayment = async () => {
       store: currentStore.value?._id || currentUser.value?.store?._id
     }
 
-    const response = await axios.post(`${API_URL}/transactions`, transactionData)
+    const response = await api.post('/transactions', transactionData)
     
     if (response.data.success) {
       // Update customer balance
       const newBalance = rfidCustomer.value.balance - totalAmount.value
-      await axios.put(`${API_URL}/customers/${rfidCustomer.value._id}/balance`, {
+      await api.put(`/customers/${rfidCustomer.value._id}/balance`, {
         amount: newBalance
       })
 
       // Log customer transaction
-      await axios.post(`${API_URL}/customer-transactions`, {
+      await api.post('/customer-transactions', {
         rfid: rfidCustomer.value.rfid,
         username: rfidCustomer.value.username,
         amount: totalAmount.value,
@@ -1966,13 +2040,13 @@ const handleBalanceRfid = async () => {
   }
 
   try {
-    const response = await axios.get(`${API_URL}/customers/rfid/${balanceRfid.value.trim()}`)
+    const response = await api.get(`/customers/rfid/${balanceRfid.value.trim()}`)
     if (response.data.success && response.data.customer) {
       balanceCustomer.value = response.data.customer
       balanceError.value = ''
       
       // Log balance inquiry transaction
-      await axios.post(`${API_URL}/customer-transactions`, {
+      await api.post('/customer-transactions', {
         rfid: balanceCustomer.value.rfid,
         username: currentUser.value?.username || 'Cashier',
         amount: 0,
@@ -2042,6 +2116,48 @@ const closeCashInModal = () => {
   cashInRfid.value = ''
   cashInAmount.value = ''
   cashInError.value = ''
+  isCashInVerificationModalOpen.value = false
+  cashInVerificationRfid.value = ''
+  cashInVerificationError.value = ''
+}
+
+const showCashInVerification = () => {
+  const amount = parseFloat(cashInAmount.value)
+  if (!amount || amount <= 0) {
+    showAlertModal('Please enter a valid amount', 'Invalid Amount')
+    return
+  }
+  isCashInVerificationModalOpen.value = true
+  cashInVerificationError.value = ''
+  nextTick(() => {
+    if (cashInVerificationRfidInput.value) {
+      cashInVerificationRfidInput.value.focus()
+    }
+  })
+}
+
+const closeCashInVerificationModal = () => {
+  isCashInVerificationModalOpen.value = false
+  cashInVerificationRfid.value = ''
+  cashInVerificationError.value = ''
+}
+
+const verifyCashInRfid = async () => {
+  if (!cashInVerificationRfid.value.trim()) {
+    cashInVerificationError.value = 'Please tap or enter RFID to verify'
+    return
+  }
+
+  // Check if RFID matches the customer's RFID
+  if (cashInVerificationRfid.value.trim() !== cashInCustomer.value.rfid) {
+    cashInVerificationError.value = 'RFID does not match. Please use the same card.'
+    cashInVerificationRfid.value = ''
+    return
+  }
+
+  // RFID verified, close verification modal and process cash-in
+  isCashInVerificationModalOpen.value = false
+  await processCashIn()
 }
 
 const handleCashInRfid = async () => {
@@ -2051,7 +2167,7 @@ const handleCashInRfid = async () => {
   }
 
   try {
-    const response = await axios.get(`${API_URL}/customers/rfid/${cashInRfid.value.trim()}`)
+    const response = await api.get(`/customers/rfid/${cashInRfid.value.trim()}`)
     if (response.data.success && response.data.customer) {
       cashInCustomer.value = response.data.customer
       cashInError.value = ''
@@ -2129,13 +2245,13 @@ const processCashIn = async () => {
     const previousBalance = cashInCustomer.value.balance
     const newBalance = previousBalance + amount
     
-    const response = await axios.put(`${API_URL}/customers/${cashInCustomer.value._id}/balance`, {
+    const response = await api.put(`/customers/${cashInCustomer.value._id}/balance`, {
       amount: newBalance
     })
     
     if (response.data.success) {
       // Log the transaction
-      await axios.post(`${API_URL}/customer-transactions`, {
+      await api.post('/customer-transactions', {
         rfid: cashInCustomer.value.rfid,
         username: currentUser.value?.username || 'Cashier',
         amount: amount,
@@ -2226,7 +2342,7 @@ const searchRefundTransaction = async () => {
     isLoading.value = true
     refundError.value = ''
 
-    const response = await axios.get(`${API_URL}/transactions/by-transaction-id/${refundTransactionId.value}`)
+    const response = await api.get(`/transactions/by-transaction-id/${refundTransactionId.value}`)
     
     if (response.data.success) {
       const transaction = response.data.transaction
@@ -2245,7 +2361,7 @@ const searchRefundTransaction = async () => {
       // Fetch customer details if RFID payment
       if (transaction.customerId) {
         try {
-          const customerResponse = await axios.get(`${API_URL}/customers/${transaction.customerId}`)
+          const customerResponse = await api.get(`/customers/${transaction.customerId}`)
           transaction.customerDetails = customerResponse.data.customer
         } catch (error) {
           console.error('Error fetching customer:', error)
@@ -2328,7 +2444,7 @@ const processRefund = async () => {
     }
 
     // Process refund on backend
-    const response = await axios.post(`${API_URL}/transactions/refund`, refundData)
+    const response = await api.post('/transactions/refund', refundData)
 
     if (response.data.success) {
       // Show success message with balance for E-wallet refunds
@@ -2624,7 +2740,7 @@ const attemptUnlock = async () => {
       }
       
       // Verify password
-      const response = await axios.post(`${API_URL}/users/verify-password`, {
+      const response = await api.post('/users/verify-password', {
         userId: user._id,
         password: unlockPassword.value
       })
@@ -2696,22 +2812,20 @@ const logout = () => {
 }
 
 const openSettingsModal = () => {
-  console.log('openSettingsModal called')
   isMenuOpen.value = false
   isSettingsModalOpen.value = true
-  console.log('isSettingsModalOpen:', isSettingsModalOpen.value)
 }
 
 const saveSettings = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
+    const user = auth.getUser()
     if (!user || !user._id) {
       showToast('User not found', 'error')
       return
     }
 
     // Save to backend
-    const response = await axios.put(`${API_URL}/users/${user._id}/print-preferences`, {
+    const response = await api.put(`/users/${user._id}/print-preferences`, {
       selectedPrinter: selectedPrinter.value,
       printMode: printMode.value
     })
@@ -2748,11 +2862,11 @@ const refreshPrinters = async () => {
 
 const loadPrinterPreference = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
+    const user = auth.getUser()
     if (user && user._id) {
       // Try to load from backend first
       try {
-        const response = await axios.get(`${API_URL}/users/${user._id}/print-preferences`)
+        const response = await api.get(`/users/${user._id}/print-preferences`)
         if (response.data.success) {
           selectedPrinter.value = response.data.preferences.selectedPrinter || null
           printMode.value = response.data.preferences.printMode || 'manual'

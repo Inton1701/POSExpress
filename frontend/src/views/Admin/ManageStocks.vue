@@ -612,15 +612,15 @@ import Modal from '../../components/Modal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faEye, faEdit, faPlus, faBell, faPrint, faFileExcel } from '@fortawesome/free-solid-svg-icons'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 
 library.add(faEye, faEdit, faPlus, faBell, faPrint, faFileExcel)
 
-const API_URL = import.meta.env.VITE_API_URL
 const toast = inject('toast')
 
 // Get current user info
-const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+const currentUser = auth.getUser() || {}
 const currentUserRole = currentUser.role || ''
 const currentUserStore = currentUser.store || null
 const currentUsername = currentUser.username || 'Admin'
@@ -1643,7 +1643,7 @@ const closeAlertModal = () => {
 const viewHistory = async (product) => {
   try {
     selectedProduct.value = product
-    const response = await axios.get(`${API_URL}/stock/history/${product.sku}`)
+    const response = await api.get(`/stock/history/${product.sku}`)
     productHistory.value = response.data.history || []
     isHistoryModalOpen.value = true
   } catch (error) {
@@ -1666,7 +1666,7 @@ const submitModifyStock = async () => {
     
     if (modifyForm.value.itemType === 'addon') {
       // Update add-on quantity via stock API
-      await axios.put(`${API_URL}/stock/update`, {
+      await api.put('/stock/update', {
         sku: modifyForm.value.sku,
         newQuantity: modifyForm.value.newQuantity,
         reason: modifyForm.value.reason || 'Manual adjustment',
@@ -1678,7 +1678,7 @@ const submitModifyStock = async () => {
       await fetchStockHistory()
     } else {
       // Update product quantity
-      await axios.put(`${API_URL}/stock/update`, {
+      await api.put('/stock/update', {
         sku: modifyForm.value.sku,
         newQuantity: modifyForm.value.newQuantity,
         reason: modifyForm.value.reason || 'Manual adjustment',
@@ -1712,7 +1712,7 @@ const submitRestock = async () => {
       isLoading.value = true
       
       // Restock add-on via stock API
-      await axios.post(`${API_URL}/stock/restock`, {
+      await api.post('/stock/restock', {
         sku: restockForm.value.sku,
         quantityToAdd: restockForm.value.quantity,
         isAddon: true,
@@ -1738,7 +1738,7 @@ const submitRestock = async () => {
 
     try {
       isLoading.value = true
-      await axios.post(`${API_URL}/stock/restock`, {
+      await api.post('/stock/restock', {
         sku: restockForm.value.sku,
         quantityToAdd: restockForm.value.quantity,
         isVariant: restockForm.value.hasVariant,
@@ -1769,13 +1769,13 @@ const submitAlert = async () => {
     
     if (alertForm.value.itemType === 'addon') {
       // Update add-on alert
-      await axios.put(`${API_URL}/addons/${alertForm.value.itemId}`, {
+      await api.put(`/addons/${alertForm.value.itemId}`, {
         quantityAlert: alertForm.value.threshold
       })
       toast(`Alert threshold set to ${alertForm.value.threshold} for ${alertProduct.value.name}`, 'success')
     } else {
       // Update product alert
-      await axios.put(`${API_URL}/stock/alert`, {
+      await api.put('/stock/alert', {
         threshold: alertForm.value.threshold,
         isVariant: alertForm.value.hasVariant,
         variantId: alertForm.value.variantId,
@@ -1799,7 +1799,7 @@ const fetchStockData = async () => {
     isLoading.value = true
     
     // Fetch all stock data (includes products and add-ons)
-    const stockResponse = await axios.get(`${API_URL}/stock`)
+    const stockResponse = await api.get('/stock')
     const stockData = stockResponse.data.stock || []
     
     // Map items with correct type based on isAddon flag
@@ -1817,7 +1817,7 @@ const fetchStockData = async () => {
 
 const fetchStockHistory = async () => {
   try {
-    const response = await axios.get(`${API_URL}/stock/history`)
+    const response = await api.get('/stock/history')
     allStockHistory.value = response.data.history || []
   } catch (error) {
     console.error('Error fetching history:', error)

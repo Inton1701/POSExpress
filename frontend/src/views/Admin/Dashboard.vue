@@ -174,13 +174,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
 
 const router = useRouter()
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const salesChartCanvas = ref(null)
 const statusChartCanvas = ref(null)
@@ -289,7 +289,7 @@ const fetchDashboardData = async () => {
     const rangeEnd = new Date(endDate.value)
     rangeEnd.setHours(23, 59, 59, 999)
     
-    const transactionsResponse = await axios.get(`${API_BASE_URL}/transactions`)
+    const transactionsResponse = await api.get('/transactions')
     let allTransactions = transactionsResponse.data.transactions || []
 
     // Filter transactions by current store if user is Co-Admin
@@ -354,7 +354,7 @@ const fetchDashboardData = async () => {
     salesData.value = last7Days
 
     // Fetch low stock products
-    const stockResponse = await axios.get(`${API_BASE_URL}/stock`)
+    const stockResponse = await api.get('/stock')
     const allStock = stockResponse.data.stock || []
     
     // Get current store ID
@@ -488,8 +488,8 @@ const updateCharts = () => {
 }
 
 onMounted(() => {
-  // Get current user info from localStorage
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+  // Get current user info from auth
+  const currentUser = auth.getUser() || {}
   currentUserRole.value = currentUser.role || 'Admin'
   currentUserStore.value = currentUser.store?._id || null
   

@@ -83,10 +83,10 @@
 <script setup>
 import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 
 const router = useRouter()
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const serverStatus = inject('serverStatus')
 
 const form = ref({
@@ -109,13 +109,14 @@ const handleLogin = async () => {
       ? { rfid: form.value.rfid }
       : { username: form.value.username, password: form.value.password }
     
-    const response = await axios.post(`${API_URL}/users/login`, loginData)
+    const response = await api.post('/users/login', loginData)
 
     if (response.data.success) {
       const user = response.data.user
+      const token = response.data.token
       
-      // Store user in localStorage
-      localStorage.setItem('user', JSON.stringify(user))
+      // Store token and user data
+      auth.login(token, user)
       
       // Redirect based on role using replace to avoid back button issues
       let redirectPath = '/customer' // default

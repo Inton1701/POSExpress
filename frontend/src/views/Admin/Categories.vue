@@ -172,11 +172,10 @@ import Modal from '../../components/Modal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faEdit, faTrash, faPlus, faExclamationCircle, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 
 library.add(faEdit, faTrash, faPlus, faExclamationCircle, faExclamationTriangle)
-
-const API_URL = import.meta.env.VITE_API_URL
 const toast = inject('toast')
 
 const categories = ref([])
@@ -296,7 +295,7 @@ const sortTable = (column) => {
 const fetchCategories = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`${API_URL}/categories`)
+    const response = await api.get('/categories')
     if (response.data.success) {
       categories.value = response.data.categories
     }
@@ -334,8 +333,8 @@ const submitForm = async () => {
     if (editingCategory.value) {
       // If Co-Admin is editing a global category, only allow status change
       if (isEditingGlobalCategory.value) {
-        const response = await axios.put(
-          `${API_URL}/categories/${editingCategory.value._id}`,
+        const response = await api.put(
+          `/categories/${editingCategory.value._id}`,
           { status: form.value.status }
         )
         
@@ -353,8 +352,8 @@ const submitForm = async () => {
       }
       
       // Update existing category (full edit)
-      const response = await axios.put(
-        `${API_URL}/categories/${editingCategory.value._id}`,
+      const response = await api.put(
+        `/categories/${editingCategory.value._id}`,
         { name: form.value.name, status: form.value.status }
       )
       
@@ -384,7 +383,7 @@ const submitForm = async () => {
         categoryData.isGlobal = true
       }
       
-      const response = await axios.post(`${API_URL}/categories`, categoryData)
+      const response = await api.post('/categories', categoryData)
       
       if (response.data.success) {
         categories.value.push(response.data.category)
@@ -425,7 +424,7 @@ const confirmDelete = async () => {
   
   try {
     isLoading.value = true
-    const response = await axios.delete(`${API_URL}/categories/${categoryToDelete.value}`)
+    const response = await api.delete(`/categories/${categoryToDelete.value}`)
     
     if (response.data.success) {
       const index = categories.value.findIndex(c => c._id === categoryToDelete.value)
@@ -448,8 +447,8 @@ const confirmDelete = async () => {
 }
 
 onMounted(() => {
-  // Get current user info from localStorage
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+  // Get current user info from auth
+  const currentUser = auth.getUser() || {}
   currentUserRole.value = currentUser.role || 'Admin'
   currentUserStore.value = currentUser.store?._id || null
   

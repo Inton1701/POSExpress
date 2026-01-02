@@ -581,11 +581,11 @@ import JsBarcode from 'jsbarcode'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faBarcode, faEdit, faTrash, faSync, faCheckCircle, faExclamationCircle, faPrint, faPlus, faExclamationTriangle, faFileExcel } from '@fortawesome/free-solid-svg-icons'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 
 library.add(faBarcode, faEdit, faTrash, faSync, faCheckCircle, faExclamationCircle, faPrint, faPlus, faExclamationTriangle, faFileExcel)
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const toast = inject('toast')
 
 const products = ref([])
@@ -860,7 +860,7 @@ const showBarcode = async (product) => {
   
   // Fetch and generate variant barcodes
   try {
-    const response = await axios.get(`${API_URL}/variants/product/${product._id}`)
+    const response = await api.get(`/variants/product/${product._id}`)
     selectedVariants.value = response.data.variants || []
     
     await nextTick()
@@ -1001,11 +1001,11 @@ const generateUniqueSKU = async () => {
       newSKU = `${prefix}${randomNum}`
       
       // Check if SKU exists
-      const response = await axios.get(`${API_URL}/products`)
+      const response = await api.get('/products')
       const existingSKUs = response.data.products.map(p => p.sku)
       
       // Also check variants
-      const variantsResponse = await axios.get(`${API_URL}/variants`)
+      const variantsResponse = await api.get('/variants')
       const existingVariantSKUs = variantsResponse.data.variants.map(v => v.sku)
       
       if (!existingSKUs.includes(newSKU) && !existingVariantSKUs.includes(newSKU)) {
@@ -1052,10 +1052,10 @@ const generateVariantSKU = async (index) => {
       newSKU = `${form.value.sku}-${suffix}${randomNum}`
       
       // Check if SKU exists
-      const response = await axios.get(`${API_URL}/products`)
+      const response = await api.get('/products')
       const existingSKUs = response.data.products.map(p => p.sku)
       
-      const variantsResponse = await axios.get(`${API_URL}/variants`)
+      const variantsResponse = await api.get('/variants')
       const existingVariantSKUs = variantsResponse.data.variants.map(v => v.sku)
       
       // Also check other variants in current form
@@ -1081,14 +1081,14 @@ const generateVariantSKU = async (index) => {
 const fetchProducts = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`${API_URL}/products`)
+    const response = await api.get('/products')
     const productsData = response.data.products || []
     
     // Check variants for each product
     const productsWithVariantInfo = await Promise.all(
       productsData.map(async (product) => {
         try {
-          const variantsResponse = await axios.get(`${API_URL}/variants/product/${product._id}`)
+          const variantsResponse = await api.get(`/variants/product/${product._id}`)
           return {
             ...product,
             hasVariants: (variantsResponse.data.variants || []).length > 0
@@ -1115,7 +1115,7 @@ const hasVariants = (product) => {
 // Fetch all categories
 const fetchCategories = async () => {
   try {
-    const response = await axios.get(`${API_URL}/categories`)
+    const response = await api.get('/categories')
     categories.value = response.data.categories.filter(c => c.status === 'active') || []
   } catch (error) {
     console.error('Error fetching categories:', error)
@@ -1125,7 +1125,7 @@ const fetchCategories = async () => {
 // Fetch all addons
 const fetchAddons = async () => {
   try {
-    const response = await axios.get(`${API_URL}/addons`)
+    const response = await api.get('/addons')
     addons.value = response.data.addons.filter(a => a.status === 'active') || []
   } catch (error) {
     console.error('Error fetching addons:', error)
@@ -1167,7 +1167,7 @@ const openEditModal = async (product) => {
     }
     
     // Fetch variants for this product
-    const variantsResponse = await axios.get(`${API_URL}/variants/product/${product._id}`)
+    const variantsResponse = await api.get(`/variants/product/${product._id}`)
     form.value.variants = (variantsResponse.data.variants || []).map(v => ({
       ...v,
       status: v.status || 'active'
@@ -1232,7 +1232,7 @@ const submitForm = async () => {
     
     // If Co-Admin is editing a global product, only allow status change
     if (isEditingGlobalProduct.value) {
-      const response = await axios.put(`${API_URL}/products/${editingProduct.value._id}`, {
+      const response = await api.put(`/products/${editingProduct.value._id}`, {
         status: form.value.status
       })
       toast('Product status updated successfully', 'success')
@@ -1267,16 +1267,16 @@ const submitForm = async () => {
     
     if (editingProduct.value) {
       // Update existing product
-      await axios.put(`${API_URL}/products/${productId}`, productData)
+      await api.put(`/products/${productId}`, productData)
       
       // Delete old variants and create new ones
-      const oldVariants = await axios.get(`${API_URL}/variants/product/${productId}`)
+      const oldVariants = await api.get(`/variants/product/${productId}`)
       for (const variant of oldVariants.data.variants || []) {
-        await axios.delete(`${API_URL}/variants/${variant._id}`)
+        await api.delete(`/variants/${variant._id}`)
       }
     } else {
       // Create new product
-      const response = await axios.post(`${API_URL}/products`, productData)
+      const response = await api.post('/products', productData)
       productId = response.data.product._id
     }
     
@@ -1292,7 +1292,7 @@ const submitForm = async () => {
           sku: v.sku || `${form.value.sku}-${v.value.substring(0, 3).toUpperCase()}`
         }))
       }
-      await axios.post(`${API_URL}/variants`, variantsData)
+      await api.post('/variants', variantsData)
     }
     
     toast(`Product ${editingProduct.value ? 'updated' : 'created'} successfully`, 'success')
@@ -1496,7 +1496,7 @@ const confirmDelete = async () => {
   
   try {
     isLoading.value = true
-    await axios.delete(`${API_URL}/products/${productToDelete.value}`)
+    await api.delete(`/products/${productToDelete.value}`)
     toast('Product deleted successfully', 'success')
     fetchProducts()
     closeDeleteModal()
@@ -1525,8 +1525,8 @@ const handleClickOutside = (event) => {
 }
 
 onMounted(() => {
-  // Get current user info from localStorage
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+  // Get current user info from auth
+  const currentUser = auth.getUser() || {}
   currentUserRole.value = currentUser.role || 'Admin'
   currentUserStore.value = currentUser.store?._id || null
   

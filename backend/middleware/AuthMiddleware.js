@@ -1,18 +1,23 @@
 const User = require("../models/User");
+const jwt = require("jsonwebtoken");
 
-// Middleware to extract user info from request
-// In a real app, you would validate JWT tokens here
+// Middleware to authenticate and extract user info from JWT token
 const extractUserInfo = async (req, res, next) => {
     try {
-        // For now, we expect userId in headers or body
-        // In production, extract from JWT token
-        const userId = req.headers['x-user-id'] || req.body.userId;
+        // Get token from Authorization header (Bearer token)
+        const authHeader = req.headers.authorization;
         
-        if (!userId) {
-            return res.status(401).json({ success: false, message: 'User not authenticated' });
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'No token provided. User not authenticated' });
         }
 
-        const user = await User.findById(userId).populate('store');
+        const token = authHeader.split(' ')[1];
+
+        // Verify token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // Get user from database
+        const user = await User.findById(decoded.id).populate('store');
         
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
@@ -28,6 +33,12 @@ const extractUserInfo = async (req, res, next) => {
 
         next();
     } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ success: false, message: 'Invalid token' });
+        }
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ success: false, message: 'Token expired' });
+        }
         res.status(500).json({ success: false, message: 'Authentication failed', error: error.message });
     }
 };

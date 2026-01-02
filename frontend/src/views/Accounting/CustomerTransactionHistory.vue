@@ -443,7 +443,8 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '../../components/Modal.vue'
 import Toast from '../../components/Toast.vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faPrint, faFileExcel, faBan, faIdCard } from '@fortawesome/free-solid-svg-icons'
@@ -451,7 +452,6 @@ import { faPrint, faFileExcel, faBan, faIdCard } from '@fortawesome/free-solid-s
 library.add(faPrint, faFileExcel, faBan, faIdCard)
 
 const router = useRouter()
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const transactions = ref([])
 const searchQuery = ref('')
@@ -663,7 +663,7 @@ const sortTable = (column) => {
 
 const fetchTransactions = async () => {
   try {
-    const response = await axios.get(`${API_URL}/customer-transactions`)
+    const response = await api.get('/customer-transactions')
     if (response.data.success) {
       transactions.value = response.data.transactions.sort((a, b) => 
         new Date(b.createdAt) - new Date(a.createdAt)
@@ -723,7 +723,7 @@ const processVoidTransaction = async () => {
   voidError.value = ''
   
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
+    const user = auth.getUser()
     if (!user) {
       voidError.value = 'User not found. Please login again.'
       return
@@ -741,7 +741,7 @@ const processVoidTransaction = async () => {
       verificationData.rfid = voidRfid.value
     }
 
-    const response = await axios.post(`${API_URL}/customer-transactions/void`, verificationData)
+    const response = await api.post('/customer-transactions/void', verificationData)
 
     if (response.data.success) {
       showToast('Transaction voided successfully', 'success')
@@ -765,13 +765,13 @@ const processVoidTransaction = async () => {
 
 const saveSettings = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
+    const user = auth.getUser()
     if (!user || !user._id) {
       showToast('User not found', 'error')
       return
     }
 
-    const response = await axios.put(`${API_URL}/users/${user._id}/print-preferences`, {
+    const response = await api.put(`/users/${user._id}/print-preferences`, {
       printMode: printMode.value
     })
 

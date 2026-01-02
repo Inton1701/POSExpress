@@ -186,11 +186,11 @@ import { useRouter } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import Toast from '../../components/Toast.vue'
 import Modal from '../../components/Modal.vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import { printThermalReceipt } from '../../utils/printReceipt.js'
 
 const router = useRouter()
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const productSales = ref([])
 const summary = ref({
@@ -270,7 +270,7 @@ const formatNumber = (value) => {
 
 const checkSessionStatus = async () => {
   try {
-    const response = await axios.get(`${API_URL}/transactions/session/status`)
+    const response = await api.get('/transactions/session/status')
     if (response.data.success) {
       sessionActive.value = response.data.session?.isActive || false
       return sessionActive.value
@@ -285,7 +285,7 @@ const checkSessionStatus = async () => {
 const fetchSalesData = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`${API_URL}/transactions/sales-report`)
+    const response = await api.get('/transactions/sales-report')
     if (response.data.success) {
       summary.value = response.data.summary
       productSales.value = response.data.productSales
@@ -341,12 +341,6 @@ const confirmPrintSalesReport = async () => {
       selectedPrinter.value = printerPref
     }
 
-    console.log('=== Sales Report Print ===')
-    console.log('Current Store:', currentStore.value)
-    console.log('Summary Data:', summary.value)
-    console.log('Product Sales:', productSales.value)
-    console.log('Selected Printer:', selectedPrinter.value)
-
     // Prepare sales report data for thermal printing (all primitive values)
     const printData = {
       transactionType: 'Sales Report',
@@ -368,17 +362,12 @@ const confirmPrintSalesReport = async () => {
       }))
     }
 
-    console.log('Print Data prepared:', printData)
-
     // Convert to plain object for IPC (strip Vue reactivity)
     const plainPrintData = JSON.parse(JSON.stringify(printData))
-
-    console.log('Sending to thermal printer...')
 
     // Send to thermal printer
     const result = await printThermalReceipt(plainPrintData, selectedPrinter.value)
     
-    console.log('Print result:', result)
     showToast('Sales report sent to printer successfully', 'success')
   } catch (error) {
     console.error('Print error:', error)
@@ -388,7 +377,7 @@ const confirmPrintSalesReport = async () => {
 
 const loadCurrentUser = () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = auth.getUser() || {}
     if (user.store) {
       currentStore.value = user.store
     }

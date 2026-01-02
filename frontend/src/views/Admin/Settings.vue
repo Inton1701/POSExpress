@@ -381,11 +381,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import Toast from '../../components/Toast.vue'
 
 const router = useRouter()
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
 const activeTab = ref('profile')
 const isLoading = ref(false)
@@ -428,7 +428,7 @@ const showToast = (message, type = 'success') => {
 
 const fetchCurrentUser = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = auth.getUser() || {}
     currentUser.value = user
     profileForm.value.username = user.username || ''
     profileForm.value.rfid = user.rfid || ''
@@ -437,7 +437,7 @@ const fetchCurrentUser = async () => {
     if (user.store) {
       const storeId = typeof user.store === 'object' ? user.store._id : user.store
       if (storeId) {
-        const response = await axios.get(`${API_BASE_URL}/stores/${storeId}`)
+        const response = await api.get(`/stores/${storeId}`)
         if (response.data.success) {
           const store = response.data.store
           profileForm.value.storeName = store.storeName || ''
@@ -455,7 +455,7 @@ const fetchCurrentUser = async () => {
 
 const fetchVATRate = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/settings/vat-config`)
+    const response = await api.get('/settings/vat-config')
     if (response.data.success) {
       currentVatConfig.value = response.data.vatConfig
       vatForm.value.type = response.data.vatConfig.type || 'percent'
@@ -504,7 +504,7 @@ const updateProfile = async () => {
       updateData.newPassword = profileForm.value.newPassword
     }
 
-    const response = await axios.put(`${API_BASE_URL}/users/${currentUser.value._id}`, updateData)
+    const response = await api.put(`/users/${currentUser.value._id}`, updateData)
     
     if (response.data.success) {
       // Update store information
@@ -518,8 +518,7 @@ const updateProfile = async () => {
             contact: profileForm.value.contact
           }
           
-          const storeResponse = await axios.put(`${API_BASE_URL}/stores/${storeId}`, storeData)
-          console.log('Store update response:', storeResponse.data)
+          const storeResponse = await api.put(`/stores/${storeId}`, storeData)
         }
       }
       
@@ -556,7 +555,7 @@ const updateVATRate = async () => {
 
   isLoading.value = true
   try {
-    const response = await axios.post(`${API_BASE_URL}/settings/vat-config`, {
+    const response = await api.post('/settings/vat-config', {
       vatType: vatForm.value.type,
       vatValue: vatForm.value.value
     })

@@ -1,6 +1,16 @@
 const User = require("../models/User");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
+// Helper function to generate JWT token
+const generateToken = (userId) => {
+    return jwt.sign(
+        { id: userId },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' } // Token expires in 7 days
+    );
+};
 
 const user = {
     // Get all users
@@ -145,7 +155,15 @@ const user = {
                 updatedAt: user.updatedAt
             };
 
-            res.status(200).json({ success: true, user: userResponse, message: 'Login successful' });
+            // Generate JWT token
+            const token = generateToken(user._id);
+
+            res.status(200).json({ 
+                success: true, 
+                user: userResponse, 
+                token: token,
+                message: 'Login successful' 
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: 'Login failed', error: error.message });
         }

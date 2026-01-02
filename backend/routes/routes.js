@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
+// Import middleware
+const { extractUserInfo, isAdmin, isCoAdminOrAdmin, isCashier } = require("../middleware/AuthMiddleware");
+
 // Import controllers
 const CategoriesController = require("../controllers/CategoriesController");
 const CustomerController = require("../controllers/CustomerController");
@@ -15,115 +18,120 @@ const AddonController = require("../controllers/AddonController");
 const SettingsController = require("../controllers/SettingsController");
 const CustomerTransaction = require("../models/CustomerTransactions");
 
-// Health check route
+// Health check route (public)
 router.get("/health", (req, res) => {
   res.json({ success: true, status: "Server is running", timestamp: new Date() });
 });
 
-// Category routes
-router.get("/categories", CategoriesController.getAllCategories);
-router.post("/categories", CategoriesController.createCategory);
-router.get("/categories/:id", CategoriesController.getCategory);
-router.put("/categories/:id", CategoriesController.updateCategory);
-router.delete("/categories/:id", CategoriesController.deleteCategory);
-
-// Product routes
-router.get("/products", ProductController.getAllProducts);
-router.post("/products", ProductController.createProduct);
-router.get("/products/:id", ProductController.getProduct);
-router.put("/products/:id", ProductController.updateProduct);
-router.delete("/products/:id", ProductController.deleteProduct);
-router.get("/products/store/:storeId", ProductController.getProductsByStore);
-router.get("/products/category/:category", ProductController.getProductsByCategory);
-router.get("/products/stock/low", ProductController.getLowStock);
-router.get("/products/stock/out", ProductController.getOutOfStock);
-
-// Customer routes
-router.get("/customers", CustomerController.getAllCustomers);
-router.post("/customers", CustomerController.createCustomer);
-router.post("/customers/login", CustomerController.loginCustomer);
-router.get("/customers/:id", CustomerController.getCustomer);
-router.get("/customers/rfid/:rfid", CustomerController.getCustomerByRFID);
-router.put("/customers/:id", CustomerController.updateCustomer);
-router.put("/customers/:id/balance", CustomerController.updateBalance);
-router.delete("/customers/:id", CustomerController.deleteCustomer);
-
-// Discount routes
-router.get("/discounts", DiscountController.getAllDiscounts);
-router.post("/discounts", DiscountController.createDiscount);
-router.get("/discounts/:id", DiscountController.getDiscount);
-router.put("/discounts/:id", DiscountController.updateDiscount);
-router.delete("/discounts/:id", DiscountController.deleteDiscount);
-
-// Stock routes
-router.get("/stock", StockController.getAllStock);
-router.get("/stock/history", StockController.getAllStockHistory);
-router.get("/stock/history/:sku", StockController.getStockHistoryBySku);
-router.put("/stock/update", StockController.updateStock);
-router.post("/stock/restock", StockController.restock);
-router.put("/stock/alert", StockController.setQuantityAlert);
-
-// Transaction routes
-router.get("/transactions", TransactionController.getAllTransactions);
-router.post("/transactions", TransactionController.createTransaction);
-router.post("/transactions/refund", TransactionController.refundTransaction);
-router.get("/transactions/by-transaction-id/:transactionId", TransactionController.getTransactionByTransactionId);
-router.get("/transactions/date-range", TransactionController.getTransactionsByDateRange);
-router.get("/transactions/sales-report", TransactionController.getSalesReport);
-router.get("/transactions/sales-history", TransactionController.getSalesHistory);
-router.get("/transactions/session/:sessionId/details", TransactionController.getSessionDetails);
-router.post("/transactions/session/start", TransactionController.startTransactionSession);
-router.post("/transactions/session/end", TransactionController.endTransactionSession);
-router.get("/transactions/session/status", TransactionController.getTransactionSessionStatus);
-router.get("/transactions/:id", TransactionController.getTransaction);
-router.put("/transactions/:id", TransactionController.updateTransaction);
-router.delete("/transactions/:id", TransactionController.deleteTransaction);
-router.put("/transactions/:id/void", TransactionController.voidTransaction);
-
-// User routes
-router.get("/users", UserController.getAllUsers);
-router.post("/users", UserController.createUser);
+// ========== PUBLIC ROUTES (No Authentication Required) ==========
+// User authentication
 router.post("/users/login", UserController.loginUser);
-router.post("/users/verify-password", UserController.verifyPassword);
-router.get("/users/:id", UserController.getUser);
-router.put("/users/:id", UserController.updateUser);
-router.delete("/users/:id", UserController.deleteUser);
-router.put("/users/:id/print-preferences", UserController.updatePrintPreferences);
-router.get("/users/:id/print-preferences", UserController.getPrintPreferences);
+router.post("/customers/login", CustomerController.loginCustomer);
 
-// Store routes
-router.get("/stores", StoreController.getAllStores);
-router.post("/stores", StoreController.createStore);
-router.get("/stores/:id", StoreController.getStore);
-router.put("/stores/:id", StoreController.updateStore);
-router.delete("/stores/:id", StoreController.deleteStore);
-router.post("/stores/:id/assign-coadmin", StoreController.assignCoAdmin);
-router.post("/stores/:id/remove-coadmin", StoreController.removeCoAdmin);
+// ========== PROTECTED ROUTES (Authentication Required) ==========
 
-// Variant routes
-router.get("/variants", VariantController.getAllVariants);
-router.get("/variants/product/:productId", VariantController.getProductVariants);
-router.post("/variants", VariantController.createVariants);
-router.put("/variants/:id", VariantController.updateVariant);
-router.delete("/variants/:id", VariantController.deleteVariant);
-router.get("/variants/sku/:sku", VariantController.getVariantBySku);
+// Category routes (Admin & Co-Admin)
+router.get("/categories", extractUserInfo, CategoriesController.getAllCategories);
+router.post("/categories", extractUserInfo, isCoAdminOrAdmin, CategoriesController.createCategory);
+router.get("/categories/:id", extractUserInfo, CategoriesController.getCategory);
+router.put("/categories/:id", extractUserInfo, isCoAdminOrAdmin, CategoriesController.updateCategory);
+router.delete("/categories/:id", extractUserInfo, isAdmin, CategoriesController.deleteCategory);
 
-// Add-on routes
-router.get("/addons", AddonController.getAllAddons);
-router.post("/addons", AddonController.createAddon);
-router.get("/addons/:id", AddonController.getAddon);
-router.put("/addons/:id", AddonController.updateAddon);
-router.delete("/addons/:id", AddonController.deleteAddon);
+// Product routes (Admin & Co-Admin can manage, all can view)
+router.get("/products", extractUserInfo, ProductController.getAllProducts);
+router.post("/products", extractUserInfo, isCoAdminOrAdmin, ProductController.createProduct);
+router.get("/products/:id", extractUserInfo, ProductController.getProduct);
+router.put("/products/:id", extractUserInfo, isCoAdminOrAdmin, ProductController.updateProduct);
+router.delete("/products/:id", extractUserInfo, isAdmin, ProductController.deleteProduct);
+router.get("/products/store/:storeId", extractUserInfo, ProductController.getProductsByStore);
+router.get("/products/category/:category", extractUserInfo, ProductController.getProductsByCategory);
+router.get("/products/stock/low", extractUserInfo, ProductController.getLowStock);
+router.get("/products/stock/out", extractUserInfo, ProductController.getOutOfStock);
 
-// Customer Transaction routes
-router.post("/customer-transactions", CustomerController.logTransaction);
-router.get("/customer-transactions/:rfid", CustomerController.getTransactionsByRFID);
-router.get("/customer-transactions", CustomerController.getAllCustomerTransactions);
-router.post("/customer-transactions/void", CustomerController.voidCustomerTransaction);
+// Customer routes (All authenticated users)
+router.get("/customers", extractUserInfo, CustomerController.getAllCustomers);
+router.post("/customers", extractUserInfo, CustomerController.createCustomer);
+router.get("/customers/:id", extractUserInfo, CustomerController.getCustomer);
+router.get("/customers/rfid/:rfid", extractUserInfo, CustomerController.getCustomerByRFID);
+router.put("/customers/:id", extractUserInfo, CustomerController.updateCustomer);
+router.put("/customers/:id/balance", extractUserInfo, CustomerController.updateBalance);
+router.delete("/customers/:id", extractUserInfo, isAdmin, CustomerController.deleteCustomer);
 
-// Settings routes
-router.get("/settings/vat-config", SettingsController.getVATConfig);
-router.post("/settings/vat-config", SettingsController.updateVATConfig);
-router.get("/settings", SettingsController.getAllSettings);
+// Discount routes (Admin & Co-Admin)
+router.get("/discounts", extractUserInfo, DiscountController.getAllDiscounts);
+router.post("/discounts", extractUserInfo, isCoAdminOrAdmin, DiscountController.createDiscount);
+router.get("/discounts/:id", extractUserInfo, DiscountController.getDiscount);
+router.put("/discounts/:id", extractUserInfo, isCoAdminOrAdmin, DiscountController.updateDiscount);
+router.delete("/discounts/:id", extractUserInfo, isAdmin, DiscountController.deleteDiscount);
+
+// Stock routes (Admin & Co-Admin manage, all view)
+router.get("/stock", extractUserInfo, StockController.getAllStock);
+router.get("/stock/history", extractUserInfo, StockController.getAllStockHistory);
+router.get("/stock/history/:sku", extractUserInfo, StockController.getStockHistoryBySku);
+router.put("/stock/update", extractUserInfo, isCoAdminOrAdmin, StockController.updateStock);
+router.post("/stock/restock", extractUserInfo, isCoAdminOrAdmin, StockController.restock);
+router.put("/stock/alert", extractUserInfo, isCoAdminOrAdmin, StockController.setQuantityAlert);
+
+// Transaction routes (All authenticated users can create/view)
+router.get("/transactions", extractUserInfo, TransactionController.getAllTransactions);
+router.post("/transactions", extractUserInfo, TransactionController.createTransaction);
+router.post("/transactions/refund", extractUserInfo, isCoAdminOrAdmin, TransactionController.refundTransaction);
+router.get("/transactions/by-transaction-id/:transactionId", extractUserInfo, TransactionController.getTransactionByTransactionId);
+router.get("/transactions/date-range", extractUserInfo, TransactionController.getTransactionsByDateRange);
+router.get("/transactions/sales-report", extractUserInfo, TransactionController.getSalesReport);
+router.get("/transactions/sales-history", extractUserInfo, TransactionController.getSalesHistory);
+router.get("/transactions/session/:sessionId/details", extractUserInfo, TransactionController.getSessionDetails);
+router.post("/transactions/session/start", extractUserInfo, TransactionController.startTransactionSession);
+router.post("/transactions/session/end", extractUserInfo, TransactionController.endTransactionSession);
+router.get("/transactions/session/status", extractUserInfo, TransactionController.getTransactionSessionStatus);
+router.get("/transactions/:id", extractUserInfo, TransactionController.getTransaction);
+router.put("/transactions/:id", extractUserInfo, isCoAdminOrAdmin, TransactionController.updateTransaction);
+router.delete("/transactions/:id", extractUserInfo, isAdmin, TransactionController.deleteTransaction);
+router.put("/transactions/:id/void", extractUserInfo, isCoAdminOrAdmin, TransactionController.voidTransaction);
+
+// User routes (Admin creates, user updates own profile)
+router.get("/users", extractUserInfo, isCoAdminOrAdmin, UserController.getAllUsers);
+router.post("/users", extractUserInfo, isCoAdminOrAdmin, UserController.createUser);
+router.post("/users/verify-password", extractUserInfo, UserController.verifyPassword);
+router.get("/users/:id", extractUserInfo, UserController.getUser);
+router.put("/users/:id", extractUserInfo, UserController.updateUser);
+router.delete("/users/:id", extractUserInfo, isAdmin, UserController.deleteUser);
+router.put("/users/:id/print-preferences", extractUserInfo, UserController.updatePrintPreferences);
+router.get("/users/:id/print-preferences", extractUserInfo, UserController.getPrintPreferences);
+
+// Store routes (Admin only)
+router.get("/stores", extractUserInfo, StoreController.getAllStores);
+router.post("/stores", extractUserInfo, isAdmin, StoreController.createStore);
+router.get("/stores/:id", extractUserInfo, StoreController.getStore);
+router.put("/stores/:id", extractUserInfo, isAdmin, StoreController.updateStore);
+router.delete("/stores/:id", extractUserInfo, isAdmin, StoreController.deleteStore);
+router.post("/stores/:id/assign-coadmin", extractUserInfo, isAdmin, StoreController.assignCoAdmin);
+router.post("/stores/:id/remove-coadmin", extractUserInfo, isAdmin, StoreController.removeCoAdmin);
+
+// Variant routes (Admin & Co-Admin)
+router.get("/variants", extractUserInfo, VariantController.getAllVariants);
+router.get("/variants/product/:productId", extractUserInfo, VariantController.getProductVariants);
+router.post("/variants", extractUserInfo, isCoAdminOrAdmin, VariantController.createVariants);
+router.put("/variants/:id", extractUserInfo, isCoAdminOrAdmin, VariantController.updateVariant);
+router.delete("/variants/:id", extractUserInfo, isAdmin, VariantController.deleteVariant);
+router.get("/variants/sku/:sku", extractUserInfo, VariantController.getVariantBySku);
+
+// Add-on routes (Admin & Co-Admin)
+router.get("/addons", extractUserInfo, AddonController.getAllAddons);
+router.post("/addons", extractUserInfo, isCoAdminOrAdmin, AddonController.createAddon);
+router.get("/addons/:id", extractUserInfo, AddonController.getAddon);
+router.put("/addons/:id", extractUserInfo, isCoAdminOrAdmin, AddonController.updateAddon);
+router.delete("/addons/:id", extractUserInfo, isAdmin, AddonController.deleteAddon);
+
+// Customer Transaction routes (All authenticated users)
+router.post("/customer-transactions", extractUserInfo, CustomerController.logTransaction);
+router.get("/customer-transactions/:rfid", extractUserInfo, CustomerController.getTransactionsByRFID);
+router.get("/customer-transactions", extractUserInfo, CustomerController.getAllCustomerTransactions);
+router.post("/customer-transactions/void", extractUserInfo, isCoAdminOrAdmin, CustomerController.voidCustomerTransaction);
+
+// Settings routes (Admin & Co-Admin)
+router.get("/settings/vat-config", extractUserInfo, SettingsController.getVATConfig);
+router.post("/settings/vat-config", extractUserInfo, isCoAdminOrAdmin, SettingsController.updateVATConfig);
+router.get("/settings", extractUserInfo, SettingsController.getAllSettings);
 
 module.exports = router;

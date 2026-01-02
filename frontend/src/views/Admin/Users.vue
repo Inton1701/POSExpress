@@ -182,11 +182,10 @@ import Modal from '../../components/Modal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faEdit, faTrash, faPlus, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 
 library.add(faEdit, faTrash, faPlus, faExclamationCircle)
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const toast = inject('toast')
 
 const users = ref([])
@@ -320,7 +319,7 @@ const availableStores = computed(() => {
 const fetchUsers = async () => {
   isLoading.value = true
   try {
-    const response = await axios.get(`${API_URL}/users`)
+    const response = await api.get('/users')
     if (response.data.success) {
       users.value = response.data.users
     }
@@ -336,7 +335,7 @@ const fetchUsers = async () => {
 
 const fetchStores = async () => {
   try {
-    const response = await axios.get(`${API_URL}/stores`)
+    const response = await api.get('/stores')
     if (response.data.success) {
       stores.value = response.data.stores
     }
@@ -385,7 +384,7 @@ const submitForm = async () => {
         delete updateData.password
       }
       
-      const response = await axios.put(`${API_URL}/users/${editingUser.value._id}`, updateData)
+      const response = await api.put(`/users/${editingUser.value._id}`, updateData)
       if (response.data.success) {
         // Refetch users to get properly populated data
         await fetchUsers()
@@ -395,7 +394,7 @@ const submitForm = async () => {
       }
     } else {
       // Add user
-      const response = await axios.post(`${API_URL}/users`, form.value)
+      const response = await api.post('/users', form.value)
       if (response.data.success) {
         // Refetch users to get properly populated data
         await fetchUsers()
@@ -427,7 +426,7 @@ const confirmDelete = async () => {
   if (!userToDelete.value) return
   
   try {
-    const response = await axios.delete(`${API_URL}/users/${userToDelete.value}`)
+    const response = await api.delete(`/users/${userToDelete.value}`)
     if (response.data.success) {
       const index = users.value.findIndex(u => u._id === userToDelete.value)
       if (index !== -1) {
@@ -447,8 +446,8 @@ const confirmDelete = async () => {
 }
 
 onMounted(() => {
-  // Get current user info from localStorage
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+  // Get current user info from auth
+  const currentUser = auth.getUser() || {}
   currentUserRole.value = currentUser.role || 'Admin'
   currentUserStore.value = currentUser.store?._id || null
 

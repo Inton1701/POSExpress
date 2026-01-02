@@ -37,7 +37,10 @@ import {
   faHistory,
   faFilePdf,
   faPlusCircle,
-  faMinusCircle
+  faMinusCircle,
+  faUsers,
+  faExclamationTriangle,
+  faSort
 } from '@fortawesome/free-solid-svg-icons';
 
 library.add(
@@ -77,7 +80,10 @@ library.add(
   faHistory,
   faFilePdf,
   faPlusCircle,
-  faMinusCircle
+  faMinusCircle,
+  faUsers,
+  faExclamationTriangle,
+  faSort
 );
 
 export default FontAwesomeIcon;

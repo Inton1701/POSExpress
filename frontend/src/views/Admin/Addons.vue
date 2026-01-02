@@ -157,11 +157,10 @@ import Modal from '../../components/Modal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faEdit, faTrash, faPlus, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 
 library.add(faEdit, faTrash, faPlus, faExclamationCircle)
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const toast = inject('toast')
 
 const addons = ref([])
@@ -272,7 +271,7 @@ const sortTable = (column) => {
 const fetchAddons = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`${API_URL}/addons`)
+    const response = await api.get('/addons')
     if (response.data.success) {
       addons.value = response.data.addons
     }
@@ -312,7 +311,7 @@ const submitForm = async () => {
 
     if (editingAddon.value) {
       // Update add-on
-      const response = await axios.put(`${API_URL}/addons/${editingAddon.value._id}`, form.value)
+      const response = await api.put(`/addons/${editingAddon.value._id}`, form.value)
       if (response.data.success) {
         const index = addons.value.findIndex(a => a._id === editingAddon.value._id)
         if (index !== -1) {
@@ -336,7 +335,7 @@ const submitForm = async () => {
         addonData.isGlobal = true
       }
       
-      const response = await axios.post(`${API_URL}/addons`, addonData)
+      const response = await api.post('/addons', addonData)
       if (response.data.success) {
         addons.value.push(response.data.addon)
         if (toast) {
@@ -371,7 +370,7 @@ const confirmDelete = async () => {
 
   try {
     isLoading.value = true
-    const response = await axios.delete(`${API_URL}/addons/${addonToDelete.value}`)
+    const response = await api.delete(`/addons/${addonToDelete.value}`)
 
     if (response.data.success) {
       const index = addons.value.findIndex(a => a._id === addonToDelete.value)
@@ -394,8 +393,8 @@ const confirmDelete = async () => {
 }
 
 onMounted(() => {
-  // Get current user info from localStorage
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+  // Get current user info from auth
+  const currentUser = auth.getUser() || {}
   currentUserRole.value = currentUser.role || 'Admin'
   currentUserStore.value = currentUser.store?._id || null
   

@@ -387,7 +387,8 @@
 
 <script setup>
 import { ref, onMounted, computed, inject } from 'vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import Modal from '../../components/Modal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -395,7 +396,6 @@ import { faPrint, faFileExcel, faEye, faEdit, faTrash } from '@fortawesome/free-
 
 library.add(faPrint, faFileExcel, faEye, faEdit, faTrash)
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const toast = inject('toast')
 
 const transactions = ref([])
@@ -609,7 +609,7 @@ const sortTable = (column) => {
 const fetchTransactions = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`${API_URL}/transactions`)
+    const response = await api.get('/transactions')
     if (response.data.success) {
       // Sort by date, newest first
       transactions.value = response.data.transactions.sort((a, b) => 
@@ -641,7 +641,7 @@ const editTransaction = (transaction) => {
 
 const saveTransaction = async () => {
   try {
-    const response = await axios.put(`${API_URL}/transactions/${editForm.value._id}`, {
+    const response = await api.put(`/transactions/${editForm.value._id}`, {
       status: editForm.value.status,
       paymentMethod: editForm.value.paymentMethod,
       employee: editForm.value.employee,
@@ -670,7 +670,7 @@ const confirmDeleteTransaction = (transaction) => {
 
 const deleteTransaction = async () => {
   try {
-    const response = await axios.delete(`${API_URL}/transactions/${transactionToDelete.value._id}`)
+    const response = await api.delete(`/transactions/${transactionToDelete.value._id}`)
     
     if (response.data.success) {
       // Remove transaction from list

@@ -478,15 +478,14 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faPlay, faStop, faPrint, faTimes } from '@fortawesome/free-solid-svg-icons'
 import Toast from '../../components/Toast.vue'
 
 library.add(faPlay, faStop, faPrint, faTimes)
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const loading = ref(false)
 const sessionStatus = ref({ isActive: false })
@@ -598,7 +597,7 @@ const viewSessionDetails = async (session) => {
   loadingSessionDetails.value = true
   
   try {
-    const response = await axios.get(`${API_BASE_URL}/transactions/session/${session._id}/details`)
+    const response = await api.get(`/transactions/session/${session._id}/details`)
     if (response.data.success) {
       selectedSessionProducts.value = response.data.productSales
     }
@@ -938,11 +937,11 @@ const generateSalesReport = () => {
 
 const fetchSessionStatus = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = auth.getUser() || {}
     const storeId = user.store?._id || user.store
     
     const params = storeId ? { storeId } : {}
-    const response = await axios.get(`${API_BASE_URL}/transactions/session/status`, { params })
+    const response = await api.get('/transactions/session/status', { params })
     
     if (response.data.success) {
       sessionStatus.value = response.data.session
@@ -955,7 +954,7 @@ const fetchSessionStatus = async () => {
 const fetchSalesReport = async () => {
   loading.value = true
   try {
-    const response = await axios.get(`${API_BASE_URL}/transactions/sales-report`)
+    const response = await api.get('/transactions/sales-report')
     if (response.data.success) {
       hasActiveSession.value = response.data.hasActiveSession || false
       summary.value = response.data.summary
@@ -971,11 +970,11 @@ const fetchSalesReport = async () => {
 
 const fetchSalesHistory = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = auth.getUser() || {}
     const storeId = user.store?._id || user.store
     
     const params = storeId ? { storeId } : {}
-    const response = await axios.get(`${API_BASE_URL}/transactions/sales-history`, { params })
+    const response = await api.get('/transactions/sales-history', { params })
     
     if (response.data.success) {
       salesHistory.value = response.data.history
@@ -992,11 +991,11 @@ const openStartSessionModal = () => {
 const startSession = async () => {
   loading.value = true
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = auth.getUser() || {}
     const employee = user.username || 'Admin'
     const storeId = user.store?._id || user.store
     
-    const response = await axios.post(`${API_BASE_URL}/transactions/session/start`, {
+    const response = await api.post('/transactions/session/start', {
       employee,
       storeId
     })
@@ -1022,10 +1021,10 @@ const openEndSessionModal = () => {
 const endSession = async () => {
   loading.value = true
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = auth.getUser() || {}
     const employee = user.username || 'Admin'
     
-    const response = await axios.post(`${API_BASE_URL}/transactions/session/end`, {
+    const response = await api.post('/transactions/session/end', {
       employee
     })
     

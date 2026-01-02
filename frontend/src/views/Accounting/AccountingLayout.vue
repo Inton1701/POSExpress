@@ -831,11 +831,11 @@ import { ref, onMounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '../../components/Modal.vue'
 import Toast from '../../components/Toast.vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import { printThermalReceipt, getAvailablePrinters } from '../../utils/printReceipt.js'
 
 const router = useRouter()
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const rfidInput = ref(null)
 const rfidValue = ref('')
@@ -1015,7 +1015,7 @@ const confirmStatusChange = async () => {
   const newStatus = customer.status === 'active' ? 'disabled' : 'active'
   
   try {
-    const response = await axios.put(`${API_URL}/customers/${customer._id}`, {
+    const response = await api.put(`/customers/${customer._id}`, {
       status: newStatus
     })
     
@@ -1038,7 +1038,7 @@ const confirmStatusChange = async () => {
 
 const fetchCustomers = async () => {
   try {
-    const response = await axios.get(`${API_URL}/customers`)
+    const response = await api.get('/customers')
     if (response.data.success) {
       customers.value = response.data.customers
     }
@@ -1050,7 +1050,7 @@ const fetchCustomers = async () => {
 const fetchTransactions = async () => {
   if (!selectedCustomer.value) return
   try {
-    const response = await axios.get(`${API_URL}/customer-transactions/${selectedCustomer.value.rfid}`)
+    const response = await api.get(`/customer-transactions/${selectedCustomer.value.rfid}`)
     if (response.data.success) {
       transactions.value = response.data.transactions
       transactionCurrentPage.value = 1
@@ -1069,7 +1069,7 @@ const handleRFIDScanned = async () => {
   if (!rfid) return
 
   try {
-    const response = await axios.get(`${API_URL}/customers/rfid/${rfid}`)
+    const response = await api.get(`/customers/rfid/${rfid}`)
     if (response.data.success) {
       selectedCustomer.value = response.data.customer
       rfidValue.value = ''
@@ -1089,7 +1089,7 @@ const searchCustomer = () => {
 
 const selectCustomerById = async (customerId) => {
   try {
-    const response = await axios.get(`${API_URL}/customers/${customerId}`)
+    const response = await api.get(`/customers/${customerId}`)
     if (response.data.success) {
       selectedCustomer.value = response.data.customer
     }
@@ -1151,7 +1151,7 @@ const verifyPasswordConfirmation = async () => {
 
   try {
     // Verify password using the selected customer's username
-    const loginResponse = await axios.post(`${API_URL}/customers/login`, {
+    const loginResponse = await api.post('/customers/login', {
       username: selectedCustomer.value.username,
       password: password
     })
@@ -1237,7 +1237,7 @@ const openCashOutModal = () => {
 const logTransaction = async (type, amount = 0) => {
   if (!selectedCustomer.value) return
   try {
-    await axios.post(`${API_URL}/customer-transactions`, {
+    await api.post('/customer-transactions', {
       rfid: selectedCustomer.value.rfid,
       username: selectedCustomer.value.username,
       amount,
@@ -1257,7 +1257,7 @@ const processCashIn = async () => {
 
   try {
     const newBalance = selectedCustomer.value.balance + amount
-    const response = await axios.put(`${API_URL}/customers/${selectedCustomer.value._id}/balance`, {
+    const response = await api.put(`/customers/${selectedCustomer.value._id}/balance`, {
       amount: newBalance
     })
     
@@ -1314,7 +1314,7 @@ const processCashOut = async () => {
   }
   try {
     const newBalance = selectedCustomer.value.balance - amount
-    const response = await axios.put(`${API_URL}/customers/${selectedCustomer.value._id}/balance`, {
+    const response = await api.put(`/customers/${selectedCustomer.value._id}/balance`, {
       amount: newBalance
     })
     if (response.data.success) {
@@ -1401,7 +1401,7 @@ const saveCustomer = async () => {
       updateData.password = editForm.value.newPassword
     }
     
-    const response = await axios.put(`${API_URL}/customers/${selectedCustomer.value._id}`, updateData)
+    const response = await api.put(`/customers/${selectedCustomer.value._id}`, updateData)
     if (response.data.success) {
       selectedCustomer.value = response.data.customer
       showToast('Customer updated successfully', 'success')
@@ -1435,7 +1435,7 @@ const addCustomer = async () => {
   }
 
   try {
-    const response = await axios.post(`${API_URL}/customers`, newCustomerForm.value)
+    const response = await api.post('/customers', newCustomerForm.value)
     if (response.data.success) {
       showToast('Customer added successfully', 'success')
       isAddModalOpen.value = false
@@ -1455,7 +1455,7 @@ const confirmDeleteCustomer = async () => {
   if (!customerToDelete.value) return
 
   try {
-    const response = await axios.delete(`${API_URL}/customers/${customerToDelete.value}`)
+    const response = await api.delete(`/customers/${customerToDelete.value}`)
     if (response.data.success) {
       showToast('Customer deleted successfully', 'success')
       if (selectedCustomer.value?._id === customerToDelete.value) {
@@ -1502,14 +1502,14 @@ const openSettingsModal = () => {
 
 const saveSettings = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
+    const user = auth.getUser()
     if (!user || !user._id) {
       showToast('User not found', 'error')
       return
     }
 
     // Save to backend
-    const response = await axios.put(`${API_URL}/users/${user._id}/print-preferences`, {
+    const response = await api.put(`/users/${user._id}/print-preferences`, {
       selectedPrinter: selectedPrinter.value,
       printMode: printMode.value
     })
@@ -1596,11 +1596,11 @@ const refreshPrinters = async () => {
 
 const loadPrinterPreference = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
+    const user = auth.getUser()
     if (user && user._id) {
       // Try to load from backend first
       try {
-        const response = await axios.get(`${API_URL}/users/${user._id}/print-preferences`)
+        const response = await api.get(`/users/${user._id}/print-preferences`)
         if (response.data.success) {
           selectedPrinter.value = response.data.printPreferences.selectedPrinter || null
           printMode.value = response.data.printPreferences.printMode || 'manual'

@@ -71,6 +71,7 @@ import { useRouter } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faUserCircle, faEllipsisV, faCog, faSignOutAlt } from '@fortawesome/free-solid-svg-icons'
+import { auth } from '@/utils/auth'
 
 library.add(faUserCircle, faEllipsisV, faCog, faSignOutAlt)
 
@@ -102,7 +103,7 @@ const closeLogoutConfirm = () => {
 }
 
 const confirmLogout = () => {
-  localStorage.removeItem('user')
+  auth.logout()
   isLogoutModalOpen.value = false
   router.push('/')
 }
@@ -126,9 +127,9 @@ const displayTitle = computed(() => {
 })
 
 onMounted(() => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
-  userName.value = user.username || 'User'
-  userRole.value = user.role || ''
-  userStore.value = user.store || null
+  const user = auth.getUser()
+  userName.value = user?.username || 'User'
+  userRole.value = user?.role || ''
+  userStore.value = user?.store || null
 })
 </script>

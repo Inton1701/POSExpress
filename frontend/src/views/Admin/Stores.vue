@@ -148,11 +148,10 @@ import Modal from '../../components/Modal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faEdit, faTrash, faPlus, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 
 library.add(faEdit, faTrash, faPlus, faExclamationCircle)
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const toast = inject('toast')
 
 const stores = ref([])
@@ -231,7 +230,7 @@ const paginatedStores = computed(() => {
 const fetchStores = async () => {
   isLoading.value = true
   try {
-    const response = await axios.get(`${API_URL}/stores`)
+    const response = await api.get('/stores')
     if (response.data.success) {
       stores.value = response.data.stores
     }
@@ -270,7 +269,7 @@ const submitForm = async () => {
   try {
     if (editingStore.value) {
       // Update store
-      const response = await axios.put(`${API_URL}/stores/${editingStore.value._id}`, form.value)
+      const response = await api.put(`/stores/${editingStore.value._id}`, form.value)
       if (response.data.success) {
         const index = stores.value.findIndex(s => s._id === editingStore.value._id)
         if (index !== -1) {
@@ -282,7 +281,7 @@ const submitForm = async () => {
       }
     } else {
       // Add store
-      const response = await axios.post(`${API_URL}/stores`, form.value)
+      const response = await api.post('/stores', form.value)
       if (response.data.success) {
         stores.value.push(response.data.store)
         if (toast) {
@@ -313,7 +312,7 @@ const confirmDelete = async () => {
   if (!storeToDelete.value) return
   
   try {
-    const response = await axios.delete(`${API_URL}/stores/${storeToDelete.value}`)
+    const response = await api.delete(`/stores/${storeToDelete.value}`)
     if (response.data.success) {
       const index = stores.value.findIndex(s => s._id === storeToDelete.value)
       if (index !== -1) {

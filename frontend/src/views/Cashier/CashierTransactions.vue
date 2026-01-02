@@ -288,11 +288,11 @@ import { useRouter } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import Toast from '../../components/Toast.vue'
 import Modal from '../../components/Modal.vue'
-import axios from 'axios'
+import { api } from '@/utils/api'
+import { auth } from '@/utils/auth'
 import { printThermalReceipt } from '../../utils/printReceipt.js'
 
 const router = useRouter()
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const transactions = ref([])
 const sessionActive = ref(false)
@@ -419,7 +419,7 @@ const getStatusClass = (status) => {
 
 const checkSessionStatus = async () => {
   try {
-    const response = await axios.get(`${API_URL}/transactions/session/status`)
+    const response = await api.get('/transactions/session/status')
     if (response.data.success) {
       sessionActive.value = response.data.session?.isActive || false
       return sessionActive.value
@@ -434,7 +434,7 @@ const checkSessionStatus = async () => {
 const fetchTransactions = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`${API_URL}/transactions`)
+    const response = await api.get('/transactions')
     if (response.data.success) {
       // Show all transactions, sorted by date
       transactions.value = response.data.transactions
@@ -461,15 +461,10 @@ const viewTransaction = (transaction) => {
 
 const reprintTransaction = async (transaction) => {
   try {
-    console.log('Reprint transaction clicked:', transaction.transactionId)
-    
     // Load printer preference
     const printerPref = localStorage.getItem('selectedPrinter')
     if (printerPref) {
       selectedPrinter.value = printerPref
-      console.log('Using printer:', printerPref)
-    } else {
-      console.log('No printer selected')
     }
 
     // Prepare receipt data based on transaction type
@@ -490,7 +485,6 @@ const reprintTransaction = async (transaction) => {
       : String(new Date().toISOString())
     
     if (transaction.status === 'Returned') {
-      console.log('Preparing refund receipt')
       // Refund receipt format - all values must be serializable
       printData = {
         type: 'refund',
@@ -513,7 +507,6 @@ const reprintTransaction = async (transaction) => {
         contact: String(currentStore.value?.contact || '')
       }
     } else {
-      console.log('Preparing sales receipt')
       // Sales receipt format - all values must be serializable
       printData = {
         transactionType: 'SALE',
@@ -542,8 +535,6 @@ const reprintTransaction = async (transaction) => {
       }
     }
 
-    console.log('Print data prepared:', printData)
-    
     // Show confirmation modal
     pendingPrintData.value = printData
     isPrintConfirmModalOpen.value = true
@@ -586,7 +577,7 @@ const confirmPrint = async () => {
 
 const loadCurrentUser = () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = auth.getUser() || {}
     if (user.store) {
       currentStore.value = user.store
       currentUserStore.value = user.store?._id || user.store
