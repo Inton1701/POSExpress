@@ -226,10 +226,10 @@ node seedAdmin.js
 ```bash
 # Backend
 pm2 status                    # Check status
-pm2 logs rfid-pos-backend     # View logs
-pm2 restart rfid-pos-backend  # Restart
-pm2 stop rfid-pos-backend     # Stop
-pm2 delete rfid-pos-backend   # Remove
+pm2 logs posexpress-backend     # View logs
+pm2 restart posexpress-backend  # Restart
+pm2 stop posexpress-backend     # Stop
+pm2 delete posexpress-backend   # Remove
 
 # Frontend
 cd ~/POSExpress/frontend
