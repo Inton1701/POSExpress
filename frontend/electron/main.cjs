@@ -794,7 +794,11 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
             try {
               console.log('Linux detected - using CUPS printing workflow')
               
-              // Step 1: Generate PDF from rendered HTML
+              // Step 1: Wait longer for content to fully render
+              console.log('Waiting for content to render...')
+              await new Promise(resolve => setTimeout(resolve, 1500))
+              
+              // Step 2: Generate PDF from rendered HTML
               console.log('Generating PDF from receipt...')
               const pdfData = await printWindow.webContents.printToPDF({
                 pageSize: {
@@ -813,22 +817,25 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               console.log('PDF generated, size:', pdfData.length, 'bytes')
               printWindow.close()
               
-              // Step 2: Save to disk (file must exist for CUPS)
+              // Step 3: Save to disk (file must exist for CUPS)
               const tempPdfFile = path.join(os.tmpdir(), `receipt-${Date.now()}.pdf`)
               fs.writeFileSync(tempPdfFile, pdfData)
               console.log('PDF saved to:', tempPdfFile)
+              console.log('You can check the PDF manually: xdg-open', tempPdfFile)
               
-              // Step 3: Print via CUPS lp command
+              // Step 4: Print via CUPS lp command
               console.log('Printing to:', targetPrinter.name)
               await printViaCUPS(targetPrinter.name, tempPdfFile)
               
-              // Step 4: Clean up temp file
-              try { 
-                fs.unlinkSync(tempPdfFile)
-                console.log('Temp file cleaned up')
-              } catch(e) {
-                console.warn('Could not delete temp file:', e.message)
-              }
+              // Step 5: Keep temp file for debugging (delete after 10 seconds)
+              setTimeout(() => {
+                try { 
+                  fs.unlinkSync(tempPdfFile)
+                  console.log('Temp file cleaned up')
+                } catch(e) {
+                  console.warn('Could not delete temp file:', e.message)
+                }
+              }, 10000)
               
               console.log('✓ Printed successfully via CUPS')
               resolve({ success: true, printer: targetPrinter.name, mode: 'cups-pdf', platform: process.platform })
