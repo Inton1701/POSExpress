@@ -120,6 +120,11 @@ const transactionSchema = new mongoose.Schema(
     customerRfid: {
       type: String
     },
+    store: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Store',
+      required: false
+    },
 
     // Date and time of the transaction
     transactionDate: {

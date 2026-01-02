@@ -412,6 +412,8 @@ const editForm = ref(null)
 const transactionToDelete = ref(null)
 const sortColumn = ref('createdAt')
 const sortDirection = ref('desc')
+const currentUserRole = ref('')
+const currentUserStore = ref(null)
 
 // New filter refs
 const dateFilter = ref('all') // all, today, custom
@@ -479,6 +481,15 @@ const sortedTransactions = computed(() => {
 
 const filteredTransactions = computed(() => {
   let filtered = sortedTransactions.value
+  
+  // Filter by store for Co-Admins
+  if (currentUserRole.value === 'Co-Admin' && currentUserStore.value) {
+    filtered = filtered.filter(t => {
+      const transactionStoreId = typeof t.store === 'object' ? t.store?._id : t.store
+      return transactionStoreId && transactionStoreId.toString() === currentUserStore.value.toString()
+    })
+  }
+  // Admin sees all transactions
   
   // Apply date filter
   if (dateFilter.value === 'today') {
@@ -1055,6 +1066,11 @@ const printSingleTransaction = () => {
 }
 
 onMounted(() => {
+  // Get current user info from localStorage
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+  currentUserRole.value = currentUser.role || 'Admin'
+  currentUserStore.value = currentUser.store?._id || null
+  
   fetchTransactions()
 })
 </script>

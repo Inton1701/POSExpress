@@ -55,8 +55,14 @@ const productSchema = new mongoose.Schema({
     default: false
   },
   addons: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Addon'
+    addon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Addon'
+    },
+    quantity: {
+      type: Number,
+      default: 1
+    }
   }],
   status: {
     type: String,

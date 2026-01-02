@@ -187,6 +187,10 @@ const statusChartCanvas = ref(null)
 let salesChart = null
 let statusChart = null
 
+// Current user info
+const currentUserRole = ref('')
+const currentUserStore = ref(null)
+
 // Date range filters - default to today
 const getTodayDateString = () => {
   const now = new Date()
@@ -286,7 +290,16 @@ const fetchDashboardData = async () => {
     rangeEnd.setHours(23, 59, 59, 999)
     
     const transactionsResponse = await axios.get(`${API_BASE_URL}/transactions`)
-    const allTransactions = transactionsResponse.data.transactions || []
+    let allTransactions = transactionsResponse.data.transactions || []
+
+    // Filter transactions by current store if user is Co-Admin
+    if (currentUserRole.value === 'Co-Admin' && currentUserStore.value) {
+      allTransactions = allTransactions.filter(t => {
+        const transactionStoreId = typeof t.store === 'object' ? t.store?._id : t.store
+        return transactionStoreId && transactionStoreId.toString() === currentUserStore.value.toString()
+      })
+    }
+    // Admin sees all transactions
 
     // Filter transactions by selected date range
     const filteredTransactions = allTransactions.filter(t => {
@@ -344,9 +357,8 @@ const fetchDashboardData = async () => {
     const stockResponse = await axios.get(`${API_BASE_URL}/stock`)
     const allStock = stockResponse.data.stock || []
     
-    // Get current user's store from localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const currentStoreId = user.store?._id || user.store
+    // Get current store ID
+    const currentStoreId = currentUserStore.value
     
     // Filter low stock products by current store
     let filteredStock = allStock
@@ -476,6 +488,11 @@ const updateCharts = () => {
 }
 
 onMounted(() => {
+  // Get current user info from localStorage
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+  currentUserRole.value = currentUser.role || 'Admin'
+  currentUserStore.value = currentUser.store?._id || null
+  
   fetchDashboardData()
   
   // Refresh data every 30 seconds

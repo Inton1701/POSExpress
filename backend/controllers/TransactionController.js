@@ -14,7 +14,15 @@ const transaction = {
   // Get all transactions
   getAllTransactions: asyncHandler(async (req, res) => {
     try {
-      const transactions = await Transaction.find()
+      let query = {};
+      
+      // If user is Co-Admin, filter transactions by their store
+      if (req.user && req.user.role === 'Co-Admin' && req.user.store) {
+        query.store = req.user.store._id || req.user.store;
+      }
+      // Admin sees all transactions
+      
+      const transactions = await Transaction.find(query)
         .populate('customerId', 'fullName email rfid balance')
         .sort({ createdAt: -1 });
       res.status(200).json({ success: true, transactions });
@@ -46,10 +54,11 @@ const transaction = {
         change, 
         employee,
         customerId,
-        customerRfid
+        customerRfid,
+        store
       } = req.body;
 
-      console.log('Creating transaction with data:', { cart, paymentMethod, totalAmount });
+      console.log('Creating transaction with data:', { cart, paymentMethod, totalAmount, store });
 
       // Validate required fields
       if (!cart || cart.length === 0) {
@@ -166,7 +175,7 @@ const transaction = {
         }
       }
 
-      // Create transaction
+      // Create transaction with store
       const createdTransaction = await Transaction.create({
         transactionId,
         cart,
@@ -180,7 +189,8 @@ const transaction = {
         status: 'Completed',
         employee: employee || 'unknown',
         customerId,
-        customerRfid
+        customerRfid,
+        store: store || (req.user && req.user.store ? req.user.store._id || req.user.store : null)
       });
 
       console.log('Transaction created successfully:', createdTransaction._id);
@@ -242,6 +252,15 @@ const transaction = {
       
       if (!transaction) {
         return res.status(404).json({ success: false, message: 'Transaction not found' });
+      }
+
+      // Check store access
+      if (req.user && req.user.role === 'Co-Admin') {
+        const userStoreId = req.user.store._id || req.user.store;
+        const transactionStoreId = transaction.store;
+        if (userStoreId.toString() !== transactionStoreId?.toString()) {
+          return res.status(403).json({ success: false, message: 'Access denied to this transaction' });
+        }
       }
 
       if (transaction.status === 'Voided') {
@@ -333,7 +352,7 @@ const transaction = {
         }
       }
 
-      // Create void transaction record
+      // Create void transaction record with store
       const voidTransactionRecord = await Transaction.create({
         transactionId: voidTransactionId,
         cart: transaction.cart,
@@ -347,7 +366,8 @@ const transaction = {
         status: 'Voided',
         employee: transaction.employee,
         customerId: transaction.customerId,
-        customerRfid: transaction.customerRfid
+        customerRfid: transaction.customerRfid,
+        store: transaction.store
       });
 
       // Update original transaction status
@@ -375,6 +395,13 @@ const transaction = {
       const { startDate, endDate } = req.query;
       
       let query = {};
+      
+      // If user is Co-Admin, filter transactions by their store
+      if (req.user && req.user.role === 'Co-Admin' && req.user.store) {
+        query.store = req.user.store._id || req.user.store;
+      }
+      // Admin sees all transactions
+      
       if (startDate && endDate) {
         query.transactionDate = {
           $gte: new Date(startDate),
@@ -396,6 +423,15 @@ const transaction = {
       
       if (!transaction) {
         return res.status(404).json({ success: false, message: 'Transaction not found' });
+      }
+
+      // Check store access
+      if (req.user && req.user.role === 'Co-Admin') {
+        const userStoreId = req.user.store._id || req.user.store;
+        const transactionStoreId = transaction.store;
+        if (userStoreId.toString() !== transactionStoreId?.toString()) {
+          return res.status(403).json({ success: false, message: 'Access denied to this transaction' });
+        }
       }
 
       const { status, paymentMethod, employee, customerRfid } = req.body;
@@ -421,6 +457,15 @@ const transaction = {
       
       if (!transaction) {
         return res.status(404).json({ success: false, message: 'Transaction not found' });
+      }
+
+      // Check store access
+      if (req.user && req.user.role === 'Co-Admin') {
+        const userStoreId = req.user.store._id || req.user.store;
+        const transactionStoreId = transaction.store;
+        if (userStoreId.toString() !== transactionStoreId?.toString()) {
+          return res.status(403).json({ success: false, message: 'Access denied to this transaction' });
+        }
       }
 
       await Transaction.findByIdAndDelete(req.params.id);
@@ -603,7 +648,8 @@ const transaction = {
         status: 'Returned',
         employee: employee || 'unknown',
         customerId,
-        customerRfid
+        customerRfid,
+        store: originalTransaction.store
       });
 
       // Update original transaction
@@ -708,6 +754,12 @@ const transaction = {
           $lte: sessionToUse.endedAt || new Date()
         }
       };
+
+      // If user is Co-Admin, filter transactions by their store
+      if (req.user && req.user.role === 'Co-Admin' && req.user.store) {
+        query.store = req.user.store._id || req.user.store;
+      }
+      // Admin sees all transactions
 
       const transactions = await Transaction.find(query).sort({ transactionDate: -1 });
 

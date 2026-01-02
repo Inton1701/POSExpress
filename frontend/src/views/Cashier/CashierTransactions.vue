@@ -312,9 +312,18 @@ const statusFilter = ref('all')
 const sortBy = ref('createdAt-desc')
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
+const currentUserStore = ref(null)
 
 const filteredTransactions = computed(() => {
   let filtered = [...transactions.value]
+  
+  // Filter by store for current user
+  if (currentUserStore.value) {
+    filtered = filtered.filter(t => {
+      const transactionStoreId = typeof t.store === 'object' ? t.store?._id : t.store
+      return transactionStoreId && transactionStoreId.toString() === currentUserStore.value.toString()
+    })
+  }
   
   // Apply search
   const query = searchQuery.value.toLowerCase().trim()
@@ -580,6 +589,7 @@ const loadCurrentUser = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     if (user.store) {
       currentStore.value = user.store
+      currentUserStore.value = user.store?._id || user.store
     }
   } catch (error) {
     console.error('Error loading user:', error)

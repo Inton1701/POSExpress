@@ -19,7 +19,7 @@ const product = {
                 // Admin sees all products (no additional filter)
             }
             
-            const products = await Product.find(query).populate('stores', 'storeName address').populate('addons', 'name status');
+            const products = await Product.find(query).populate('stores', 'storeName address').populate('addons.addon', 'name status price quantity');
             res.status(200).json({ success: true, products });
         } catch (error) {
             res.status(500).json({ success: false, message: 'Failed to fetch products', error: error.message });
@@ -87,7 +87,7 @@ const product = {
     // Get a single product by ID
     getProduct: asyncHandler(async (req, res) => {
         try {
-            const product = await Product.findById(req.params.id).populate('stores', 'storeName address contact').populate('addons', 'name status');
+            const product = await Product.findById(req.params.id).populate('stores', 'storeName address contact').populate('addons.addon', 'name status price quantity');
             
             if (!product) {
                 return res.status(404).json({ success: false, message: 'Product not found' });
@@ -268,7 +268,7 @@ const product = {
             const products = await Product.find({
                 stores: storeId,
                 status: { $ne: 'deleted' }
-            }).populate('stores', 'storeName address');
+            }).populate('stores', 'storeName address').populate('addons.addon', 'name status price quantity');
 
             res.status(200).json({ success: true, products });
         } catch (error) {

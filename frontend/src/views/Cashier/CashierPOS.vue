@@ -1328,18 +1328,36 @@ const addToOrder = (product) => {
 // Add addons to a new order item
 const addAddonsToItem = (item, productAddons) => {
   productAddons.forEach(addonRef => {
-    const addonId = typeof addonRef === 'string' ? addonRef : addonRef._id
+    // Handle both old format (string/object ID) and new format (object with addon ID and quantity)
+    let addonId, addonQuantityPerProduct
+    
+    if (typeof addonRef === 'string') {
+      // Old format: just addon ID string
+      addonId = addonRef
+      addonQuantityPerProduct = 1
+    } else if (addonRef.addon) {
+      // New format: { addon: addonId, quantity: number }
+      addonId = typeof addonRef.addon === 'object' ? addonRef.addon._id : addonRef.addon
+      addonQuantityPerProduct = addonRef.quantity || 1
+    } else {
+      // Fallback: object with _id
+      addonId = addonRef._id
+      addonQuantityPerProduct = 1
+    }
+    
     const addon = allAddons.value.find(a => a._id === addonId)
     
     if (addon && addon.status === 'active') {
-      // Check addon stock availability
+      // Calculate total addon quantity needed (per-product quantity × item quantity)
+      const totalAddonQuantityNeeded = addonQuantityPerProduct * item.quantity
       const addonStock = addon.quantity || 0
-      if (addonStock >= item.quantity) {
+      
+      if (addonStock >= totalAddonQuantityNeeded) {
         item.addons.push({
           addonId: addon._id,
           name: addon.name,
           price: addon.price || 0,
-          quantity: item.quantity // Match product quantity
+          quantity: totalAddonQuantityNeeded
         })
       } else {
         // If addon stock insufficient, add available quantity or skip
@@ -1350,7 +1368,7 @@ const addAddonsToItem = (item, productAddons) => {
             price: addon.price || 0,
             quantity: addonStock
           })
-          showAlertModal(`Limited stock for ${addon.name}. Only ${addonStock} available.`, 'Limited Stock')
+          showAlertModal(`Limited stock for ${addon.name}. Only ${addonStock} available (needed ${totalAddonQuantityNeeded}).`, 'Limited Stock')
         } else {
           showAlertModal(`${addon.name} is out of stock and will not be added.`, 'Out of Stock')
         }
@@ -1548,7 +1566,8 @@ const processCashPayment = async () => {
       totalAmount: totalAmount.value,
       cash: cash,
       change: change,
-      employee: currentUser.value?.username || 'cashier'
+      employee: currentUser.value?.username || 'cashier',
+      store: currentStore.value?._id || currentUser.value?.store?._id
     }
 
     const response = await axios.post(`${API_URL}/transactions`, transactionData)
@@ -1661,7 +1680,8 @@ const processRfidPayment = async () => {
       change: 0,
       employee: currentUser.value?.username || 'cashier',
       customerId: rfidCustomer.value._id,
-      customerRfid: rfidCustomer.value.rfid
+      customerRfid: rfidCustomer.value.rfid,
+      store: currentStore.value?._id || currentUser.value?.store?._id
     }
 
     const response = await axios.post(`${API_URL}/transactions`, transactionData)
@@ -2118,7 +2138,8 @@ const processRefund = async () => {
       paymentMethod: refundTransaction.value.paymentMethod,
       customerId: refundTransaction.value.customerId,
       customerRfid: refundTransaction.value.customerRfid,
-      employee: currentUser.value?.username || 'unknown'
+      employee: currentUser.value?.username || 'unknown',
+      store: currentStore.value?._id || currentUser.value?.store?._id
     }
 
     // Process refund on backend

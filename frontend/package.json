@@ -1,6 +1,8 @@
 {
   "name": "pos",
   "version": "1.0.0",
+  "description": "RFID POS System",
+  "author": "Your Company",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -52,13 +54,7 @@
           ]
         }
       ],
-      "icon": "public/posxpress-logo.png",
-      "certificateFile": null,
-      "certificatePassword": null,
-      "signingHashAlgorithms": [
-        "sha256"
-      ],
-      "sign": null
+      "icon": "public/posxpress-logo.png"
     },
     "nsis": {
       "oneClick": false,

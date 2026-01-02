@@ -311,7 +311,8 @@
                     <input
                       type="checkbox"
                       :value="addon._id"
-                      v-model="form.addons"
+                      @change="toggleAddon(addon._id)"
+                      :checked="form.addons.some(a => a.addon === addon._id)"
                       class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
                     />
                     <span class="text-sm">{{ addon.name }}</span>
@@ -332,6 +333,31 @@
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+          
+          <!-- Selected Add-ons with Quantities -->
+          <div v-if="form.addons.length > 0" class="mt-3 space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div class="text-xs font-bold text-gray-700 mb-2">Add-on Quantities per Product</div>
+            <div v-for="addonItem in form.addons" :key="addonItem.addon" class="flex items-center gap-2">
+              <span class="text-xs flex-1 text-gray-700">{{ getAddonName(addonItem.addon) }}</span>
+              <div class="flex items-center gap-1">
+                <span class="text-xs text-gray-600">Qty:</span>
+                <input
+                  v-model.number="addonItem.quantity"
+                  type="number"
+                  min="1"
+                  class="w-16 p-1.5 text-xs rounded border border-gray-300"
+                  placeholder="1"
+                />
+              </div>
+              <button
+                type="button"
+                @click="removeAddon(addonItem.addon)"
+                class="text-red-500 hover:text-red-700 font-bold text-xs"
+              >
+                ✕
+              </button>
             </div>
           </div>
         </div>
@@ -1116,7 +1142,7 @@ const openAddModal = () => {
     category: '', 
     status: 'active',
     variants: [],
-    addons: [],
+    addons: [], // Array of { addon: addonId, quantity: number }
     isVattable: false
   }
   isModalOpen.value = true
@@ -1133,7 +1159,10 @@ const openEditModal = async (product) => {
       category: product.category || '',
       status: product.status,
       variants: [],
-      addons: product.addons ? product.addons.map(a => typeof a === 'object' ? a._id : a) : [],
+      addons: product.addons ? product.addons.map(a => ({
+        addon: typeof a === 'object' ? (a.addon?._id || a._id) : a,
+        quantity: typeof a === 'object' ? (a.quantity || 1) : 1
+      })) : [],
       isVattable: product.isVattable || false
     }
     
@@ -1172,6 +1201,29 @@ const closeModal = () => {
   categorySearchQuery.value = ''
   isAddonsDropdownOpen.value = false
   addonSearchQuery.value = ''
+}
+
+const toggleAddon = (addonId) => {
+  const index = form.value.addons.findIndex(a => a.addon === addonId)
+  if (index > -1) {
+    // Remove addon
+    form.value.addons.splice(index, 1)
+  } else {
+    // Add addon with default quantity of 1
+    form.value.addons.push({ addon: addonId, quantity: 1 })
+  }
+}
+
+const removeAddon = (addonId) => {
+  const index = form.value.addons.findIndex(a => a.addon === addonId)
+  if (index > -1) {
+    form.value.addons.splice(index, 1)
+  }
+}
+
+const getAddonName = (addonId) => {
+  const addon = addons.value.find(a => a._id === addonId)
+  return addon ? addon.name : 'Unknown'
 }
 
 const submitForm = async () => {
