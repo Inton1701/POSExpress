@@ -167,16 +167,21 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         }
       }
       
-      // Create print window (only needed for Windows/Mac)
+      // Create print window (must be visible on Linux for capturePage to work)
       const printWindow = new BrowserWindow({
         width: 182, // 48mm ≈ 182px
         height: 800,
-        show: false,
+        show: process.platform === 'linux', // Must be visible on Linux
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true
         }
       })
+      
+      // Minimize on Linux to keep it out of the way
+      if (process.platform === 'linux') {
+        printWindow.minimize()
+      }
       
       // Generate HTML receipt based on type
       let receiptHTML = ''
