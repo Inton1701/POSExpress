@@ -2,7 +2,11 @@
   "name": "pos",
   "version": "1.0.0",
   "description": "RFID POS System",
-  "author": "Your Company",
+  "author": {
+    "name": "POSXPRESS",
+    "email": "support@posexpress.local"
+  },
+  "homepage": "https://github.com/Inton1701/POSExpress.git",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -74,7 +78,8 @@
     "deb": {
       "depends": [
         "libappindicator1"
-      ]
+      ],
+      "maintainer": "Your Company <support@posexpress.local>"
     }
   },
   "dependencies": {

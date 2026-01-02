@@ -88,6 +88,32 @@ ipcMain.handle('get-printers', async () => {
   }
 })
 
+// Helper function to print via CUPS on Linux (fallback method)
+async function printViaCUPS(printerName, htmlContent) {
+  return new Promise((resolve, reject) => {
+    const tempFile = path.join(os.tmpdir(), `receipt-${Date.now()}.html`)
+    
+    // Write HTML to temp file
+    fs.writeFileSync(tempFile, htmlContent)
+    
+    // Convert HTML to PS/PDF and print via lp command
+    const printCommand = `lp -d "${printerName}" -o fit-to-page "${tempFile}"`
+    
+    exec(printCommand, (error, stdout, stderr) => {
+      // Clean up temp file
+      try { fs.unlinkSync(tempFile) } catch(e) {}
+      
+      if (error) {
+        console.error('CUPS print error:', error)
+        reject(error)
+      } else {
+        console.log('CUPS print output:', stdout)
+        resolve({ success: true, method: 'cups' })
+      }
+    })
+  })
+}
+
 // Print receipt to thermal printer using hidden BrowserWindow
 ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
   return new Promise(async (resolve, reject) => {
@@ -106,11 +132,14 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
       if (!targetPrinter) {
         const thermalPrinters = printers.filter(p => {
           const name = p.name.toLowerCase()
+          // Expanded keywords for better Linux printer detection
           return name.includes('thermal') || name.includes('pos') || 
                  name.includes('receipt') || name.includes('58mm') ||
                  name.includes('80mm') || name.includes('xprinter') ||
                  name.includes('epson') || name.includes('star') ||
-                 name.includes('rpp') || name.includes('xp-') || name.includes('x-')
+                 name.includes('rpp') || name.includes('xp-') || name.includes('x-') ||
+                 name.includes('cups') || name.includes('usb') ||
+                 name.includes('tm-') || name.includes('tsp') // Common thermal printer prefixes
         })
         
         targetPrinter = thermalPrinters[0] || printers.find(p => p.isDefault) || printers[0]
@@ -755,27 +784,37 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         setTimeout(() => {
           console.log('Attempting to print...')
           
-          printWindow.webContents.print({
-            silent: true, // No print dialog
+          // Linux-specific print settings
+          const printOptions = {
+            silent: process.platform !== 'linux', // Linux: show dialog for better compatibility
             printBackground: true,
             deviceName: targetPrinter.name,
             copies: 1,
-            pageSize: {
-              width: 48000, // 48mm in microns
-              height: 999999 // Dynamic height for continuous roll
-            },
             margins: {
               marginType: 'none'
-            },
-            scaleFactor: 100
-          }, (success, errorType) => {
+            }
+          }
+          
+          // Add page size for non-Linux platforms
+          if (process.platform !== 'linux') {
+            printOptions.pageSize = {
+              width: 48000, // 48mm in microns
+              height: 999999 // Dynamic height for continuous roll
+            }
+            printOptions.scaleFactor = 100
+          } else {
+            // Linux: Use custom page size name or let CUPS handle it
+            printOptions.pageSize = 'Custom'
+          }
+          
+          printWindow.webContents.print(printOptions, (success, errorType) => {
             console.log('Print callback - Success:', success, 'ErrorType:', errorType)
             
             printWindow.close()
             
             if (success) {
               console.log('✓ Printed successfully')
-              resolve({ success: true, printer: targetPrinter.name, mode: 'browser-window' })
+              resolve({ success: true, printer: targetPrinter.name, mode: 'browser-window', platform: process.platform })
             } else {
               console.error('Print failed:', errorType)
               reject(new Error(errorType || 'Print failed'))
