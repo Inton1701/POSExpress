@@ -790,38 +790,28 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         setTimeout(async () => {
           console.log('Attempting to print...')
           
-          // Linux-specific: Try PDF printing via CUPS
+          // Linux-specific: Capture as image and print via CUPS
           if (process.platform === 'linux') {
             try {
-              console.log('Linux detected - generating PDF for CUPS printing')
+              console.log('Linux detected - capturing screenshot for CUPS printing')
               
-              // Generate PDF from the rendered HTML
-              const pdfData = await printWindow.webContents.printToPDF({
-                pageSize: {
-                  width: 48000, // 48mm in microns
-                  height: 297000 // A4 height (will be trimmed by thermal printer)
-                },
-                printBackground: true,
-                margins: {
-                  top: 0,
-                  bottom: 0,
-                  left: 0,
-                  right: 0
-                }
-              })
+              // Capture screenshot of the rendered HTML
+              const image = await printWindow.webContents.capturePage()
+              const pngBuffer = image.toPNG()
               
               printWindow.close()
               
-              // Write PDF to temp file and print via CUPS
-              const tempPdfFile = path.join(os.tmpdir(), `receipt-${Date.now()}.pdf`)
-              fs.writeFileSync(tempPdfFile, pdfData)
+              // Write PNG to temp file and print via CUPS
+              const tempImageFile = path.join(os.tmpdir(), `receipt-${Date.now()}.png`)
+              fs.writeFileSync(tempImageFile, pngBuffer)
               
-              const printCommand = `lp -d "${targetPrinter.name}" -o fit-to-page -o media=Custom.48x297mm "${tempPdfFile}"`
+              // Print image with proper scaling for thermal printer
+              const printCommand = `lp -d "${targetPrinter.name}" -o fit-to-page -o media=Custom.48x297mm "${tempImageFile}"`
               console.log('Executing CUPS command:', printCommand)
               
               exec(printCommand, (error, stdout, stderr) => {
                 // Clean up temp file
-                try { fs.unlinkSync(tempPdfFile) } catch(e) {}
+                try { fs.unlinkSync(tempImageFile) } catch(e) {}
                 
                 if (error) {
                   console.error('CUPS print error:', error)
@@ -831,14 +821,14 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
                   console.log('CUPS print output:', stdout)
                   if (stderr) console.log('CUPS stderr:', stderr)
                   console.log('✓ Printed successfully via CUPS')
-                  resolve({ success: true, printer: targetPrinter.name, mode: 'cups-pdf', platform: process.platform })
+                  resolve({ success: true, printer: targetPrinter.name, mode: 'cups-image', platform: process.platform })
                 }
               })
               
-            } catch (pdfError) {
+            } catch (imageError) {
               printWindow.close()
-              console.error('PDF generation failed:', pdfError)
-              reject(new Error('PDF generation failed: ' + pdfError.message))
+              console.error('Image capture failed:', imageError)
+              reject(new Error('Image capture failed: ' + imageError.message))
             }
             return
           }
