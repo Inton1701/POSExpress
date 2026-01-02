@@ -124,13 +124,19 @@ cd ~/POSExpress/backend
 # Install dependencies
 npm install
 
+# Generate a secure JWT secret
+JWT_SECRET=$(openssl rand -base64 32)
+
 # Create .env file
-cat > .env << 'EOF'
+cat > .env << EOF
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/posexpress
-JWT_SECRET=secret
+JWT_SECRET=$JWT_SECRET
 NODE_ENV=production
 EOF
+
+# Display the generated JWT secret (save this!)
+echo "Generated JWT_SECRET: $JWT_SECRET"
 
 # Start with PM2
 pm2 start app.js --name posexpress-backend

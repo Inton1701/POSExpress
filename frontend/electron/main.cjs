@@ -780,29 +780,70 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         `
       }
       
-      // On Linux, use CUPS directly - skip Electron print API
-      if (process.platform === 'linux') {
-        console.log('Linux detected - using CUPS directly')
-        try {
-          await printViaCUPS(targetPrinter.name, receiptHTML)
-          resolve({ success: true, printer: targetPrinter.name, mode: 'cups-direct', platform: process.platform })
-        } catch (cupsError) {
-          console.error('CUPS printing failed:', cupsError)
-          reject(new Error('CUPS printing failed: ' + cupsError.message))
-        }
-        return
-      }
-      
-      // Windows/Mac: Use Electron print API
+      // Load HTML in browser window for rendering
       printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(receiptHTML))
       
       printWindow.webContents.on('did-finish-load', () => {
         console.log('Print window loaded, preparing to print...')
         
         // Small delay to ensure content is rendered
-        setTimeout(() => {
+        setTimeout(async () => {
           console.log('Attempting to print...')
           
+          // Linux-specific: Try PDF printing via CUPS
+          if (process.platform === 'linux') {
+            try {
+              console.log('Linux detected - generating PDF for CUPS printing')
+              
+              // Generate PDF from the rendered HTML
+              const pdfData = await printWindow.webContents.printToPDF({
+                pageSize: {
+                  width: 48000, // 48mm in microns
+                  height: 297000 // A4 height (will be trimmed by thermal printer)
+                },
+                printBackground: true,
+                margins: {
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  right: 0
+                }
+              })
+              
+              printWindow.close()
+              
+              // Write PDF to temp file and print via CUPS
+              const tempPdfFile = path.join(os.tmpdir(), `receipt-${Date.now()}.pdf`)
+              fs.writeFileSync(tempPdfFile, pdfData)
+              
+              const printCommand = `lp -d "${targetPrinter.name}" -o fit-to-page -o media=Custom.48x297mm "${tempPdfFile}"`
+              console.log('Executing CUPS command:', printCommand)
+              
+              exec(printCommand, (error, stdout, stderr) => {
+                // Clean up temp file
+                try { fs.unlinkSync(tempPdfFile) } catch(e) {}
+                
+                if (error) {
+                  console.error('CUPS print error:', error)
+                  console.error('CUPS stderr:', stderr)
+                  reject(new Error('CUPS printing failed: ' + error.message))
+                } else {
+                  console.log('CUPS print output:', stdout)
+                  if (stderr) console.log('CUPS stderr:', stderr)
+                  console.log('✓ Printed successfully via CUPS')
+                  resolve({ success: true, printer: targetPrinter.name, mode: 'cups-pdf', platform: process.platform })
+                }
+              })
+              
+            } catch (pdfError) {
+              printWindow.close()
+              console.error('PDF generation failed:', pdfError)
+              reject(new Error('PDF generation failed: ' + pdfError.message))
+            }
+            return
+          }
+          
+          // Windows/Mac: Use standard Electron print API
           const printOptions = {
             silent: true,
             printBackground: true,
