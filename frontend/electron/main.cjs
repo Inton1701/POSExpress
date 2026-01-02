@@ -91,8 +91,8 @@ ipcMain.handle('get-printers', async () => {
 // Helper function to print via CUPS on Linux (using lp command)
 async function printViaCUPS(printerName, pdfPath) {
   return new Promise((resolve, reject) => {
-    // Simple CUPS print command - ZJ-58 driver handles PDF properly
-    const printCommand = `lp -d "${printerName}" -o fit-to-page "${pdfPath}"`
+    // CUPS print command with thermal printer options
+    const printCommand = `lp -d "${printerName}" -o fit-to-page -o media=Custom.48x297mm -o scaling=100 "${pdfPath}"`
     
     console.log('Executing CUPS command:', printCommand)
     
@@ -104,6 +104,14 @@ async function printViaCUPS(printerName, pdfPath) {
       } else {
         console.log('CUPS output:', stdout)
         if (stderr) console.log('CUPS stderr:', stderr)
+        
+        // Check print queue status
+        exec(`lpstat -o`, (lpError, lpStdout) => {
+          if (!lpError) {
+            console.log('Print queue status:', lpStdout)
+          }
+        })
+        
         resolve({ success: true })
       }
     })
