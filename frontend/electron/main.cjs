@@ -88,32 +88,23 @@ ipcMain.handle('get-printers', async () => {
   }
 })
 
-// Helper function to print via CUPS on Linux (fallback method)
-async function printViaCUPS(printerName, htmlContent) {
+// Helper function to print via CUPS on Linux (using lp command)
+async function printViaCUPS(printerName, imagePath) {
   return new Promise((resolve, reject) => {
-    const tempFile = path.join(os.tmpdir(), `receipt-${Date.now()}.html`)
-    
-    // Write HTML to temp file
-    fs.writeFileSync(tempFile, htmlContent)
-    
-    // Convert HTML to text and print via lp command with thermal printer options
-    // Using text mode for better thermal printer compatibility
-    const printCommand = `lp -d "${printerName}" -o fit-to-page -o media=Custom.48x297mm "${tempFile}"`
+    // Simple CUPS print command
+    const printCommand = `lp -d "${printerName}" -o fit-to-page "${imagePath}"`
     
     console.log('Executing CUPS command:', printCommand)
     
     exec(printCommand, (error, stdout, stderr) => {
-      // Clean up temp file
-      try { fs.unlinkSync(tempFile) } catch(e) {}
-      
       if (error) {
         console.error('CUPS print error:', error)
-        console.error('CUPS stderr:', stderr)
+        console.error('stderr:', stderr)
         reject(error)
       } else {
-        console.log('CUPS print output:', stdout)
+        console.log('CUPS output:', stdout)
         if (stderr) console.log('CUPS stderr:', stderr)
-        resolve({ success: true, method: 'cups' })
+        resolve({ success: true })
       }
     })
   })
@@ -790,45 +781,53 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         setTimeout(async () => {
           console.log('Attempting to print...')
           
-          // Linux-specific: Capture as image and print via CUPS
+          // Linux-specific: Generate PDF and print via CUPS
           if (process.platform === 'linux') {
             try {
-              console.log('Linux detected - capturing screenshot for CUPS printing')
+              console.log('Linux detected - using CUPS printing workflow')
               
-              // Capture screenshot of the rendered HTML
-              const image = await printWindow.webContents.capturePage()
-              const pngBuffer = image.toPNG()
-              
-              printWindow.close()
-              
-              // Write PNG to temp file and print via CUPS
-              const tempImageFile = path.join(os.tmpdir(), `receipt-${Date.now()}.png`)
-              fs.writeFileSync(tempImageFile, pngBuffer)
-              
-              // Print image with proper scaling for thermal printer
-              const printCommand = `lp -d "${targetPrinter.name}" -o fit-to-page -o media=Custom.48x297mm "${tempImageFile}"`
-              console.log('Executing CUPS command:', printCommand)
-              
-              exec(printCommand, (error, stdout, stderr) => {
-                // Clean up temp file
-                try { fs.unlinkSync(tempImageFile) } catch(e) {}
-                
-                if (error) {
-                  console.error('CUPS print error:', error)
-                  console.error('CUPS stderr:', stderr)
-                  reject(new Error('CUPS printing failed: ' + error.message))
-                } else {
-                  console.log('CUPS print output:', stdout)
-                  if (stderr) console.log('CUPS stderr:', stderr)
-                  console.log('✓ Printed successfully via CUPS')
-                  resolve({ success: true, printer: targetPrinter.name, mode: 'cups-image', platform: process.platform })
+              // Step 1: Generate PDF from rendered HTML
+              console.log('Generating PDF from receipt...')
+              const pdfData = await printWindow.webContents.printToPDF({
+                pageSize: {
+                  width: 48000, // 48mm in microns
+                  height: 297000 // 297mm height
+                },
+                printBackground: true,
+                margins: {
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  right: 0
                 }
               })
               
-            } catch (imageError) {
               printWindow.close()
-              console.error('Image capture failed:', imageError)
-              reject(new Error('Image capture failed: ' + imageError.message))
+              
+              // Step 2: Save to disk (file must exist for CUPS)
+              const tempPdfFile = path.join(os.tmpdir(), `receipt-${Date.now()}.pdf`)
+              fs.writeFileSync(tempPdfFile, pdfData)
+              console.log('PDF saved to:', tempPdfFile)
+              
+              // Step 3: Print via CUPS lp command
+              console.log('Printing to:', targetPrinter.name)
+              await printViaCUPS(targetPrinter.name, tempPdfFile)
+              
+              // Step 4: Clean up temp file
+              try { 
+                fs.unlinkSync(tempPdfFile)
+                console.log('Temp file cleaned up')
+              } catch(e) {
+                console.warn('Could not delete temp file:', e.message)
+              }
+              
+              console.log('✓ Printed successfully via CUPS')
+              resolve({ success: true, printer: targetPrinter.name, mode: 'cups-pdf', platform: process.platform })
+              
+            } catch (error) {
+              printWindow.close()
+              console.error('CUPS printing failed:', error)
+              reject(new Error('CUPS printing failed: ' + error.message))
             }
             return
           }
