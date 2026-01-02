@@ -89,10 +89,10 @@ ipcMain.handle('get-printers', async () => {
 })
 
 // Helper function to print via CUPS on Linux (using lp command)
-async function printViaCUPS(printerName, pdfPath) {
+async function printViaCUPS(printerName, imagePath) {
   return new Promise((resolve, reject) => {
-    // CUPS print command with thermal printer options
-    const printCommand = `lp -d "${printerName}" -o fit-to-page -o media=Custom.48x297mm -o scaling=100 "${pdfPath}"`
+    // CUPS print command for thermal printer - PNG format
+    const printCommand = `lp -d "${printerName}" -o fit-to-page -o media=Custom.48x297mm -o scaling=100 "${imagePath}"`
     
     console.log('Executing CUPS command:', printCommand)
     
