@@ -1,6 +1,5 @@
   GNU nano 6.2                                                                        .gitignore                                                                                  
 node_modules/
-public
 .env
 
 .pnpm-store/

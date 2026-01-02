@@ -128,7 +128,7 @@ npm install
 cat > .env << 'EOF'
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/posexpress
-JWT_SECRET=your-secret-key-here-change-this
+JWT_SECRET=secret
 NODE_ENV=production
 EOF
 

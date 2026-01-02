@@ -36,7 +36,6 @@ coverage
 __screenshots__/
 
 node_modules
-public
 .env
 
 # System files
