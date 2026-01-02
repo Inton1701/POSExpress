@@ -96,8 +96,11 @@ async function printViaCUPS(printerName, htmlContent) {
     // Write HTML to temp file
     fs.writeFileSync(tempFile, htmlContent)
     
-    // Convert HTML to PS/PDF and print via lp command
-    const printCommand = `lp -d "${printerName}" -o fit-to-page "${tempFile}"`
+    // Convert HTML to text and print via lp command with thermal printer options
+    // Using text mode for better thermal printer compatibility
+    const printCommand = `lp -d "${printerName}" -o fit-to-page -o media=Custom.48x297mm "${tempFile}"`
+    
+    console.log('Executing CUPS command:', printCommand)
     
     exec(printCommand, (error, stdout, stderr) => {
       // Clean up temp file
@@ -105,9 +108,11 @@ async function printViaCUPS(printerName, htmlContent) {
       
       if (error) {
         console.error('CUPS print error:', error)
+        console.error('CUPS stderr:', stderr)
         reject(error)
       } else {
         console.log('CUPS print output:', stdout)
+        if (stderr) console.log('CUPS stderr:', stderr)
         resolve({ success: true, method: 'cups' })
       }
     })
@@ -171,11 +176,11 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         }
       }
       
-      // Create hidden print window
+      // Create print window (only needed for Windows/Mac)
       const printWindow = new BrowserWindow({
         width: 182, // 48mm ≈ 182px
         height: 800,
-        show: false, // Hidden
+        show: false,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true
@@ -775,6 +780,20 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         `
       }
       
+      // On Linux, use CUPS directly - skip Electron print API
+      if (process.platform === 'linux') {
+        console.log('Linux detected - using CUPS directly')
+        try {
+          await printViaCUPS(targetPrinter.name, receiptHTML)
+          resolve({ success: true, printer: targetPrinter.name, mode: 'cups-direct', platform: process.platform })
+        } catch (cupsError) {
+          console.error('CUPS printing failed:', cupsError)
+          reject(new Error('CUPS printing failed: ' + cupsError.message))
+        }
+        return
+      }
+      
+      // Windows/Mac: Use Electron print API
       printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(receiptHTML))
       
       printWindow.webContents.on('did-finish-load', () => {
@@ -784,37 +803,26 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         setTimeout(() => {
           console.log('Attempting to print...')
           
-          // Linux-specific print settings
           const printOptions = {
-            silent: process.platform !== 'linux', // Linux: show dialog for better compatibility
+            silent: true,
             printBackground: true,
             deviceName: targetPrinter.name,
             copies: 1,
-            margins: {
-              marginType: 'none'
-            }
-          }
-          
-          // Add page size for non-Linux platforms
-          if (process.platform !== 'linux') {
-            printOptions.pageSize = {
+            margins: { marginType: 'none' },
+            pageSize: {
               width: 48000, // 48mm in microns
               height: 999999 // Dynamic height for continuous roll
-            }
-            printOptions.scaleFactor = 100
-          } else {
-            // Linux: Use custom page size name or let CUPS handle it
-            printOptions.pageSize = 'Custom'
+            },
+            scaleFactor: 100
           }
           
           printWindow.webContents.print(printOptions, (success, errorType) => {
             console.log('Print callback - Success:', success, 'ErrorType:', errorType)
-            
             printWindow.close()
             
             if (success) {
               console.log('✓ Printed successfully')
-              resolve({ success: true, printer: targetPrinter.name, mode: 'browser-window', platform: process.platform })
+              resolve({ success: true, printer: targetPrinter.name, mode: 'electron', platform: process.platform })
             } else {
               console.error('Print failed:', errorType)
               reject(new Error(errorType || 'Print failed'))

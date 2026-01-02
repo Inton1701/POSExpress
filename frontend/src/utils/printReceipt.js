@@ -9,29 +9,18 @@ export const printThermalReceipt = async (transactionData, selectedPrinter = nul
   // Check if running in Electron environment
   if (window.electronAPI) {
     try {
-      console.log('Using Electron direct printing...')
-      console.log('Transaction data:', transactionData)
-      if (selectedPrinter) {
-        console.log('Using selected printer:', selectedPrinter)
-      }
-      
       // Use Electron's direct printing to thermal printer
       const result = await window.electronAPI.printThermalReceipt({
         ...transactionData,
         printerName: selectedPrinter
       })
       
-      console.log('Print result:', result)
-      
       if (result.success) {
-        console.log(`✓ Printed successfully to: ${result.printer}`)
-        return { success: true, printer: result.printer, mode: 'electron' }
+        return { success: true, printer: result.printer, mode: result.mode || 'electron' }
       } else {
-        console.error('Electron print failed:', result.error)
         throw new Error(result.error || 'Print failed')
       }
     } catch (error) {
-      console.error('Electron print error:', error)
       throw new Error(error.message || 'Failed to print receipt')
     }
   } else {
