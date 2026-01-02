@@ -89,23 +89,40 @@ ipcMain.handle('get-printers', async () => {
 })
 
 // Helper function to print via CUPS on Linux (using lp command)
-async function printViaCUPS(printerName, imagePath) {
+async function printViaCUPS(printerName, pdfPath) {
   return new Promise((resolve, reject) => {
-    // Simple CUPS print command
-    const printCommand = `lp -d "${printerName}" -o fit-to-page "${imagePath}"`
+    // Convert PDF to raster using ghostscript for thermal printer compatibility
+    const rasterPath = pdfPath.replace('.pdf', '.raster')
     
-    console.log('Executing CUPS command:', printCommand)
+    // Use ghostscript to convert PDF to PWG raster format (thermal printer compatible)
+    const gsCommand = `gs -dNOPAUSE -dBATCH -sDEVICE=pwgraster -r203x203 -sOutputFile="${rasterPath}" "${pdfPath}"`
     
-    exec(printCommand, (error, stdout, stderr) => {
-      if (error) {
-        console.error('CUPS print error:', error)
-        console.error('stderr:', stderr)
-        reject(error)
-      } else {
-        console.log('CUPS output:', stdout)
-        if (stderr) console.log('CUPS stderr:', stderr)
-        resolve({ success: true })
+    console.log('Converting PDF to raster format...')
+    exec(gsCommand, (gsError, gsStdout, gsStderr) => {
+      if (gsError) {
+        console.error('Ghostscript conversion error:', gsError)
+        reject(new Error('PDF to raster conversion failed'))
+        return
       }
+      
+      // Now print the raster file
+      const printCommand = `lp -d "${printerName}" -o fit-to-page "${rasterPath}"`
+      console.log('Executing CUPS command:', printCommand)
+      
+      exec(printCommand, (error, stdout, stderr) => {
+        // Clean up raster file
+        try { fs.unlinkSync(rasterPath) } catch(e) {}
+        
+        if (error) {
+          console.error('CUPS print error:', error)
+          console.error('stderr:', stderr)
+          reject(error)
+        } else {
+          console.log('CUPS output:', stdout)
+          if (stderr) console.log('CUPS stderr:', stderr)
+          resolve({ success: true })
+        }
+      })
     })
   })
 }
