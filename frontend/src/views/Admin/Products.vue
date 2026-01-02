@@ -46,7 +46,7 @@
               Date Added
               <span v-if="sortColumn === 'createdAt'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
             </th>
-            <th class="px-6 py-3 text-center text-sm font-bold">Actions</th>
+            <th class="px-6 py-3 text-center text-sm font-bold sticky right-0 bg-gray-200 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[140px]">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -68,21 +68,21 @@
             <td class="px-6 py-4 text-sm text-gray-600">
               {{ formatDate(product.createdAt) }}
             </td>
-            <td class="px-6 py-4 text-center">
-              <button @click="showBarcode(product)" class="text-purple-500 hover:text-purple-700 mr-3" title="View Barcode">
-                <font-awesome-icon :icon="['fas', 'barcode']" />
+            <td class="px-6 py-4 text-center sticky right-0 bg-white shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[140px]">
+              <button @click="showBarcode(product)" class="text-purple-500 hover:text-purple-700 mr-2" title="View Barcode">
+                <font-awesome-icon :icon="['fas', 'barcode']" class="text-lg" />
               </button>
-              <button v-if="canEditProduct(product)" @click="openEditModal(product)" class="text-blue-500 hover:text-blue-700 mr-3" title="Edit">
-                <font-awesome-icon :icon="['fas', 'edit']" />
+              <button v-if="canEditProduct(product)" @click="openEditModal(product)" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit">
+                <font-awesome-icon :icon="['fas', 'edit']" class="text-lg" />
               </button>
-              <span v-else class="text-gray-400 mr-3" title="You cannot edit this product">
-                <font-awesome-icon :icon="['fas', 'edit']" />
+              <span v-else class="text-gray-400 mr-2" title="You cannot edit this product">
+                <font-awesome-icon :icon="['fas', 'edit']" class="text-lg" />
               </span>
               <button v-if="!hasVariants(product) && canDeleteProduct(product)" @click="deleteProduct(product._id)" class="text-red-500 hover:text-red-700" title="Delete">
-                <font-awesome-icon :icon="['fas', 'trash']" />
+                <font-awesome-icon :icon="['fas', 'trash']" class="text-lg" />
               </button>
               <span v-else class="text-gray-400" :title="hasVariants(product) ? 'Products with variants can only be deleted from edit mode' : 'You cannot delete this product'">
-                <font-awesome-icon :icon="['fas', 'trash']" />
+                <font-awesome-icon :icon="['fas', 'trash']" class="text-lg" />
               </span>
             </td>
           </tr>

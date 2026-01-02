@@ -72,16 +72,13 @@
 
     <main class="flex-1 flex overflow-hidden">
       <!-- Order List (Left) -->
-      <div class="w-56 sm:w-64 md:w-72 lg:w-80 bg-white border-r  flex flex-col">
+      <div class="w-40 sm:w-48 md:w-56 lg:w-64 xl:w-72 bg-white border-r  flex flex-col">
         <div class="flex-1 overflow-y-auto p-3">
           <div class="flex  b-2 justify-between items-center mb-3">
             <h3 class="font-bold text-lg">Order Items</h3>
             <div class="flex gap-2">
               <button @click="openBarcodeModal" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 text-sm flex items-center gap-1">
                 <font-awesome-icon icon="barcode" />
-              </button>
-              <button @click="openClearAllModal" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-3 text-sm flex items-center gap-1">
-                <font-awesome-icon icon="times" />
               </button>
             </div>
           </div>
@@ -103,12 +100,14 @@
               <span class="font-bold">₱{{ (getItemPrice(item) * item.quantity).toFixed(2) }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <div class="flex items-center gap-1">
-                <button @click="adjustQuantity(index, -1)" class="bg-red-500 hover:bg-red-600 text-white w-6 h-6 text-sm">-</button>
-                <span class="text-sm font-semibold px-2">{{ item.quantity }}</span>
-                <button @click="adjustQuantity(index, 1)" class="bg-green-500 hover:bg-green-600 text-white w-6 h-6 text-sm">+</button>
+              <div class="flex items-center gap-2">
+                <button @click="adjustQuantity(index, -1)" class="bg-red-500 hover:bg-red-600 text-white w-10 h-10 text-lg font-bold rounded-lg transition">−</button>
+                <span class="text-lg font-semibold px-3">{{ item.quantity }}</span>
+                <button @click="adjustQuantity(index, 1)" class="bg-green-500 hover:bg-green-600 text-white w-10 h-10 text-lg font-bold rounded-lg transition">+</button>
               </div>
-              <button @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-xs">Remove</button>
+              <button @click="removeItem(index)" class="text-red-500 hover:text-red-700" title="Remove item">
+                <font-awesome-icon icon="trash" class="text-lg" />
+              </button>
             </div>
           </div>
           <div v-if="orderItems.length === 0" class="text-center text-gray-500 py-6 text-sm">
@@ -144,7 +143,7 @@
           </div>
           
           <!-- Products View -->
-          <div v-if="!viewingVariants" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+          <div v-if="!viewingVariants" class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           <!-- Loading state -->
           <div v-if="isLoading" class="col-span-full text-center py-12 text-gray-500">
             Loading products...
@@ -159,11 +158,7 @@
             v-for="product in filteredProducts" 
             :key="product._id" 
             @click="handleProductClick(product)" 
-            :disabled="getStockStatus(product) === 'out'"
-            :class="[
-              'relative font-bold py-8 px-2 flex items-center justify-center min-h-[80px]',
-              getStockStatus(product) === 'out' ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'
-            ]"
+            class="relative font-bold p-2 flex items-center justify-center aspect-square bg-green-500 hover:bg-green-600 text-white"
           >
             <span class="text-sm text-center">{{ product.name }}</span>
             <!-- Stock indicator -->
@@ -175,14 +170,14 @@
         </div>
         
         <!-- Variants View -->
-        <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           <button 
             v-for="variant in selectedProductVariants" 
             :key="variant._id" 
             @click="addVariantToOrder(variant)"
             :disabled="getVariantStockStatus(variant) === 'out'"
             :class="[
-              'relative font-bold py-8 px-2 flex items-center justify-center min-h-[80px]',
+              'relative font-bold p-2 flex items-center justify-center aspect-square',
               getVariantStockStatus(variant) === 'out' ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'
             ]"
           >
@@ -307,7 +302,7 @@
             </button>
             <button @click="addToCashAmount('.')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">.</button>
             <button @click="addToCashAmount('0')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">0</button>
-            <button @click="deleteCashAmount" class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl">
+            <button @click="deleteCashAmount" class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl" title="Delete">
               <font-awesome-icon icon="backspace" />
             </button>
           </div>
@@ -328,155 +323,261 @@
     </Modal>
 
     <!-- RFID Payment Modal -->
-    <Modal :is-open="isRfidPaymentModalOpen" title="RFID Payment" @close="closeRfidPaymentModal">
-      <div v-if="!rfidCustomer" class="text-center">
-        <p class="mb-4 text-lg">Please tap your RFID card to continue</p>
-        <p class="text-2xl font-bold text-blue-600 mb-4">Total: ₱{{ totalAmount.toFixed(2) }}</p>
-        <div class="flex justify-center mb-4">
-          <font-awesome-icon icon="credit-card" class="text-6xl text-blue-500 animate-pulse" />
+    <Modal :is-open="isRfidPaymentModalOpen" title="RFID Payment" size="full" @close="closeRfidPaymentModal">
+      <div v-if="!rfidCustomer" class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left Column: Icon and Input -->
+        <div class="flex flex-col justify-center space-y-6">
+          <p class="text-2xl font-semibold text-gray-700 text-center">Please tap your RFID card</p>
+          <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 w-full">
+            <p class="text-lg text-gray-600 mb-2 text-center">Total Amount</p>
+            <p class="text-5xl font-bold text-blue-600 text-center">₱{{ totalAmount.toFixed(2) }}</p>
+          </div>
+          <div class="flex justify-center">
+            <font-awesome-icon icon="credit-card" class="text-9xl text-blue-500 animate-pulse" />
+          </div>
+          <input 
+            ref="rfidPaymentInput" 
+            v-model="rfidPaymentValue" 
+            @keyup.enter="handleRfidPayment" 
+            type="text" 
+            class="w-full p-4 border-2 border-gray-300 rounded-xl text-center text-xl"
+            placeholder="Tap RFID or enter manually"
+          />
+          <p v-if="rfidPaymentError" class="text-red-600 text-center text-xl font-semibold">{{ rfidPaymentError }}</p>
         </div>
-        <input 
-          ref="rfidPaymentInput" 
-          v-model="rfidPaymentValue" 
-          @keyup.enter="handleRfidPayment" 
-          type="text" 
-          class="w-full p-3 border border-gray-300 rounded-xl"
-          placeholder="Tap RFID or enter manually"
-        />
-        <p v-if="rfidPaymentError" class="mt-2 text-red-600">{{ rfidPaymentError }}</p>
+        
+        <!-- Right Column: Number Pad -->
+        <div class="flex flex-col justify-center">
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <button v-for="num in [1,2,3,4,5,6,7,8,9]" :key="num" 
+              @click="rfidPaymentValue += num" 
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">
+              {{ num }}
+            </button>
+            <button @click="rfidPaymentValue += '.'" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">.</button>
+            <button @click="rfidPaymentValue += '0'" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">0</button>
+            <button @click="rfidPaymentValue = rfidPaymentValue.slice(0, -1)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl" title="Delete">
+              <font-awesome-icon icon="backspace" />
+            </button>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-4">
+            <button @click="handleRfidPayment" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-5 text-2xl rounded-xl">Continue</button>
+            <button @click="closeRfidPaymentModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">Cancel</button>
+          </div>
+        </div>
       </div>
 
-      <div v-else class="text-center">
-        <div class="mb-4">
-          <font-awesome-icon icon="check-circle" class="text-6xl text-green-500 mb-2" />
-          <p class="text-xl font-bold mb-2">{{ rfidCustomer.fullName }}</p>
-          <p class="text-lg">Current Balance: <span class="font-bold text-blue-600">₱{{ rfidCustomer.balance.toFixed(2) }}</span></p>
-          <p class="text-lg">Total Amount: <span class="font-bold text-purple-600">₱{{ totalAmount.toFixed(2) }}</span></p>
-          <p class="text-lg mt-2">
-            Remaining Balance: 
-            <span class="font-bold" :class="(rfidCustomer.balance - totalAmount) >= 0 ? 'text-green-600' : 'text-red-600'">
+      <div v-else class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left Column: Balance Info -->
+        <div class="flex flex-col justify-center space-y-6">
+          <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-6">
+            <p class="text-lg text-gray-600 mb-2">Current Balance</p>
+            <p class="text-5xl font-bold text-blue-600">₱{{ rfidCustomer.balance.toFixed(2) }}</p>
+          </div>
+          
+          <div class="bg-purple-50 border-2 border-purple-300 rounded-xl p-6">
+            <p class="text-lg text-gray-600 mb-2">Total Amount</p>
+            <p class="text-5xl font-bold text-purple-600">₱{{ totalAmount.toFixed(2) }}</p>
+          </div>
+          
+          <div :class="(rfidCustomer.balance - totalAmount) >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'" class="border-2 rounded-xl p-6">
+            <p class="text-lg text-gray-600 mb-2">Remaining Balance</p>
+            <p class="text-5xl font-bold" :class="(rfidCustomer.balance - totalAmount) >= 0 ? 'text-green-600' : 'text-red-600'">
               ₱{{ (rfidCustomer.balance - totalAmount).toFixed(2) }}
-            </span>
-          </p>
-        </div>
+            </p>
+          </div>
 
-        <div v-if="rfidCustomer.balance < totalAmount" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4">
-          <p class="font-bold">Insufficient Balance!</p>
-          <p>Please add funds or use another payment method.</p>
+          <div v-if="rfidCustomer.balance < totalAmount" class="bg-red-100 border-2 border-red-400 text-red-700 px-6 py-4 rounded-xl">
+            <p class="font-bold text-xl">Insufficient Balance!</p>
+            <p class="text-lg">Please add funds or use another payment method.</p>
+          </div>
         </div>
-      </div>
-
-      <div class="flex gap-4 mt-4">
-        <button @click="closeRfidPaymentModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
-        <button v-if="rfidCustomer" @click="processRfidPayment" 
-          :disabled="rfidCustomer.balance < totalAmount"
-          :class="rfidCustomer.balance < totalAmount ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'"
-          class="flex-1 text-white font-bold py-2 px-4 rounded-2xl">
-          Confirm Payment
-        </button>
+        
+        <!-- Right Column: Customer Info & Action Buttons -->
+        <div class="flex flex-col justify-center gap-6">
+          <div class="text-center mb-4">
+            <font-awesome-icon icon="check-circle" class="text-8xl text-green-500 mb-4" />
+            <p class="text-4xl font-bold">{{ rfidCustomer.fullName }}</p>
+          </div>
+          
+          <button @click="processRfidPayment" 
+            :disabled="rfidCustomer.balance < totalAmount"
+            :class="rfidCustomer.balance < totalAmount ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'"
+            class="w-full text-white font-bold py-8 text-3xl rounded-xl">
+            Complete Payment
+          </button>
+          <button @click="closeRfidPaymentModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-6 text-2xl rounded-xl">Cancel</button>
+        </div>
       </div>
     </Modal>
 
     <!-- Balance Modal -->
-    <Modal :is-open="isBalanceModalOpen" title="Check Balance" @close="closeBalanceModal">
-      <div v-if="!balanceCustomer">
-        <p class="mb-4 text-center">Please tap your RFID card</p>
-        <div class="flex justify-center mb-4">
-          <font-awesome-icon icon="wallet" class="text-6xl text-blue-500 animate-pulse" />
+    <Modal :is-open="isBalanceModalOpen" title="Check Balance" size="full" @close="closeBalanceModal">
+      <div v-if="!balanceCustomer" class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left Column: Icon and Input -->
+        <div class="flex flex-col justify-center items-center space-y-6">
+          <p class="text-2xl font-semibold text-gray-700">Please tap your RFID card</p>
+          <div class="flex justify-center">
+            <font-awesome-icon icon="wallet" class="text-9xl text-blue-500 animate-pulse" />
+          </div>
+          <input 
+            ref="balanceRfidInput" 
+            v-model="balanceRfid" 
+            @keyup.enter="handleBalanceRfid" 
+            type="text" 
+            class="w-full p-4 border-2 border-gray-300 rounded-xl text-center text-xl"
+            placeholder="Tap RFID or enter manually"
+          />
+          <p v-if="balanceError" class="text-red-600 text-center text-xl font-semibold">{{ balanceError }}</p>
         </div>
-        <input 
-          ref="balanceRfidInput" 
-          v-model="balanceRfid" 
-          @keyup.enter="handleBalanceRfid" 
-          type="text" 
-          class="w-full p-3 border border-gray-300 rounded-xl text-center"
-          placeholder="Tap RFID or enter manually"
-        />
-        <p v-if="balanceError" class="mt-2 text-red-600 text-center">{{ balanceError }}</p>
-      </div>
-      
-      <div v-else>
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-          <p class="text-center font-bold text-lg mb-2">{{ balanceCustomer.fullName }}</p>
-          <p class="text-center text-gray-600 text-sm mb-1">RFID: {{ balanceCustomer.rfid }}</p>
-          <div class="text-center mt-4">
-            <p class="text-gray-600 text-sm">Current Balance</p>
-            <p class="text-4xl font-bold text-blue-600">₱{{ balanceCustomer.balance.toFixed(2) }}</p>
+        
+        <!-- Right Column: Number Pad -->
+        <div class="flex flex-col justify-center">
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <button v-for="num in [1,2,3,4,5,6,7,8,9]" :key="num" 
+              @click="balanceRfid += num" 
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">
+              {{ num }}
+            </button>
+            <button @click="balanceRfid += '.'" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">.</button>
+            <button @click="balanceRfid += '0'" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">0</button>
+            <button @click="balanceRfid = balanceRfid.slice(0, -1)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl" title="Delete">
+              <font-awesome-icon icon="backspace" />
+            </button>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-4">
+            <button @click="handleBalanceRfid" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-5 text-2xl rounded-xl">Check Balance</button>
+            <button @click="closeBalanceModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">Cancel</button>
           </div>
         </div>
       </div>
       
-      <div class="flex gap-4">
-        <button @click="closeBalanceModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Close</button>
-        <button v-if="balanceCustomer" @click="printBalanceReceipt" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-2xl flex items-center justify-center gap-2">
-          <font-awesome-icon icon="print" />
-          Print
-        </button>
+      <div v-else class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left Column: Customer Info -->
+        <div class="flex flex-col space-y-6 justify-start">
+          <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-8">
+            <p class="text-center font-bold text-5xl mb-4">{{ balanceCustomer.fullName }}</p>
+            <p class="text-center text-2xl text-gray-700">Current Balance</p>
+            <p class="text-center font-bold text-6xl text-blue-600 mt-3">₱{{ balanceCustomer.balance.toFixed(2) }}</p>
+          </div>
+          
+          <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-6">
+            <p class="text-2xl font-semibold text-gray-700 mb-2">Card Details</p>
+            <p class="text-lg text-gray-600">RFID: <span class="font-bold">{{ balanceCustomer.rfid }}</span></p>
+          </div>
+        </div>
+        
+        <!-- Right Column: Actions -->
+        <div class="flex flex-col justify-between">
+          <div class="bg-blue-100 border-2 border-blue-300 rounded-xl p-8">
+            <p class="text-center text-2xl font-semibold text-gray-700 mb-4">Balance Information</p>
+            <p class="text-center text-5xl font-bold text-blue-600">₱{{ balanceCustomer.balance.toFixed(2) }}</p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-4">
+            <button @click="printBalanceReceipt" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 px-6 rounded-2xl flex items-center justify-center gap-3 text-3xl">
+              <font-awesome-icon icon="print" />
+              Print Receipt
+            </button>
+            <button @click="closeBalanceModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-6 px-6 rounded-2xl text-3xl">Close</button>
+          </div>
+        </div>
       </div>
     </Modal>
 
     <!-- Cash In Modal -->
     <Modal :is-open="isCashInModalOpen" title="Cash In" size="full" @close="closeCashInModal">
-      <div v-if="!cashInCustomer">
-        <p class="mb-4 text-center">Please tap your RFID card</p>
-        <div class="flex justify-center mb-4">
-          <font-awesome-icon icon="credit-card" class="text-6xl text-yellow-500 animate-pulse" />
+      <div v-if="!cashInCustomer" class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left Column: Icon and Input -->
+        <div class="flex flex-col justify-center items-center space-y-6">
+          <p class="text-2xl font-semibold text-gray-700">Please tap your RFID card</p>
+          <div class="flex justify-center">
+            <font-awesome-icon icon="credit-card" class="text-9xl text-yellow-500 animate-pulse" />
+          </div>
+          <input 
+            ref="cashInRfidInput" 
+            v-model="cashInRfid" 
+            @keyup.enter="handleCashInRfid" 
+            type="text" 
+            class="w-full p-4 border-2 border-gray-300 rounded-xl text-center text-xl"
+            placeholder="Tap RFID or enter manually"
+          />
+          <p v-if="cashInError" class="text-red-600 text-center text-xl font-semibold">{{ cashInError }}</p>
         </div>
-        <input 
-          ref="cashInRfidInput" 
-          v-model="cashInRfid" 
-          @keyup.enter="handleCashInRfid" 
-          type="text" 
-          class="w-full p-3 border border-gray-300 rounded-xl text-center"
-          placeholder="Tap RFID or enter manually"
-        />
-        <p v-if="cashInError" class="mt-2 text-red-600 text-center">{{ cashInError }}</p>
+        
+        <!-- Right Column: Number Pad -->
+        <div class="flex flex-col justify-center">
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <button v-for="num in [1,2,3,4,5,6,7,8,9]" :key="num" 
+              @click="cashInRfid += num" 
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">
+              {{ num }}
+            </button>
+            <button @click="cashInRfid += '.'" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">.</button>
+            <button @click="cashInRfid += '0'" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">0</button>
+            <button @click="cashInRfid = cashInRfid.slice(0, -1)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl" title="Delete">
+              <font-awesome-icon icon="backspace" />
+            </button>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-4">
+            <button @click="handleCashInRfid" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-5 text-2xl rounded-xl">Continue</button>
+            <button @click="closeCashInModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">Cancel</button>
+          </div>
+        </div>
       </div>
       
       <div v-else class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
         <!-- Left Column: Customer Info and Amount -->
-        <div class="flex flex-col space-y-6 justify-start">
-          <div class="bg-green-50 border-2 border-green-300 rounded-xl p-6">
-            <p class="text-center font-bold text-3xl mb-3">{{ cashInCustomer.fullName }}</p>
-            <p class="text-center text-xl text-gray-700">Current Balance</p>
-            <p class="text-center font-bold text-4xl text-green-600 mt-2">₱{{ cashInCustomer.balance.toFixed(2) }}</p>
+        <div class="flex flex-col justify-center space-y-6">
+          <div>
+            <p class="text-lg text-gray-600 mb-2">Customer Name</p>
+            <p class="text-5xl font-bold text-green-600">{{ cashInCustomer.fullName }}</p>
           </div>
           
           <div>
-            <p class="mb-3 font-semibold text-2xl">Amount to Add:</p>
-            <input v-model="cashInAmount" type="text" readonly placeholder="0.00" class="w-full p-6 rounded-xl border-2 border-gray-300 text-right text-4xl font-bold bg-gray-50" />
+            <p class="text-lg text-gray-600 mb-2">Current Balance</p>
+            <div class="bg-green-100 p-4 rounded-xl">
+              <p class="text-5xl font-bold text-green-600">₱{{ cashInCustomer.balance.toFixed(2) }}</p>
+            </div>
+          </div>
+          
+          <div>
+            <p class="text-lg text-gray-600 mb-2">Amount to Add</p>
+            <input v-model="cashInAmount" type="text" readonly placeholder="0.00" class="w-full p-4 rounded-xl border-2 border-gray-300 text-right text-5xl font-bold bg-gray-50" />
           </div>
         </div>
         
         <!-- Right Column: Number Pad and Buttons -->
         <div class="flex flex-col justify-between">
           <!-- Number Pad -->
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-3 gap-3 mb-6">
             <button v-for="num in [1,2,3,4,5,6,7,8,9]" :key="num" 
               @click="appendToCashIn(num)" 
-              class="bg-gray-200 hover:bg-gray-300 text-3xl font-bold py-6 rounded-xl transition">
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">
               {{ num }}
             </button>
-            <button @click="appendToCashIn('.')" class="bg-gray-200 hover:bg-gray-300 text-3xl font-bold py-6 rounded-xl transition">.</button>
-            <button @click="appendToCashIn(0)" class="bg-gray-200 hover:bg-gray-300 text-3xl font-bold py-6 rounded-xl transition">0</button>
-            <button @click="deleteCashInDigit" class="bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-6 rounded-xl transition">
-              <font-awesome-icon icon="delete-left" />
+            <button @click="appendToCashIn('.')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">.</button>
+            <button @click="appendToCashIn(0)" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-3xl rounded-xl">0</button>
+            <button @click="deleteCashInDigit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl" title="Delete">
+              <font-awesome-icon icon="backspace" />
             </button>
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col gap-4 mt-6">
+          <div class="flex flex-col gap-4">
             <button @click="processCashIn" :disabled="!cashInAmount || parseFloat(cashInAmount) <= 0" 
-              :class="!cashInAmount || parseFloat(cashInAmount) <= 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'"
-              class="w-full text-white font-bold py-4 px-6 rounded-2xl text-xl">Add Funds</button>
-            <button @click="closeCashInModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 px-6 rounded-2xl text-xl">Cancel</button>
+              :class="!cashInAmount || parseFloat(cashInAmount) <= 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'"
+              class="w-full text-white font-bold py-5 text-2xl rounded-xl">Complete Cash In</button>
+            <button @click="closeCashInModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">Cancel</button>
           </div>
         </div>
-      </div>
-
-      <!-- Action Buttons for RFID Screen -->
-      <div v-if="!cashInCustomer" class="flex justify-center mt-6">
-        <button @click="closeCashInModal" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
       </div>
     </Modal>
 
@@ -762,7 +863,7 @@
               0
             </button>
             <button @click="deleteRefundTransactionId" 
-              class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl">
+              class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-3xl rounded-xl" title="Delete">
               <font-awesome-icon icon="backspace" />
             </button>
           </div>
@@ -770,8 +871,8 @@
           <!-- Action Buttons -->
           <div class="flex flex-col gap-4">
             <button @click="searchRefundTransaction" :disabled="!refundTransactionId || isLoading"
-              class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-5 text-2xl rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-              {{ isLoading ? 'Searching...' : 'Search' }}
+              class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-5 text-2xl rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ isLoading ? 'Searching...' : 'Search Transaction' }}
             </button>
             <button @click="closeRefundModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">
               Cancel
@@ -782,86 +883,92 @@
     </Modal>
 
     <!-- Refund Details Modal -->
-    <Modal :is-open="isRefundDetailsModalOpen" title="Process Refund" size="lg" @close="closeRefundDetailsModal">
-      <div v-if="refundTransaction" class="space-y-4 max-h-[70vh] overflow-y-auto">
-        <!-- Transaction Info -->
-        <div class="bg-gray-50 rounded-xl p-4 space-y-2">
-          <div class="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p class="text-gray-600">Transaction ID</p>
-              <p class="font-bold text-gray-800">{{ refundTransaction.transactionId }}</p>
-            </div>
-            <div>
-              <p class="text-gray-600">Date</p>
-              <p class="font-bold text-gray-800">{{ new Date(refundTransaction.createdAt).toLocaleString() }}</p>
-            </div>
-            <div>
-              <p class="text-gray-600">Payment Method</p>
-              <p class="font-bold text-gray-800">{{ refundTransaction.paymentMethod }}</p>
-            </div>
-            <div>
-              <p class="text-gray-600">Original Amount</p>
-              <p class="font-bold text-green-600">₱{{ refundTransaction.totalAmount.toFixed(2) }}</p>
-            </div>
-          </div>
-          
-          <!-- Customer Info (if RFID payment) -->
-          <div v-if="refundTransaction.customerDetails" class="border-t pt-2 mt-2">
-            <p class="text-gray-600 text-sm mb-1">Customer</p>
-            <p class="font-bold text-gray-800">{{ refundTransaction.customerDetails.fullName }}</p>
-            <p class="text-xs text-gray-500">RFID: {{ refundTransaction.customerDetails.rfid }}</p>
-            <p class="text-xs text-gray-500">Balance: ₱{{ refundTransaction.customerDetails.balance.toFixed(2) }}</p>
-          </div>
-        </div>
-
-        <!-- Items to Refund -->
-        <div>
-          <h3 class="font-bold text-gray-800 mb-2">Items to Refund</h3>
-          <div class="space-y-2">
+    <Modal :is-open="isRefundDetailsModalOpen" title="Process Refund" size="full" @close="closeRefundDetailsModal">
+      <div v-if="refundTransaction" class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
+        <!-- Left side: Items to Refund -->
+        <div class="flex flex-col space-y-4 overflow-y-auto pr-2">
+          <h3 class="font-bold text-lg text-gray-800 sticky top-0 bg-white py-2">Items to Refund</h3>
+          <div class="space-y-2 flex-1">
             <div v-for="(item, index) in refundItems" :key="index" 
-              class="bg-white border rounded-xl p-3 flex items-center justify-between">
-              <div class="flex-1">
+              class="bg-white border rounded-xl p-3 flex flex-col gap-2">
+              <div>
                 <p class="font-semibold text-gray-800">{{ item.name }}</p>
                 <p class="text-xs text-gray-500">₱{{ item.price.toFixed(2) }} each</p>
                 <p class="text-xs text-gray-600">Max: {{ item.maxQuantity }}</p>
               </div>
-              <div class="flex items-center gap-2">
-                <button @click="adjustRefundQuantity(index, -1)" 
-                  class="bg-red-500 hover:bg-red-600 text-white font-bold w-8 h-8 rounded-lg">
-                  -
-                </button>
-                <span class="font-bold text-lg w-12 text-center">{{ item.refundQuantity }}</span>
-                <button @click="adjustRefundQuantity(index, 1)" 
-                  class="bg-green-500 hover:bg-green-600 text-white font-bold w-8 h-8 rounded-lg">
-                  +
-                </button>
-                <div class="text-right ml-2">
-                  <p class="font-bold text-gray-800">₱{{ (item.price * item.refundQuantity).toFixed(2) }}</p>
+              <div class="flex items-center justify-between">
+                <p class="font-bold text-gray-800">₱{{ (item.price * item.refundQuantity).toFixed(2) }}</p>
+                <div class="flex items-center gap-2">
+                  <button @click="adjustRefundQuantity(index, -1)" 
+                    class="bg-red-500 hover:bg-red-600 text-white font-bold w-10 h-10 rounded-lg text-lg">
+                    −
+                  </button>
+                  <span class="font-bold w-12 text-center text-lg">{{ item.refundQuantity }}</span>
+                  <button @click="adjustRefundQuantity(index, 1)" 
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold w-10 h-10 rounded-lg text-lg">
+                    +
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Refund Summary -->
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <div class="flex justify-between items-center">
-            <p class="text-lg font-bold text-gray-800">Total Refund Amount</p>
-            <p class="text-2xl font-bold text-blue-600">₱{{ refundAmount.toFixed(2) }}</p>
-          </div>
-          <p v-if="refundTransaction.paymentMethod === 'E-wallet'" class="text-sm text-gray-600 mt-2">
-            Amount will be refunded to customer's account
-          </p>
-        </div>
+        <!-- Right side: Transaction Details and Buttons -->
+        <div class="flex flex-col justify-between space-y-6">
+          <!-- Transaction Info -->
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-gray-50 rounded-xl p-4">
+                <p class="text-gray-600 text-sm mb-1">Transaction ID</p>
+                <p class="font-bold text-gray-800 text-lg">{{ refundTransaction.transactionId }}</p>
+              </div>
 
-        <div class="flex gap-3 pt-2">
-          <button @click="closeRefundDetailsModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl">
-            Cancel
-          </button>
-          <button @click="processRefund" :disabled="isLoading || refundAmount === 0"
-            class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-            {{ isLoading ? 'Processing...' : 'Process Refund' }}
-          </button>
+              <div class="bg-gray-50 rounded-xl p-4">
+                <p class="text-gray-600 text-sm mb-1">Date</p>
+                <p class="font-bold text-gray-800">{{ new Date(refundTransaction.createdAt).toLocaleString() }}</p>
+              </div>
+
+              <div class="bg-gray-50 rounded-xl p-4">
+                <p class="text-gray-600 text-sm mb-1">Payment Method</p>
+                <p class="font-bold text-gray-800">{{ refundTransaction.paymentMethod }}</p>
+              </div>
+
+              <div class="bg-gray-50 rounded-xl p-4">
+                <p class="text-gray-600 text-sm mb-1">Original Amount</p>
+                <p class="font-bold text-green-600 text-lg">₱{{ refundTransaction.totalAmount.toFixed(2) }}</p>
+              </div>
+            </div>
+
+            <div v-if="refundTransaction.customerDetails" class="bg-gray-50 rounded-xl p-4">
+              <p class="text-gray-600 text-sm mb-1">Customer</p>
+              <p class="font-bold text-gray-800">{{ refundTransaction.customerDetails.fullName }}</p>
+              <p class="text-xs text-gray-500">RFID: {{ refundTransaction.customerDetails.rfid }}</p>
+              <p class="text-xs text-gray-500">Balance: ₱{{ refundTransaction.customerDetails.balance.toFixed(2) }}</p>
+            </div>
+          </div>
+
+          <!-- Refund Summary -->
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div class="flex justify-between items-center">
+              <p class="text-lg font-bold text-gray-800">Total Refund</p>
+              <p class="text-3xl font-bold text-blue-600">₱{{ refundAmount.toFixed(2) }}</p>
+            </div>
+            <p v-if="refundTransaction.paymentMethod === 'E-wallet'" class="text-sm text-gray-600 mt-2">
+              Amount will be refunded to customer's account
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-3">
+            <button @click="processRefund" :disabled="isLoading || refundAmount === 0"
+              class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-lg">
+              {{ isLoading ? 'Processing...' : 'Process Refund' }}
+            </button>
+            <button @click="closeRefundDetailsModal" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl">
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -910,6 +1017,7 @@ const showChange = ref(false)
 const isBalanceModalOpen = ref(false)
 const isCashInModalOpen = ref(false)
 const isVoidModalOpen = ref(false)
+const isClearAllModalOpen = ref(false)
 const isBarcodeModalOpen = ref(false)
 const isLogoutModalOpen = ref(false)
 const isRefundModalOpen = ref(false)
@@ -940,6 +1048,7 @@ const currentUser = ref(null)
 const currentStore = ref(null)
 const isLoading = ref(false)
 const barcodeValue = ref('')
+const productsWithVariants = ref(new Set())
 const manualBarcode = ref('')
 const barcodeError = ref('')
 const barcodeInput = ref(null)
@@ -1044,11 +1153,32 @@ const fetchProducts = async () => {
     const response = await axios.get(`${API_URL}/products`)
     if (response.data.success) {
       products.value = response.data.products
+      // Fetch which products have variants
+      await fetchProductsWithVariants()
     }
   } catch (error) {
     console.error('Error fetching products:', error)
   } finally {
     isLoading.value = false
+  }
+}
+
+const fetchProductsWithVariants = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/variants`)
+    if (response.data.success) {
+      const productIds = new Set()
+      response.data.variants.forEach(variant => {
+        if (variant.productId) {
+          // Handle both populated objects and direct IDs
+          const id = typeof variant.productId === 'object' ? variant.productId._id : variant.productId
+          productIds.add(String(id))
+        }
+      })
+      productsWithVariants.value = productIds
+    }
+  } catch (error) {
+    console.error('Error fetching variants:', error)
   }
 }
 
@@ -1103,8 +1233,8 @@ const filteredProducts = computed(() => {
     })
   }
   
-  // Filter by active status
-  filtered = filtered.filter(product => product.status === 'active')
+  // Filter by active status - show active and sold out products
+  filtered = filtered.filter(product => product.status === 'active' || product.status === 'sold out')
   
   // Filter by category - only show if no category or category is active
   filtered = filtered.filter(product => {
@@ -1193,15 +1323,25 @@ const refundAmount = computed(() => {
   }, 0)
 })
 
-const adjustLastItem = (change) => {
+const adjustLastItem = async (change) => {
   if (orderItems.value.length === 0) return
   const lastIndex = orderItems.value.length - 1
-  adjustQuantity(lastIndex, change)
+  await adjustQuantity(lastIndex, change)
 }
 
 // Check if product has stock issues
 const getStockStatus = (product) => {
-  // Don't check stock for products with variants - check variant stock instead
+  // Don't show stock badges for products with variants
+  if (productsWithVariants.value.has(String(product._id))) {
+    return 'ok'
+  }
+  
+  // For products without variants, check their quantity
+  const quantity = product.quantity || 0
+  const alert = product.quantityAlert || 5
+  
+  if (quantity <= 0) return 'out'
+  if (quantity <= alert) return 'low'
   return 'ok'
 }
 
@@ -1225,10 +1365,11 @@ const handleProductClick = async (product) => {
     selectedProductVariants.value = variants
     viewingVariants.value = true
   } else {
-    // For products without variants, check stock
+    // For products without variants, check stock before adding
     const quantity = product.quantity || 0
     if (quantity <= 0) {
-      return // Don't allow adding out of stock products
+      showAlertModal(`${product.name} is out of stock`, 'Out of Stock')
+      return
     }
     addToOrder(product)
   }
@@ -1255,13 +1396,15 @@ const addVariantToOrder = (variant) => {
     // Check if there's enough stock before increasing quantity
     const currentQuantityInCart = existingItem.quantity
     const availableStock = variant.quantity || 0
+    const newQuantity = currentQuantityInCart + 1
     
-    if (currentQuantityInCart >= availableStock) {
+    if (newQuantity > availableStock) {
       showAlertModal(`Insufficient stock for ${selectedProduct.value.name} - ${variant.value}. Available: ${availableStock}`, 'Out of Stock')
       return
     }
     
-    existingItem.quantity += 1
+    existingItem.quantity = newQuantity
+    existingItem.availableStock = availableStock // Update stored stock
     // Update addon quantities
     updateAddonsForItem(existingItem)
   } else {
@@ -1274,6 +1417,7 @@ const addVariantToOrder = (variant) => {
       isVariant: true,
       variantId: variant._id,
       productId: selectedProduct.value._id,
+      availableStock: variant.quantity || 0,
       isVattable: selectedProduct.value.isVattable || false,
       addons: []
     }
@@ -1294,13 +1438,14 @@ const addToOrder = (product) => {
     // Check if there's enough stock before increasing quantity
     const currentQuantityInCart = existingItem.quantity
     const availableStock = product.quantity || 0
+    const newQuantity = currentQuantityInCart + 1
     
-    if (currentQuantityInCart >= availableStock) {
+    if (newQuantity > availableStock) {
       showAlertModal(`Insufficient stock for ${product.name}. Available: ${availableStock}`, 'Out of Stock')
       return
     }
     
-    existingItem.quantity += 1
+    existingItem.quantity = newQuantity
     // Update addon quantities
     updateAddonsForItem(existingItem)
   } else {
@@ -1398,7 +1543,7 @@ const updateAddonsForItem = (item) => {
   }
 }
 
-const adjustQuantity = (index, change) => {
+const adjustQuantity = async (index, change) => {
   const item = orderItems.value[index]
   const newQuantity = item.quantity + change
   
@@ -1410,26 +1555,54 @@ const adjustQuantity = (index, change) => {
   
   // If increasing quantity, check stock availability
   if (change > 0) {
-    // Find the original product/variant to check stock
-    let availableStock = 0
-    
     if (item.isVariant) {
-      const variant = allProducts.value.flatMap(p => p.variants || []).find(v => v._id === item.variantId)
-      availableStock = variant ? variant.quantity || 0 : 0
+      // For variants, fetch fresh stock data
+      try {
+        const variants = await fetchVariants(item.productId)
+        const variant = variants.find(v => v._id === item.variantId)
+        
+        if (!variant) {
+          showAlertModal('Variant not found', 'Error')
+          return
+        }
+        
+        const availableStock = variant.quantity || 0
+        
+        if (newQuantity > availableStock) {
+          showAlertModal(`Insufficient stock for ${item.name}. Available: ${availableStock}`, 'Out of Stock')
+          return
+        }
+        
+        // Update quantity and stored stock
+        item.quantity = newQuantity
+        item.availableStock = availableStock
+        updateAddonsForItem(item)
+      } catch (error) {
+        console.error('Error checking stock:', error)
+        showAlertModal('Failed to check stock availability', 'Error')
+        return
+      }
     } else {
-      const product = allProducts.value.find(p => p._id === item.productId)
-      availableStock = product ? product.quantity || 0 : 0
+      // For products without variants, check stock from products array
+      const product = products.value.find(p => p._id === item.productId)
+      if (product) {
+        const availableStock = product.quantity || 0
+        
+        if (newQuantity > availableStock) {
+          showAlertModal(`Insufficient stock for ${item.name}. Available: ${availableStock}`, 'Out of Stock')
+          return
+        }
+      }
+      
+      // Update quantity
+      item.quantity = newQuantity
+      updateAddonsForItem(item)
     }
-    
-    if (newQuantity > availableStock) {
-      showAlertModal(`Insufficient stock for ${item.name}. Available: ${availableStock}`, 'Out of Stock')
-      return
-    }
+  } else {
+    // For decreasing quantity, just update
+    item.quantity = newQuantity
+    updateAddonsForItem(item)
   }
-  
-  item.quantity = newQuantity
-  // Update addon quantities to match product quantity
-  updateAddonsForItem(item)
 }
 
 const removeItem = (index) => {
@@ -1471,12 +1644,12 @@ const selectPaymentMethod = (method) => {
     rfidCustomer.value = null
     rfidPaymentError.value = ''
     isRfidPaymentModalOpen.value = true
-    // Delay focus to ensure modal is fully rendered and barcode blur handler won't interfere
-    setTimeout(() => {
+    // Wait for modal to render before focusing
+    nextTick(() => {
       if (rfidPaymentInput.value) {
         rfidPaymentInput.value.focus()
       }
-    }, 150)
+    })
   }
 }
 
@@ -1773,7 +1946,9 @@ const openBalanceModal = () => {
   balanceError.value = ''
   isBalanceModalOpen.value = true
   nextTick(() => {
-    balanceRfidInput.value?.focus()
+    if (balanceRfidInput.value) {
+      balanceRfidInput.value.focus()
+    }
   })
 }
 
@@ -1855,7 +2030,9 @@ const openCashInModal = () => {
   cashInError.value = ''
   isCashInModalOpen.value = true
   nextTick(() => {
-    cashInRfidInput.value?.focus()
+    if (cashInRfidInput.value) {
+      cashInRfidInput.value.focus()
+    }
   })
 }
 
@@ -1912,6 +2089,14 @@ const openVoidModal = () => {
     return
   }
   isVoidModalOpen.value = true
+}
+
+const openClearAllModal = () => {
+  if (orderItems.value.length === 0) {
+    showAlertModal('No items to clear', 'Clear All')
+    return
+  }
+  isClearAllModalOpen.value = true
 }
 
 const processPayment = () => {
@@ -2216,12 +2401,12 @@ const processRefund = async () => {
 
 const openBarcodeModal = () => {
   isBarcodeModalOpen.value = true
-  // Delay focus to ensure modal is fully rendered and barcode blur handler won't interfere
-  setTimeout(() => {
+  // Use nextTick to ensure modal is fully rendered before focusing
+  nextTick(() => {
     if (manualBarcodeInput.value) {
       manualBarcodeInput.value.focus()
     }
-  }, 150)
+  })
 }
 
 const findProductByBarcode = (barcode) => {
@@ -2345,7 +2530,8 @@ const handlePageClick = (event) => {
   if (isSettingsModalOpen.value || isPrintConfirmModalOpen.value || isPayModalOpen.value || 
       isCashPaymentModalOpen.value || isRfidPaymentModalOpen.value || isBarcodeModalOpen.value ||
       isBalanceModalOpen.value || isCashInModalOpen.value || isVoidModalOpen.value ||
-      isLogoutModalOpen.value) {
+      isLogoutModalOpen.value || isAlertModalOpen.value ||
+      isRefundModalOpen.value || isRefundDetailsModalOpen.value) {
     return
   }
   
@@ -2362,14 +2548,19 @@ const handlePageClick = (event) => {
                         target.closest('select') !== null
   
   if (!isInteractive) {
-    refocusBarcodeInput()
+    // Use Promise to ensure DOM is ready
+    Promise.resolve().then(() => {
+      if (barcodeInput.value && !document.activeElement?.closest('input[type="text"]')) {
+        barcodeInput.value.focus()
+      }
+    })
   }
 }
 
 const handleBarcodeBlur = () => {
-  // Small delay before refocusing to allow other inputs to receive focus
-  setTimeout(() => {
-    // Don't refocus if any modal is open
+  // Only refocus barcode input if no other input has focus and no modals are open
+  Promise.resolve().then(() => {
+    // Check if any modal is open
     if (isSettingsModalOpen.value || isPrintConfirmModalOpen.value || isPayModalOpen.value || 
         isCashPaymentModalOpen.value || isRfidPaymentModalOpen.value || isBarcodeModalOpen.value ||
         isBalanceModalOpen.value || isCashInModalOpen.value || isVoidModalOpen.value ||
@@ -2378,17 +2569,19 @@ const handleBarcodeBlur = () => {
       return
     }
     
-    // Only refocus if no other input/select is currently focused
+    // Check if another input/select/textarea is focused
     const activeElement = document.activeElement
-    const isInputFocused = activeElement && 
-                          (activeElement.tagName === 'INPUT' || 
-                           activeElement.tagName === 'TEXTAREA' ||
-                           activeElement.tagName === 'SELECT')
+    const isOtherInputFocused = activeElement && 
+                                (activeElement.tagName === 'INPUT' || 
+                                 activeElement.tagName === 'TEXTAREA' ||
+                                 activeElement.tagName === 'SELECT') &&
+                                activeElement !== barcodeInput.value
     
-    if (!isInputFocused) {
-      refocusBarcodeInput()
+    // Only refocus if no other input is focused
+    if (!isOtherInputFocused && barcodeInput.value) {
+      barcodeInput.value.focus()
     }
-  }, 100)
+  })
 }
 
 const toggleMenu = () => {
@@ -2408,14 +2601,14 @@ const lockPOS = () => {
   unlockRFID.value = ''
   unlockError.value = ''
   
-  // Focus the appropriate input after a short delay
-  setTimeout(() => {
+  // Use nextTick to ensure lock screen is rendered
+  nextTick(() => {
     if (unlockMethod.value === 'password' && unlockPasswordInput.value) {
       unlockPasswordInput.value.focus()
     } else if (unlockMethod.value === 'rfid' && unlockRFIDInput.value) {
       unlockRFIDInput.value.focus()
     }
-  }, 100)
+  })
 }
 
 const attemptUnlock = async () => {
@@ -2646,13 +2839,13 @@ watch(orderItems, () => {
 // Watch unlockMethod to refocus input
 watch(unlockMethod, () => {
   if (isPOSLocked.value) {
-    setTimeout(() => {
+    nextTick(() => {
       if (unlockMethod.value === 'password' && unlockPasswordInput.value) {
         unlockPasswordInput.value.focus()
       } else if (unlockMethod.value === 'rfid' && unlockRFIDInput.value) {
         unlockRFIDInput.value.focus()
       }
-    }, 100)
+    })
   }
 })
 

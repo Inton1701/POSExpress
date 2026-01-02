@@ -66,7 +66,7 @@
 
         <!-- Transactions Table -->
         <div v-else class="overflow-x-auto">
-          <table class="w-full">
+          <table class="w-full relative">
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-8 py-6 text-left text-2xl font-bold">Transaction ID</th>
@@ -75,7 +75,7 @@
                 <th class="px-8 py-6 text-left text-2xl font-bold">Payment</th>
                 <th class="px-8 py-6 text-left text-2xl font-bold">Amount</th>
                 <th class="px-8 py-6 text-left text-2xl font-bold">Status</th>
-                <th class="px-8 py-6 text-center text-2xl font-bold">Actions</th>
+                <th class="px-8 py-6 text-center text-2xl font-bold sticky right-0 bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[200px]">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -101,13 +101,13 @@
                     {{ transaction.status }}
                   </span>
                 </td>
-                <td class="px-8 py-6 text-center">
-                  <div class="flex gap-3 justify-center">
-                    <button @click="viewTransaction(transaction)" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded text-lg font-semibold">
+                <td class="px-8 py-6 text-center sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[200px]">
+                  <div class="flex gap-2 justify-center">
+                    <button @click="viewTransaction(transaction)" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-lg font-semibold">
                       <font-awesome-icon icon="eye" class="mr-2" />
                       View
                     </button>
-                    <button @click="reprintTransaction(transaction)" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded text-lg font-semibold">
+                    <button @click="reprintTransaction(transaction)" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-lg font-semibold">
                       <font-awesome-icon icon="print" class="mr-2" />
                       Print
                     </button>

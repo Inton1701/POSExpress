@@ -86,6 +86,7 @@
               <option value="Cash-in">Cash-In</option>
               <option value="Cash-out">Cash-Out</option>
               <option value="Balance inquiry">Balance Inquiry</option>
+              <option value="Voided">Voided</option>
             </select>
           </div>
         </div>
@@ -104,7 +105,7 @@
       <!-- Transactions Table -->
       <div class="bg-white rounded-2xl shadow overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full">
+          <table class="w-full relative">
             <thead class="bg-gray-50">
               <tr>
                 <th @click="sortTable('createdAt')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
@@ -143,7 +144,7 @@
                     <span v-if="sortColumn === 'balanceAfter'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
                   </div>
                 </th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[100px]">
                   Actions
                 </th>
               </tr>
@@ -177,14 +178,14 @@
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-gray-900">{{ (transaction.balanceAfter || 0).toFixed(2) }}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
+                <td class="px-6 py-4 whitespace-nowrap text-center sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[100px]">
                   <button 
                     v-if="transaction.transactionType !== 'Balance Inquiry' && transaction.status !== 'voided'"
                     @click="openVoidModal(transaction)" 
-                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold"
+                    class="text-red-500 hover:text-red-700"
+                    title="Void"
                   >
-                    <font-awesome-icon icon="ban" class="mr-1" />
-                    Void
+                    <font-awesome-icon icon="ban" class="text-lg" />
                   </button>
                   <span v-else class="text-xs text-gray-400">-</span>
                 </td>
@@ -785,7 +786,16 @@ const saveSettings = async () => {
 }
 
 const goBack = () => {
-  router.push('/accounting')
+  // Check current route to determine where to go back
+  const currentPath = router.currentRoute.value.path
+  
+  if (currentPath.startsWith('/pos')) {
+    // If we're on a POS route, go back to POS
+    router.push('/pos')
+  } else {
+    // Otherwise, go back to accounting
+    router.push('/accounting')
+  }
 }
 
 const openReportModal = () => {

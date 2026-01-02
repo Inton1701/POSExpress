@@ -84,7 +84,7 @@
     <!-- Transactions Table -->
     <div class="bg-white rounded-2xl shadow overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full relative">
           <thead class="bg-gray-50">
             <tr>
               <th @click="sortTable('transactionId')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
@@ -115,7 +115,7 @@
                 Cashier
                 <span v-if="sortColumn === 'employee'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
               </th>
-              <th class="px-6 py-3 text-left text-sm font-bold">Actions</th>
+              <th class="px-6 py-3 text-center text-sm font-bold sticky right-0 bg-gray-200 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[120px]">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -143,18 +143,16 @@
                 </span>
               </td>
               <td class="px-6 py-4 text-sm">{{ transaction.employee || 'N/A' }}</td>
-              <td class="px-6 py-4">
-                <div class="flex gap-2">
-                  <button @click="viewTransaction(transaction)" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold">
-                    View
-                  </button>
-                  <button @click="editTransaction(transaction)" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-semibold">
-                    Edit
-                  </button>
-                  <button @click="confirmDeleteTransaction(transaction)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold">
-                    Delete
-                  </button>
-                </div>
+              <td class="px-6 py-4 text-center sticky right-0 bg-white shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[120px]">
+                <button @click="viewTransaction(transaction)" class="text-blue-500 hover:text-blue-700 mr-2" title="View">
+                  <font-awesome-icon :icon="['fas', 'eye']" class="text-lg" />
+                </button>
+                <button @click="editTransaction(transaction)" class="text-green-500 hover:text-green-700 mr-2" title="Edit">
+                  <font-awesome-icon :icon="['fas', 'edit']" class="text-lg" />
+                </button>
+                <button @click="confirmDeleteTransaction(transaction)" class="text-red-500 hover:text-red-700" title="Delete">
+                  <font-awesome-icon :icon="['fas', 'trash']" class="text-lg" />
+                </button>
               </td>
             </tr>
             <tr v-if="transactions.length === 0 && !isLoading">
@@ -393,9 +391,9 @@ import axios from 'axios'
 import Modal from '../../components/Modal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faPrint, faFileExcel } from '@fortawesome/free-solid-svg-icons'
+import { faPrint, faFileExcel, faEye, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons'
 
-library.add(faPrint, faFileExcel)
+library.add(faPrint, faFileExcel, faEye, faEdit, faTrash)
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const toast = inject('toast')

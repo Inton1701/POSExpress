@@ -18,7 +18,8 @@
     </div>
 
     <div class="bg-white rounded-2xl shadow overflow-hidden">
-      <table class="w-full">
+      <div class="overflow-x-auto">
+        <table class="w-full relative">
         <thead class="bg-gray-50">
           <tr>
             <th @click="sortTable('name')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
@@ -29,7 +30,7 @@
               Status
               <span v-if="sortColumn === 'status'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
             </th>
-            <th class="px-6 py-3 text-center text-sm font-bold">Actions</th>
+            <th class="px-6 py-3 text-center text-sm font-bold sticky right-0 bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[100px]">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -54,23 +55,24 @@
                 {{ category.status }}
               </span>
             </td>
-            <td class="px-6 py-4 text-center">
-              <button v-if="canEditCategory(category)" @click="openEditModal(category)" class="text-blue-500 hover:text-blue-700 mr-3" title="Edit">
-                <font-awesome-icon :icon="['fas', 'edit']" />
+            <td class="px-6 py-4 text-center sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[100px]">
+              <button v-if="canEditCategory(category)" @click="openEditModal(category)" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit">
+                <font-awesome-icon :icon="['fas', 'edit']" class="text-lg" />
               </button>
-              <span v-else class="text-gray-400 mr-3" title="You cannot edit this category">
-                <font-awesome-icon :icon="['fas', 'edit']" />
+              <span v-else class="text-gray-400 mr-2" title="You cannot edit this category">
+                <font-awesome-icon :icon="['fas', 'edit']" class="text-lg" />
               </span>
               <button v-if="canDeleteCategory(category)" @click="deleteCategory(category._id)" class="text-red-500 hover:text-red-700" title="Delete">
-                <font-awesome-icon :icon="['fas', 'trash']" />
+                <font-awesome-icon :icon="['fas', 'trash']" class="text-lg" />
               </button>
               <span v-else class="text-gray-400" title="You cannot delete this category">
-                <font-awesome-icon :icon="['fas', 'trash']" />
+                <font-awesome-icon :icon="['fas', 'trash']" class="text-lg" />
               </span>
             </td>
           </tr>
         </tbody>
       </table>
+      </div>
       
       <!-- Pagination Controls -->
       <div class="flex justify-between items-center px-6 py-4 bg-gray-50 border-t">

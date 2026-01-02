@@ -128,17 +128,17 @@
     <div v-if="showStartSessionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
         <h3 class="text-xl font-bold mb-4">Start Transaction Session</h3>
-        <p class="text-gray-600 mb-6">
+        <p class="text-gray-600 mb-4">
           Are you sure you want to start a new transaction session?
           <br><br>
           <strong>This will enable all transactions, including:</strong>
-          <ul class="list-disc ml-6 mt-2">
-            <li>New sales</li>
-            <li>Void operations</li>
-            <li>Refund operations</li>
-            <li>Cash-in operations</li>
-          </ul>
         </p>
+        <ul class="list-disc ml-6 mb-6">
+          <li>New sales</li>
+          <li>Void operations</li>
+          <li>Refund operations</li>
+          <li>Cash-in operations</li>
+        </ul>
         <div class="flex gap-3 justify-end">
           <button 
             @click="showStartSessionModal = false"
@@ -161,17 +161,17 @@
     <div v-if="showEndSessionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
         <h3 class="text-xl font-bold mb-4">End Transaction Session</h3>
-        <p class="text-gray-600 mb-6">
+        <p class="text-gray-600 mb-4">
           Are you sure you want to end the transaction session? 
           <br><br>
           <strong>This will disable all transactions, including:</strong>
-          <ul class="list-disc ml-6 mt-2">
-            <li>New sales</li>
-            <li>Void operations</li>
-            <li>Refund operations</li>
-            <li>Cash-in operations</li>
-          </ul>
         </p>
+        <ul class="list-disc ml-6 mb-6">
+          <li>New sales</li>
+          <li>Void operations</li>
+          <li>Refund operations</li>
+          <li>Cash-in operations</li>
+        </ul>
         <div class="flex gap-3 justify-end">
           <button 
             @click="showEndSessionModal = false"
@@ -196,7 +196,7 @@
         <h3 class="text-lg font-bold">Sales History (Past Sessions)</h3>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full relative">
           <thead>
             <tr class="border-b">
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Session Period</th>
@@ -218,7 +218,7 @@
                 Transactions
                 <span v-if="sortColumn === 'transactionCount'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
               </th>
-              <th class="text-center py-3 px-4 font-semibold text-gray-700">Actions</th>
+              <th class="text-center py-3 px-4 font-semibold text-gray-700 sticky right-0 bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[100px]">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -237,13 +237,13 @@
               <td class="py-3 px-4 text-right font-bold text-blue-600">₱{{ formatNumber(session.salesSummary?.totalProfit || 0) }}</td>
               <td class="py-3 px-4 text-right">{{ session.salesSummary?.totalProductsSold || 0 }}</td>
               <td class="py-3 px-4 text-right">{{ session.salesSummary?.transactionCount || 0 }}</td>
-              <td class="py-3 px-4 text-center">
+              <td class="py-3 px-4 text-center sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[100px]">
                 <button 
                   @click="viewSessionDetails(session)"
-                  class="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded"
+                  class="text-blue-500 hover:text-blue-700"
                   title="View Details"
                 >
-                  View
+                  <font-awesome-icon icon="eye" class="text-lg" />
                 </button>
               </td>
             </tr>

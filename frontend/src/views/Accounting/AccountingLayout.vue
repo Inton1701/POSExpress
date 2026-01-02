@@ -211,7 +211,7 @@
                       <font-awesome-icon v-else icon="sort" class="text-xs text-gray-400" />
                     </div>
                   </th>
-                  <th class="py-2 px-3 border-b text-center">Actions</th>
+                  <th class="py-2 px-3 border-b text-center sticky right-0 bg-gray-100 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[120px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,16 +231,16 @@
                       {{ customer.status === 'active' ? 'Active' : 'Disabled' }}
                     </button>
                   </td>
-                  <td class="py-2 px-3 text-center">
+                  <td class="py-2 px-3 text-center sticky right-0 bg-white shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[120px]">
                     <button 
                       @click="selectCustomerById(customer._id)" 
-                      class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded mr-1 text-xs"
+                      class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
                     >
                       Select
                     </button>
                     <button 
                       @click="deleteCustomer(customer._id)" 
-                      class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                      class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs ml-1"
                     >
                       Delete
                     </button>
@@ -422,6 +422,18 @@
             <font-awesome-icon icon="file-pdf" class="mr-2" />
             Export PDF
           </button>
+        </div>
+        <div class="mb-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
+          <select v-model="transactionTypeFilter" class="w-full p-2 rounded-xl border border-gray-300">
+            <option value="all">All Types</option>
+            <option value="Cash-in">Cash-In</option>
+            <option value="Cash-out">Cash-Out</option>
+            <option value="Balance Inquiry">Balance Inquiry</option>
+            <option value="Purchased">Purchased</option>
+            <option value="Refund">Refund</option>
+            <option value="Voided">Voided</option>
+          </select>
         </div>
       </div>
       <div v-if="transactions.length === 0" class="text-center py-8 text-gray-500">
@@ -880,6 +892,7 @@ const transactionSortColumn = ref('createdAt')
 const transactionSortDirection = ref('desc')
 const transactionCurrentPage = ref(1)
 const transactionItemsPerPage = ref(10)
+const transactionTypeFilter = ref('all')
 
 const toastRef = ref(null)
 
@@ -929,7 +942,14 @@ const filteredCustomers = computed(() => {
 const sortedTransactions = computed(() => {
   if (!transactions.value || transactions.value.length === 0) return []
   
-  const sorted = [...transactions.value].sort((a, b) => {
+  let filtered = transactions.value
+  
+  // Apply transaction type filter
+  if (transactionTypeFilter.value !== 'all') {
+    filtered = filtered.filter(tx => tx.transactionType === transactionTypeFilter.value)
+  }
+  
+  const sorted = [...filtered].sort((a, b) => {
     let aVal = a[transactionSortColumn.value]
     let bVal = b[transactionSortColumn.value]
     
@@ -1618,12 +1638,14 @@ const loadPrinterPreference = async () => {
 }
 
 const exportCustomerTransactionsPDF = () => {
-  if (!selectedCustomer.value || transactions.value.length === 0) {
+  if (!selectedCustomer.value || sortedTransactions.value.length === 0) {
     showToast('No transactions to export', 'warning')
     return
   }
 
   const printWindow = window.open('', '_blank')
+  
+  const typeText = transactionTypeFilter.value === 'all' ? 'All Types' : transactionTypeFilter.value
   
   const reportContent = `
     <!DOCTYPE html>
@@ -1696,8 +1718,9 @@ const exportCustomerTransactionsPDF = () => {
         <p><strong>Customer Name:</strong> ${selectedCustomer.value.fullName}</p>
         <p><strong>Username:</strong> ${selectedCustomer.value.username}</p>
         <p><strong>Current Balance:</strong> ${selectedCustomer.value.balance.toFixed(2)}</p>
+        <p><strong>Transaction Type Filter:</strong> ${typeText}</p>
         <p><strong>Generated on:</strong> ${new Date().toLocaleString()}</p>
-        <p><strong>Total Transactions:</strong> ${transactions.value.length}</p>
+        <p><strong>Total Transactions:</strong> ${sortedTransactions.value.length}</p>
       </div>
       <table>
         <thead>
@@ -1710,7 +1733,7 @@ const exportCustomerTransactionsPDF = () => {
           </tr>
         </thead>
         <tbody>
-          ${transactions.value.map(tx => {
+          ${sortedTransactions.value.map(tx => {
             const isPositive = tx.transactionType === 'Cash-in' || tx.transactionType === 'Refund'
             const isNegative = tx.transactionType === 'Cash-out' || tx.transactionType === 'Purchased' || tx.transactionType === 'Voided'
             const isNeutral = tx.transactionType === 'Balance Inquiry'

@@ -48,7 +48,8 @@
       <div class="p-4 bg-gray-50 border-b">
         <h3 class="text-lg font-bold">Current Stock Levels</h3>
       </div>
-      <table class="w-full">
+      <div class="overflow-x-auto">
+        <table class="w-full relative">
         <thead class="bg-gray-50">
           <tr>
             <th @click="sortTable('type')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
@@ -73,7 +74,7 @@
               <span v-if="sortColumn === 'quantityAlert'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
             </th>
             <th class="px-6 py-3 text-left text-sm font-bold">Status</th>
-            <th class="px-6 py-3 text-center text-sm font-bold">Actions</th>
+            <th class="px-6 py-3 text-center text-sm font-bold sticky right-0 bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[140px]">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -111,18 +112,18 @@
                 In Stock
               </span>
             </td>
-            <td class="px-6 py-4 text-center">
-              <button @click="viewHistory(item)" class="text-orange-500 hover:text-orange-700 mr-3" title="View History">
-                <font-awesome-icon :icon="['fas', 'eye']" />
+            <td class="px-6 py-4 text-center sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[140px]">
+              <button @click="viewHistory(item)" class="text-blue-500 hover:text-blue-700 mr-2" title="View History">
+                <font-awesome-icon :icon="['fas', 'eye']" class="text-lg" />
               </button>
-              <button @click="openModifyStockModal(item)" class="text-blue-500 hover:text-blue-700 mr-3" title="Modify Stock">
-                <font-awesome-icon :icon="['fas', 'edit']" />
+              <button @click="openModifyStockModal(item)" class="text-blue-500 hover:text-blue-700 mr-2" title="Modify Stock">
+                <font-awesome-icon :icon="['fas', 'edit']" class="text-lg" />
               </button>
-              <button @click="openRestockModal(item)" class="text-green-500 hover:text-green-700 mr-3" title="Restock">
-                <font-awesome-icon :icon="['fas', 'plus']" />
+              <button @click="openRestockModal(item)" class="text-green-500 hover:text-green-700 mr-2" title="Restock">
+                <font-awesome-icon :icon="['fas', 'plus']" class="text-lg" />
               </button>
               <button @click="openAlertModal(item)" class="text-purple-500 hover:text-purple-700" title="Set Alert">
-                <font-awesome-icon :icon="['fas', 'bell']" />
+                <font-awesome-icon :icon="['fas', 'bell']" class="text-lg" />
               </button>
             </td>
           </tr>
@@ -131,6 +132,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
       
       <!-- Pagination Controls -->
       <div class="flex justify-between items-center px-6 py-4 bg-gray-50 border-t">

@@ -18,22 +18,23 @@
     </div>
 
     <div class="bg-white rounded-2xl shadow overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th @click="sortTable('username')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
-              Username
-              <span v-if="sortColumn === 'username'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
-            </th>
-            <th @click="sortTable('role')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
-              Role
-              <span v-if="sortColumn === 'role'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
-            </th>
-            <th @click="sortTable('store')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
-              Store
-              <span v-if="sortColumn === 'store'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
-            </th>
-            <th class="px-6 py-3 text-center text-sm font-bold">Actions</th>
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white relative">
+          <thead class="bg-gray-200">
+            <tr>
+              <th @click="sortTable('username')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
+                Username
+                <span v-if="sortColumn === 'username'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+              </th>
+              <th @click="sortTable('role')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
+                Role
+                <span v-if="sortColumn === 'role'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+              </th>
+              <th @click="sortTable('store')" class="px-6 py-3 text-left text-sm font-bold cursor-pointer hover:bg-gray-100">
+                Store
+                <span v-if="sortColumn === 'store'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+              </th>
+              <th class="px-6 py-3 text-center text-sm font-bold sticky right-0 bg-gray-200 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[100px]">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -45,8 +46,12 @@
               </span>
             </td>
             <td class="px-6 py-4">{{ user.store?.storeName || 'N/A' }}</td>
-            <td class="px-6 py-4 text-center">
-              <button @click="openEditModal(user)" class="text-blue-500 hover:text-blue-700 mr-3" title="Edit">
+            <td class="px-6 py-4 text-center sticky right-0 bg-white shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[100px]">
+              <button @click="openEditModal(user)" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit">
+                <font-awesome-icon :icon="['fas', 'edit']" class="text-lg" />
+              </button>
+              <button v-if="canDeleteUser(user)" @click="deleteUser(user._id)" class="text-red-500 hover:text-red-700" title="Delete">
+                <font-awesome-icon :icon="['fas', 'trash']" class="text-lg" />
                 <font-awesome-icon :icon="['fas', 'edit']" />
               </button>
               <button v-if="canDeleteUser(user)" @click="deleteUser(user._id)" class="text-red-500 hover:text-red-700" title="Delete">
@@ -59,6 +64,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
       
       <!-- Pagination Controls -->
       <div class="flex justify-between items-center px-6 py-4 bg-gray-50 border-t">
