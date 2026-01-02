@@ -89,10 +89,10 @@ ipcMain.handle('get-printers', async () => {
 })
 
 // Helper function to print via CUPS on Linux (using lp command)
-async function printViaCUPS(printerName, imagePath) {
+async function printViaCUPS(printerName, pdfPath) {
   return new Promise((resolve, reject) => {
-    // Simple CUPS print command - thermal printers handle PNG well
-    const printCommand = `lp -d "${printerName}" -o fit-to-page "${imagePath}"`
+    // Simple CUPS print command - ZJ-58 driver handles PDF properly
+    const printCommand = `lp -d "${printerName}" -o fit-to-page "${pdfPath}"`
     
     console.log('Executing CUPS command:', printCommand)
     
@@ -167,21 +167,16 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         }
       }
       
-      // Create print window (must be visible on Linux for capturePage to work)
+      // Create print window (hidden - PDF generation doesn't require visible window)
       const printWindow = new BrowserWindow({
         width: 182, // 48mm ≈ 182px
         height: 800,
-        show: process.platform === 'linux', // Must be visible on Linux
+        show: false,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true
         }
       })
-      
-      // Minimize on Linux to keep it out of the way
-      if (process.platform === 'linux') {
-        printWindow.minimize()
-      }
       
       // Generate HTML receipt based on type
       let receiptHTML = ''
@@ -786,42 +781,49 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         setTimeout(async () => {
           console.log('Attempting to print...')
           
-          // Linux-specific: Capture as PNG and print via CUPS
+          // Linux-specific: Generate PDF and print via CUPS
           if (process.platform === 'linux') {
             try {
               console.log('Linux detected - using CUPS printing workflow')
               
-              // Step 1: Wait a bit for proper rendering, then capture as PNG
-              console.log('Capturing receipt as PNG...')
+              // Step 1: Generate PDF from rendered HTML
+              console.log('Generating PDF from receipt...')
+              const pdfData = await printWindow.webContents.printToPDF({
+                pageSize: {
+                  width: 48000, // 48mm in microns
+                  height: 297000 // 297mm height
+                },
+                printBackground: true,
+                margins: {
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  right: 0
+                }
+              })
               
-              // Add delay to ensure window is fully rendered
-              await new Promise(resolve => setTimeout(resolve, 500))
-              
-              const image = await printWindow.webContents.capturePage()
-              const pngBuffer = image.toPNG()
-              console.log('Capture completed, PNG size:', pngBuffer.length, 'bytes')
-              
+              console.log('PDF generated, size:', pdfData.length, 'bytes')
               printWindow.close()
               
               // Step 2: Save to disk (file must exist for CUPS)
-              const tempImageFile = path.join(os.tmpdir(), `receipt-${Date.now()}.png`)
-              fs.writeFileSync(tempImageFile, pngBuffer)
-              console.log('PNG saved to:', tempImageFile)
+              const tempPdfFile = path.join(os.tmpdir(), `receipt-${Date.now()}.pdf`)
+              fs.writeFileSync(tempPdfFile, pdfData)
+              console.log('PDF saved to:', tempPdfFile)
               
               // Step 3: Print via CUPS lp command
               console.log('Printing to:', targetPrinter.name)
-              await printViaCUPS(targetPrinter.name, tempImageFile)
+              await printViaCUPS(targetPrinter.name, tempPdfFile)
               
               // Step 4: Clean up temp file
               try { 
-                fs.unlinkSync(tempImageFile)
+                fs.unlinkSync(tempPdfFile)
                 console.log('Temp file cleaned up')
               } catch(e) {
                 console.warn('Could not delete temp file:', e.message)
               }
               
               console.log('✓ Printed successfully via CUPS')
-              resolve({ success: true, printer: targetPrinter.name, mode: 'cups-png', platform: process.platform })
+              resolve({ success: true, printer: targetPrinter.name, mode: 'cups-pdf', platform: process.platform })
               
             } catch (error) {
               if (printWindow && !printWindow.isDestroyed()) {
