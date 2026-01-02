@@ -791,10 +791,15 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
             try {
               console.log('Linux detected - using CUPS printing workflow')
               
-              // Step 1: Capture as PNG (fastest and most compatible with thermal printers)
+              // Step 1: Wait a bit for proper rendering, then capture as PNG
               console.log('Capturing receipt as PNG...')
+              
+              // Add delay to ensure window is fully rendered
+              await new Promise(resolve => setTimeout(resolve, 500))
+              
               const image = await printWindow.webContents.capturePage()
               const pngBuffer = image.toPNG()
+              console.log('Capture completed, PNG size:', pngBuffer.length, 'bytes')
               
               printWindow.close()
               
@@ -819,7 +824,9 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               resolve({ success: true, printer: targetPrinter.name, mode: 'cups-png', platform: process.platform })
               
             } catch (error) {
-              printWindow.close()
+              if (printWindow && !printWindow.isDestroyed()) {
+                printWindow.close()
+              }
               console.error('CUPS printing failed:', error)
               reject(new Error('CUPS printing failed: ' + error.message))
             }
