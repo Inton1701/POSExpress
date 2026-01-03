@@ -898,6 +898,7 @@
             <p class="text-base text-gray-600 mb-2">Enter or scan the Transaction ID from the receipt</p>
             <label class="block text-base font-bold mb-2">Transaction ID</label>
             <input 
+              ref="transactionIdInput"
               v-model="refundTransactionId"
               type="text"
               placeholder="Enter transaction ID"
@@ -1104,6 +1105,7 @@ const unlockRFID = ref('')
 const unlockError = ref('')
 const unlockPasswordInput = ref(null)
 const unlockRFIDInput = ref(null)
+const transactionIdInput = ref(null)
 const refundTransactionId = ref('')
 const refundTransaction = ref(null)
 const refundItems = ref([])
@@ -2317,12 +2319,24 @@ const deleteRefundTransactionId = () => {
 
 const pasteTransactionId = async () => {
   try {
-    const text = await navigator.clipboard.readText()
-    refundTransactionId.value = text
-    refundError.value = ''
+    // Import clipboard utility dynamically
+    const { readFromClipboard, isClipboardAvailable } = await import('@/utils/clipboard.js')
+    
+    // Try to read from clipboard (works on HTTPS)
+    if (isClipboardAvailable()) {
+      const text = await readFromClipboard()
+      refundTransactionId.value = text
+      refundError.value = ''
+    } else {
+      // On HTTP: Focus input and prompt user to paste manually
+      transactionIdInput.value?.focus()
+      showAlertModal('Press Ctrl+V (or Cmd+V on Mac) to paste the Transaction ID', 'Paste Manually')
+    }
   } catch (error) {
     console.error('Error pasting transaction ID:', error)
-    showAlertModal('Failed to paste from clipboard. Please enter manually.', 'Paste Error')
+    // Fallback: Focus input so user can paste manually
+    transactionIdInput.value?.focus()
+    showAlertModal('Press Ctrl+V (or Cmd+V on Mac) to paste the Transaction ID', 'Paste Manually')
   }
 }
 

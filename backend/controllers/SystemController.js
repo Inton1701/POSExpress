@@ -150,13 +150,18 @@ const triggerUpdate = async (req, res) => {
         // Execute after response is sent
         setTimeout(async () => {
             try {
-                // Make script executable
-                await execPromise(`chmod +x "${scriptPath}"`);
+                // Try to make script executable (skip if permission denied)
+                try {
+                    await execPromise(`chmod +x "${scriptPath}"`);
+                } catch (chmodErr) {
+                    console.log('chmod skipped (already executable or permission denied):', chmodErr.message);
+                }
                 
                 // Run update script (this will restart the system)
                 exec(`bash "${scriptPath}" << EOF\ny\n3\nEOF`, (error, stdout, stderr) => {
                     if (error) {
                         console.error('Update execution error:', error);
+                        console.error('Note: If you see permission errors, run: sudo ./fix-permissions.sh');
                         return;
                     }
                     console.log('Update output:', stdout);
@@ -164,6 +169,7 @@ const triggerUpdate = async (req, res) => {
                 });
             } catch (err) {
                 console.error('Error triggering update:', err);
+                console.error('Fix permissions with: sudo ./fix-permissions.sh');
             }
         }, 1000);
 

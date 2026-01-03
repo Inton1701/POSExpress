@@ -589,7 +589,9 @@ const loadCurrentUser = () => {
 
 const copyTransactionId = async (transactionId) => {
   try {
-    await navigator.clipboard.writeText(transactionId)
+    // Import clipboard utility dynamically
+    const { copyToClipboard } = await import('@/utils/clipboard.js')
+    await copyToClipboard(transactionId)
     showToast('Transaction ID copied to clipboard', 'success')
   } catch (error) {
     console.error('Error copying transaction ID:', error)
