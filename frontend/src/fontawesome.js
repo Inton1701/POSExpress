@@ -40,7 +40,12 @@ import {
   faMinusCircle,
   faUsers,
   faExclamationTriangle,
-  faSort
+  faSort,
+  faCircleXmark,
+  faExclamationCircle,
+  faDownload,
+  faExternalLinkAlt,
+  faCodeBranch
 } from '@fortawesome/free-solid-svg-icons';
 
 library.add(
@@ -83,7 +88,12 @@ library.add(
   faMinusCircle,
   faUsers,
   faExclamationTriangle,
-  faSort
+  faSort,
+  faCircleXmark,
+  faExclamationCircle,
+  faDownload,
+  faExternalLinkAlt,
+  faCodeBranch
 );
 
 export default FontAwesomeIcon;

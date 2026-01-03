@@ -135,9 +135,9 @@ router.get("/settings/vat-config", extractUserInfo, SettingsController.getVATCon
 router.post("/settings/vat-config", extractUserInfo, isCoAdminOrAdmin, SettingsController.updateVATConfig);
 router.get("/settings", extractUserInfo, SettingsController.getAllSettings);
 
-// System/Update routes (Admin only)
+// System/Update routes (All authenticated users)
 router.get("/system/version", SystemController.getCurrentVersion);
-router.get("/system/check-updates", extractUserInfo, isAdmin, SystemController.checkForUpdates);
-router.post("/system/update", extractUserInfo, isAdmin, SystemController.triggerUpdate);
+router.get("/system/check-updates", extractUserInfo, SystemController.checkForUpdates);
+router.post("/system/update", extractUserInfo, SystemController.triggerUpdate);
 
 module.exports = router;

@@ -266,7 +266,7 @@
           }">
             <div class="flex items-start gap-3">
               <font-awesome-icon 
-                :icon="updateStatus === 'up-to-date' ? 'check-circle' : updateStatus === 'update-available' ? 'exclamation-circle' : 'times-circle'" 
+                :icon="updateStatus === 'up-to-date' ? 'check-circle' : updateStatus === 'update-available' ? 'exclamation-circle' : 'circle-xmark'" 
                 class="text-2xl mt-1"
                 :class="{
                   'text-green-600': updateStatus === 'up-to-date',
@@ -602,6 +602,12 @@ const checkForUpdates = async () => {
   updateMessage.value = ''
   
   try {
+    // Check if user is logged in
+    const currentUser = auth.getUser()
+    if (!currentUser) {
+      throw new Error('User not authenticated')
+    }
+    
     // Call backend API to check for updates
     const response = await api.get('/system/check-updates')
     
@@ -629,7 +635,15 @@ const checkForUpdates = async () => {
   } catch (error) {
     console.error('Error checking for updates:', error)
     updateStatus.value = 'error'
-    updateMessage.value = error.response?.data?.message || 'Could not check for updates. Please try again later.'
+    
+    // More specific error messages
+    if (error.response?.status === 403) {
+      updateMessage.value = 'Access denied. Only administrators can check for updates.'
+    } else if (error.response?.status === 401) {
+      updateMessage.value = 'Session expired. Please login again.'
+    } else {
+      updateMessage.value = error.response?.data?.message || 'Could not check for updates. Please try again later.'
+    }
   } finally {
     isCheckingUpdates.value = false
   }
@@ -656,7 +670,17 @@ const installUpdate = async () => {
           window.location.reload()
         }
       }, 1000)
-    } elseasync () => {
+    } else {
+      throw new Error(response.data.message || 'Failed to start update')
+    }
+  } catch (error) {
+    console.error('Error installing update:', error)
+    showToast(error.response?.data?.message || 'Failed to install update', 'error')
+    isUpdating.value = false
+  }
+}
+
+onMounted(async () => {
   fetchCurrentUser()
   fetchVATRate()
   
@@ -673,8 +697,9 @@ const installUpdate = async () => {
       currentVersion.value = response.data.version
     }
   } catch (error) {
-    console.error('Error fetching version:', error
-}
+    console.error('Error fetching version:', error)
+  }
+})
 
 const compareVersions = (v1, v2) => {
   const parts1 = v1.split('.').map(Number)

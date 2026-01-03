@@ -48,15 +48,38 @@ const checkForUpdates = async (req, res) => {
         const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
         
         if (!response.ok) {
+            // Check if it's a 404 (no releases published)
+            if (response.status === 404) {
+                return res.json({
+                    success: true,
+                    message: 'System is up to date',
+                    currentVersion,
+                    latestVersion: currentVersion,
+                    updateAvailable: false
+                });
+            }
+            
             return res.json({
-                success: false,
-                message: 'Could not fetch release information from GitHub',
+                success: true,
+                message: 'System is up to date',
                 currentVersion,
+                latestVersion: currentVersion,
                 updateAvailable: false
             });
         }
 
         const releaseData = await response.json();
+        
+        // Check if we got valid release data
+        if (!releaseData.tag_name) {
+            return res.json({
+                success: false,
+                message: 'Invalid release data from GitHub',
+                currentVersion,
+                updateAvailable: false
+            });
+        }
+        
         const latestVersion = releaseData.tag_name.replace('v', '');
         
         // Compare versions
