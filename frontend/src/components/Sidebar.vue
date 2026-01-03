@@ -99,7 +99,7 @@ const panelTitle = computed(() => {
 
 // All menu items with role restrictions
 const allMenuItems = [
-  { name: 'Dashboards', path: '/admin/dashboard', icon: ['fas', 'tachometer-alt'], roles: ['Admin', 'Co-Admin'] },
+  { name: 'Dashboard', path: '/admin/dashboard', icon: ['fas', 'tachometer-alt'], roles: ['Admin', 'Co-Admin'] },
   { name: 'Sales', path: '/admin/sales', icon: ['fas', 'chart-line'], roles: ['Admin', 'Co-Admin'] },
   { name: 'Stores', path: '/admin/stores', icon: ['fas', 'store'], roles: ['Admin'] },
   { name: 'Products', path: '/admin/products', icon: ['fas', 'box'], roles: ['Admin', 'Co-Admin'] },
