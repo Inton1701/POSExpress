@@ -16,6 +16,7 @@ const StoreController = require("../controllers/StoreController");
 const VariantController = require("../controllers/VariantController");
 const AddonController = require("../controllers/AddonController");
 const SettingsController = require("../controllers/SettingsController");
+const SystemController = require("../controllers/SystemController");
 const CustomerTransaction = require("../models/CustomerTransactions");
 
 // Health check route (public)
@@ -133,5 +134,10 @@ router.post("/customer-transactions/void", extractUserInfo, isCoAdminOrAdmin, Cu
 router.get("/settings/vat-config", extractUserInfo, SettingsController.getVATConfig);
 router.post("/settings/vat-config", extractUserInfo, isCoAdminOrAdmin, SettingsController.updateVATConfig);
 router.get("/settings", extractUserInfo, SettingsController.getAllSettings);
+
+// System/Update routes (Admin only)
+router.get("/system/version", SystemController.getCurrentVersion);
+router.get("/system/check-updates", extractUserInfo, isAdmin, SystemController.checkForUpdates);
+router.post("/system/update", extractUserInfo, isAdmin, SystemController.triggerUpdate);
 
 module.exports = router;

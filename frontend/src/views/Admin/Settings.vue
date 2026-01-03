@@ -303,15 +303,24 @@
                     <div class="text-xs text-gray-600 whitespace-pre-wrap">{{ latestRelease.body }}</div>
                   </div>
                   
-                  <a 
-                    :href="latestRelease.html_url" 
-                    target="_blank"
-                    class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition"
-                  >
-                    <font-awesome-icon icon="download" />
-                    Download Update
-                    <font-awesome-icon icon="external-link-alt" class="text-xs" />
-                  </a>
+                  <div class="flex gap-2">
+                    <button 
+                      @click="installUpdate"
+                      :disabled="isUpdating"
+                      class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:opacity-50"
+                    >
+                      <font-awesome-icon :icon="isUpdating ? 'spinner' : 'sync-alt'" :spin="isUpdating" />
+                      {{ isUpdating ? 'Installing...' : 'Install Update' }}
+                    </button>
+                    <a 
+                      :href="latestRelease.html_url" 
+                      target="_blank"
+                      class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition"
+                    >
+                      <font-awesome-icon icon="external-link-alt" class="text-xs" />
+                      View on GitHub
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -396,12 +405,13 @@ const toastRef = ref(null)
 
 // Update check variables
 const currentVersion = ref('1.0.0')
-const githubRepoUrl = ref('https://github.com/YOUR_USERNAME/YOUR_REPO') // Update with actual repo
+const githubRepoUrl = ref('https://github.com/Inton1701/POSExpress')
 const updateStatus = ref(null)
 const updateMessage = ref('')
 const latestRelease = ref(null)
 const isCheckingUpdates = ref(false)
 const lastChecked = ref(null)
+const isUpdating = ref(false)
 
 const profileForm = ref({
   username: '',
@@ -592,29 +602,23 @@ const checkForUpdates = async () => {
   updateMessage.value = ''
   
   try {
-    // Extract owner and repo from GitHub URL
-    const repoPath = githubRepoUrl.value.replace('https://github.com/', '')
+    // Call backend API to check for updates
+    const response = await api.get('/system/check-updates')
     
-    // Fetch latest release from GitHub API
-    const response = await fetch(`https://api.github.com/repos/${repoPath}/releases/latest`)
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch release information')
-    }
-    
-    const releaseData = await response.json()
-    latestRelease.value = releaseData
-    
-    // Compare versions
-    const latestVersion = releaseData.tag_name.replace('v', '')
-    const current = currentVersion.value
-    
-    if (compareVersions(latestVersion, current) > 0) {
-      updateStatus.value = 'update-available'
-      updateMessage.value = `A new version (${releaseData.tag_name}) is available for download.`
+    if (response.data.success) {
+      const data = response.data
+      currentVersion.value = data.currentVersion
+      
+      if (data.updateAvailable) {
+        latestRelease.value = data.release
+        updateStatus.value = 'update-available'
+        updateMessage.value = `A new version (v${data.latestVersion}) is available.`
+      } else {
+        updateStatus.value = 'up-to-date'
+        updateMessage.value = 'You are running the latest version.'
+      }
     } else {
-      updateStatus.value = 'up-to-date'
-      updateMessage.value = 'You are running the latest version.'
+      throw new Error(response.data.message || 'Failed to check for updates')
     }
     
     // Update last checked time
@@ -625,10 +629,51 @@ const checkForUpdates = async () => {
   } catch (error) {
     console.error('Error checking for updates:', error)
     updateStatus.value = 'error'
-    updateMessage.value = 'Could not connect to GitHub. Please check your internet connection or try again later.'
+    updateMessage.value = error.response?.data?.message || 'Could not check for updates. Please try again later.'
   } finally {
     isCheckingUpdates.value = false
   }
+}
+
+const installUpdate = async () => {
+  if (!confirm('This will update the system and restart services. Continue?')) {
+    return
+  }
+  
+  isUpdating.value = true
+  try {
+    const response = await api.post('/system/update')
+    
+    if (response.data.success) {
+      showToast('Update started! System will restart in a few moments...', 'success')
+      
+      // Show countdown and reload page
+      let countdown = 30
+      const countdownInterval = setInterval(() => {
+        countdown--
+        if (countdown <= 0) {
+          clearInterval(countdownInterval)
+          window.location.reload()
+        }
+      }, 1000)
+    } elseasync () => {
+  fetchCurrentUser()
+  fetchVATRate()
+  
+  // Load last update check time
+  const lastCheck = localStorage.getItem('lastUpdateCheck')
+  if (lastCheck) {
+    lastChecked.value = new Date(lastCheck).toLocaleString()
+  }
+  
+  // Fetch current version from backend
+  try {
+    const response = await api.get('/system/version')
+    if (response.data.success) {
+      currentVersion.value = response.data.version
+    }
+  } catch (error) {
+    console.error('Error fetching version:', error
 }
 
 const compareVersions = (v1, v2) => {
