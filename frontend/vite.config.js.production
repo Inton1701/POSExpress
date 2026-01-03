@@ -11,7 +11,7 @@ export default mergeConfig(
       root: fileURLToPath(new URL('./', import.meta.url)),
     },
    server: {
-   allowedHosts: ['posexpress.app', 'api.posexpress.app'],
+   allowedHosts: ['posexpress.local'],
     },
   }),
 )

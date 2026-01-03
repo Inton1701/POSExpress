@@ -87,9 +87,56 @@ sudo chmod -R 755 /var/www/html
 
 echo -e "${GREEN}✓ Deployed to /var/www/html${NC}"
 
+# Create Nginx configuration for native deployment
+echo "Configuring Nginx for API proxy..."
+sudo tee /etc/nginx/sites-available/posexpress > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name _;
+    root /var/www/html;
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Proxy API requests to backend
+    location /api {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 90s;
+        proxy_connect_timeout 90s;
+    }
+
+    # Vue Router fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Deny hidden files
+    location ~ /\. {
+        deny all;
+    }
+}
+EOF
+
+# Enable site and remove default
+sudo ln -sf /etc/nginx/sites-available/posexpress /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# Test configuration
+sudo nginx -t
+
 # Restart nginx
 sudo systemctl restart nginx
-echo -e "${GREEN}✓ Nginx restarted${NC}"
+echo -e "${GREEN}✓ Nginx configured and restarted${NC}"
 echo ""
 
 # Step 6: Build Electron Linux app
@@ -118,7 +165,10 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 echo "Access your application:"
 echo "  Web: http://posexpress.local"
-echo "  or http://localhost"
+echo "  or http://localhost (on server)"
+echo ""
+echo "Note: Windows users need Bonjour installed"
+echo "See: WINDOWS_CLIENT_SETUP.md"
 echo ""
 echo "Nginx status: sudo systemctl status nginx"
 echo "View logs: sudo tail -f /var/log/nginx/error.log"

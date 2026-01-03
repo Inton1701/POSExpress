@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# RFID POS - mDNS Network Configuration Script
-# Automates: Avahi installation, hostname setup, .local domain configuration
+# RFID POS - LAN Network Configuration Script
+# Automates: Avahi installation, hostname setup, .local domain configuration, firewall rules
 
 set -e  # Exit on error
 
@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  RFID POS - mDNS Network Setup${NC}"
+echo -e "${BLUE}  RFID POS - LAN Network Setup${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -86,12 +86,73 @@ echo ""
 # Step 4: Configure firewall (if ufw is active)
 echo -e "${YELLOW}[4/5] Configuring firewall...${NC}"
 
-if command -v ufw &> /dev/null && $SUDO ufw status | grep -q "Status: active"; then
-    echo "UFW firewall is active. Opening mDNS port..."
-    $SUDO ufw allow 5353/udp comment 'mDNS'
-    echo -e "${GREEN}✓ Firewall configured for mDNS (port 5353/udp)${NC}"
+if command -v ufw &> /dev/null; then
+    # Check if UFW is installed
+    UFW_STATUS=$($SUDO ufw status | head -1)
+    
+    if echo "$UFW_STATUS" | grep -q "Status: active"; then
+        echo "UFW firewall is active. Configuring ports..."
+        
+        # Allow HTTP (Nginx web server)
+        $SUDO ufw allow 80/tcp comment 'HTTP - Web Access'
+        echo -e "${GREEN}✓ Port 80/tcp (HTTP) opened${NC}"
+        
+        # Allow HTTPS (if using SSL in future)
+        $SUDO ufw allow 443/tcp comment 'HTTPS - Secure Web Access'
+        echo -e "${GREEN}✓ Port 443/tcp (HTTPS) opened${NC}"
+        
+        # Allow mDNS for .local domain resolution
+        $SUDO ufw allow 5353/udp comment 'mDNS - .local domain'
+        echo -e "${GREEN}✓ Port 5353/udp (mDNS) opened${NC}"
+        
+        # Optional: Allow SSH (usually already open)
+        $SUDO ufw allow 22/tcp comment 'SSH - Remote Access'
+        echo -e "${GREEN}✓ Port 22/tcp (SSH) opened${NC}"
+        
+        echo ""
+        echo "Firewall rules configured for:"
+        echo "  • Web access (HTTP/HTTPS): ports 80, 443"
+        echo "  • mDNS (.local domains): port 5353/udp"
+        echo "  • SSH (remote management): port 22"
+    else
+        echo "UFW is installed but inactive."
+        read -p "Do you want to enable UFW firewall? (y/n) [y]: " ENABLE_FW
+        ENABLE_FW=${ENABLE_FW:-y}
+        
+        if [[ "$ENABLE_FW" =~ ^[Yy]$ ]]; then
+            # Configure rules before enabling
+            $SUDO ufw allow 80/tcp comment 'HTTP - Web Access'
+            $SUDO ufw allow 443/tcp comment 'HTTPS - Secure Web Access'
+            $SUDO ufw allow 5353/udp comment 'mDNS - .local domain'
+            $SUDO ufw allow 22/tcp comment 'SSH - Remote Access'
+            
+            # Enable firewall
+            echo "y" | $SUDO ufw enable
+            echo -e "${GREEN}✓ Firewall enabled and configured${NC}"
+        else
+            echo -e "${YELLOW}Firewall not enabled (not recommended for production)${NC}"
+        fi
+    fi
 else
-    echo -e "${GREEN}✓ No active firewall detected or UFW not installed${NC}"
+    echo -e "${YELLOW}UFW not installed. Installing...${NC}"
+    $SUDO apt install -y ufw
+    
+    # Configure rules
+    $SUDO ufw allow 80/tcp comment 'HTTP - Web Access'
+    $SUDO ufw allow 443/tcp comment 'HTTPS - Secure Web Access'
+    $SUDO ufw allow 5353/udp comment 'mDNS - .local domain'
+    $SUDO ufw allow 22/tcp comment 'SSH - Remote Access'
+    
+    # Enable firewall
+    read -p "Enable firewall now? (y/n) [y]: " ENABLE_FW
+    ENABLE_FW=${ENABLE_FW:-y}
+    
+    if [[ "$ENABLE_FW" =~ ^[Yy]$ ]]; then
+        echo "y" | $SUDO ufw enable
+        echo -e "${GREEN}✓ Firewall installed and enabled${NC}"
+    else
+        echo -e "${YELLOW}Firewall installed but not enabled${NC}"
+    fi
 fi
 echo ""
 
