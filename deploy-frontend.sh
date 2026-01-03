@@ -36,7 +36,7 @@ echo ""
 
 # Step 2: Install/Update dependencies
 echo -e "${YELLOW}[2/6] Installing dependencies...${NC}"
-npm install
+npm install --ignore-scripts || npm install --legacy-peer-deps --ignore-scripts
 echo -e "${GREEN}✓ Dependencies installed${NC}"
 echo ""
 
