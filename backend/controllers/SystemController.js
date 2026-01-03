@@ -48,7 +48,7 @@ const checkForUpdates = async (req, res) => {
         const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
         
         if (!response.ok) {
-cd             // Check if it's a 404 (no releases published)
+            // Check if it's a 404 (no releases published)
             if (response.status === 404) {
                 return res.json({
                     success: true,
