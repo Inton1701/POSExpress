@@ -45,11 +45,15 @@ const checkForUpdates = async (req, res) => {
         }
 
         // Fetch latest release from GitHub
+        console.log(`Checking for updates from GitHub: ${GITHUB_REPO}`);
         const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
+        
+        console.log(`GitHub response status: ${response.status}`);
         
         if (!response.ok) {
             // Check if it's a 404 (no releases published)
             if (response.status === 404) {
+                console.log('No releases found on GitHub (404)');
                 return res.json({
                     success: true,
                     message: 'System is up to date',
@@ -59,6 +63,7 @@ const checkForUpdates = async (req, res) => {
                 });
             }
             
+            console.log(`GitHub API error: ${response.status}`);
             return res.json({
                 success: true,
                 message: 'System is up to date',
@@ -72,6 +77,7 @@ const checkForUpdates = async (req, res) => {
         
         // Check if we got valid release data
         if (!releaseData.tag_name) {
+            console.log('Invalid release data - no tag_name');
             return res.json({
                 success: false,
                 message: 'Invalid release data from GitHub',
@@ -81,9 +87,11 @@ const checkForUpdates = async (req, res) => {
         }
         
         const latestVersion = releaseData.tag_name.replace('v', '');
+        console.log(`Current version: ${currentVersion}, Latest version: ${latestVersion}`);
         
         // Compare versions
         const updateAvailable = compareVersions(latestVersion, currentVersion) > 0;
+        console.log(`Update available: ${updateAvailable}`);
 
         res.json({
             success: true,
