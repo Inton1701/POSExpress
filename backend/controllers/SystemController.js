@@ -201,8 +201,88 @@ function compareVersions(v1, v2) {
     return 0;
 }
 
+/**
+ * Reboot the system
+ */
+const rebootSystem = async (req, res) => {
+    try {
+        const os = require('os');
+        const platform = os.platform();
+        
+        console.log(`Attempting system reboot on ${platform}`);
+        
+        if (platform === 'win32') {
+            // Windows reboot command
+            exec('shutdown /r /t 5', (error) => {
+                if (error) {
+                    console.error('Reboot command error:', error);
+                }
+            });
+        } else if (platform === 'linux' || platform === 'darwin') {
+            // Linux/macOS reboot command - uses passwordless sudo configured in deploy script
+            exec('sudo /usr/sbin/reboot', (error) => {
+                if (error) {
+                    console.error('Reboot command error:', error);
+                }
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'System reboot initiated - system will restart in 5 seconds'
+        });
+    } catch (error) {
+        console.error('Reboot error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to initiate system reboot'
+        });
+    }
+};
+
+/**
+ * Shutdown the system
+ */
+const shutdownSystem = async (req, res) => {
+    try {
+        const os = require('os');
+        const platform = os.platform();
+        
+        console.log(`Attempting system shutdown on ${platform}`);
+        
+        if (platform === 'win32') {
+            // Windows shutdown command
+            exec('shutdown /s /t 5', (error) => {
+                if (error) {
+                    console.error('Shutdown command error:', error);
+                }
+            });
+        } else if (platform === 'linux' || platform === 'darwin') {
+            // Linux/macOS shutdown command - uses passwordless sudo configured in deploy script
+            exec('sudo /usr/sbin/poweroff', (error) => {
+                if (error) {
+                    console.error('Shutdown command error:', error);
+                }
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'System shutdown initiated - system will power off in 5 seconds'
+        });
+    } catch (error) {
+        console.error('Shutdown error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to initiate system shutdown'
+        });
+    }
+};
+
 module.exports = {
     getCurrentVersion,
     checkForUpdates,
-    triggerUpdate
+    triggerUpdate,
+    rebootSystem,
+    shutdownSystem
 };

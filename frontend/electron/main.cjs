@@ -6,6 +6,7 @@ const { exec } = require('child_process')
 const bwipjs = require('bwip-js')
 
 let mainWindow
+let secondWindow
 
 function createWindow() {
   // Determine correct paths for packaged vs unpackaged app
@@ -16,6 +17,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    fullscreen: process.platform === 'linux',
     show: false, // Don't show window until ready
     webPreferences: {
       nodeIntegration: false,
@@ -58,6 +60,77 @@ function createWindow() {
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.show()
+        // Set to fullscreen on Linux after showing
+        if (process.platform === 'linux') {
+          mainWindow.setFullScreen(true)
+        }
+      }
+    }, 100)
+    
+    // Open second window after 5 seconds (Linux only)
+    if (process.platform === 'linux') {
+      setTimeout(() => {
+        createSecondWindow()
+      }, 5000)
+    }
+  })
+}
+
+function createSecondWindow() {
+  const preloadPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.cjs')
+    : path.join(__dirname, 'preload.cjs')
+  
+  secondWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    fullscreen: process.platform === 'linux',
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: preloadPath
+    }
+  })
+
+  // Load the app in second window
+  if (process.env.NODE_ENV === 'development') {
+    secondWindow.loadURL('http://localhost:5173')
+    secondWindow.webContents.openDevTools()
+  } else {
+    const indexPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
+      : path.join(__dirname, '../dist/index.html')
+    
+    secondWindow.loadFile(indexPath).catch(err => {
+      console.error('Failed to load second window:', err)
+    })
+  }
+
+  // Inject API URL and show second window
+  secondWindow.webContents.on('did-finish-load', () => {
+    secondWindow.webContents.executeJavaScript(`
+      window.__APP_CONFIG__ = {
+        API_URL: '${global.API_URL}'
+      }
+    `).catch(() => {})
+    
+    setTimeout(() => {
+      if (secondWindow && !secondWindow.isDestroyed()) {
+        secondWindow.show()
+        // Set to fullscreen on Linux after showing
+        if (process.platform === 'linux') {
+          secondWindow.setFullScreen(true)
+        }
+        
+        // Close first window after 2 seconds (Linux only)
+        if (process.platform === 'linux') {
+          setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.close()
+            }
+          }, 2000)
+        }
       }
     }, 100)
   })

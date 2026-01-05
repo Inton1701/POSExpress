@@ -142,5 +142,7 @@ router.get("/settings", extractUserInfo, SettingsController.getAllSettings);
 router.get("/system/version", SystemController.getCurrentVersion);
 router.get("/system/check-updates", extractUserInfo, SystemController.checkForUpdates);
 router.post("/system/update", extractUserInfo, SystemController.triggerUpdate);
+router.post("/system/reboot", extractUserInfo, isCoAdminOrAdmin, SystemController.rebootSystem);
+router.post("/system/shutdown", extractUserInfo, isCoAdminOrAdmin, SystemController.shutdownSystem);
 
 module.exports = router;

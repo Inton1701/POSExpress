@@ -3133,27 +3133,25 @@ const verifyAdminCredentials = async () => {
 
 const executeReboot = async () => {
   try {
-    if (process.platform === 'win32') {
-      await window.electronAPI.executeCommand('shutdown /r /t 5')
-    } else if (process.platform === 'linux') {
-      await window.electronAPI.executeCommand('sudo reboot')
+    const response = await api.post('/system/reboot')
+    if (response.data.success) {
+      showToast('System will reboot in 5 seconds...', 'info')
     }
-    showToast('System will reboot in 5 seconds...', 'info')
   } catch (error) {
-    showToast('Reboot failed. Run: sudo bash deploy-frontend.sh to configure permissions', 'error')
+    showToast('Reboot failed. Please ensure admin privileges and permissions are configured.', 'error')
+    console.error('Reboot error:', error)
   }
 }
 
 const executeShutdown = async () => {
   try {
-    if (process.platform === 'win32') {
-      await window.electronAPI.executeCommand('shutdown /s /t 5')
-    } else if (process.platform === 'linux') {
-      await window.electronAPI.executeCommand('sudo poweroff')
+    const response = await api.post('/system/shutdown')
+    if (response.data.success) {
+      showToast('System will shutdown in 5 seconds...', 'info')
     }
-    showToast('System will shutdown in 5 seconds...', 'info')
   } catch (error) {
-    showToast('Shutdown failed. Run: sudo bash deploy-frontend.sh to configure permissions', 'error')
+    showToast('Shutdown failed. Please ensure admin privileges and permissions are configured.', 'error')
+    console.error('Shutdown error:', error)
   }
 }
 
