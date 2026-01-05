@@ -9,9 +9,9 @@ let mainWindow
 let secondWindow
 
 function createWindow() {
-  // Determine correct paths for packaged vs unpackaged app (app.asar is auto-mounted)
+  // Determine correct paths for packaged vs unpackaged app
   const preloadPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'electron', 'preload.cjs')
+    ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.cjs')
     : path.join(__dirname, 'preload.cjs')
   
   mainWindow = new BrowserWindow({
@@ -33,9 +33,9 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools() // Open dev tools in development
   } else {
-    // In production, load from dist folder (app.asar is auto-mounted)
+    // In production, load from dist folder
     const indexPath = app.isPackaged
-      ? path.join(process.resourcesPath, 'dist', 'index.html')
+      ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
       : path.join(__dirname, '../dist/index.html')
     
     console.log('App packaged:', app.isPackaged)
@@ -47,26 +47,40 @@ function createWindow() {
     })
   }
 
-  // Use ready-to-show to avoid white screen
-  mainWindow.once('ready-to-show', () => {
+  // Inject API URL into preload and show window when ready
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.executeJavaScript(`
+      window.__APP_CONFIG__ = {
+        API_URL: '${global.API_URL}'
+      }
+    `).catch(() => {}) // Ignore errors from this injection
+    
+    // Show window after a delay to ensure Vue has fully rendered
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (process.platform === 'linux') {
+          // On Linux, keep first window hidden (don't show it at all)
+          // It will load in background and be closed later
+          console.log('First window loaded, keeping hidden')
+        } else {
+          // On Windows, show normally
+          mainWindow.show()
+        }
+      }
+    }, 2000)
+    
+    // Open second window after 5 seconds (Linux only)
     if (process.platform === 'linux') {
-      // On Linux, keep first window hidden (will be closed after second opens)
-      console.log('First window ready (keeping hidden for Linux)')
-      // Create second window after first is fully ready
       setTimeout(() => {
         createSecondWindow()
-      }, 1000)
-    } else {
-      // On Windows, show normally
-      mainWindow.show()
-      console.log('First window shown')
+      }, 5000)
     }
   })
 }
 
 function createSecondWindow() {
   const preloadPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'electron', 'preload.cjs')
+    ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.cjs')
     : path.join(__dirname, 'preload.cjs')
   
   secondWindow = new BrowserWindow({
@@ -87,28 +101,35 @@ function createSecondWindow() {
     secondWindow.webContents.openDevTools()
   } else {
     const indexPath = app.isPackaged
-      ? path.join(process.resourcesPath, 'dist', 'index.html')
+      ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
       : path.join(__dirname, '../dist/index.html')
     
-    console.log('Loading second window from:', indexPath)
     secondWindow.loadFile(indexPath).catch(err => {
       console.error('Failed to load second window:', err)
     })
   }
 
-  // Use ready-to-show for second window
-  secondWindow.once('ready-to-show', () => {
-    secondWindow.show()
-    secondWindow.setFullScreen(true)
-    console.log('Second window shown in fullscreen')
-    
-    // Close first window after 3 seconds
-    setTimeout(() => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.close()
-        console.log('First window closed')
+  // Inject API URL and show second window
+  secondWindow.webContents.on('did-finish-load', () => {
+    secondWindow.webContents.executeJavaScript(`
+      window.__APP_CONFIG__ = {
+        API_URL: '${global.API_URL}'
       }
-    }, 3000)
+    `).catch(() => {})
+    
+    setTimeout(() => {
+      if (secondWindow && !secondWindow.isDestroyed()) {
+        secondWindow.show()
+        secondWindow.setFullScreen(true)
+        
+        // Close first window after 3 seconds
+        setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.close()
+          }
+        }, 3000)
+      }
+    }, 100)
   })
 }
 
