@@ -176,6 +176,15 @@
       </div>
     </Modal>
 
+    <!-- Print Loading Modal -->
+    <Modal :is-open="isPrintingReceipt" title="Printing Sales Report">
+      <div class="text-center py-8">
+        <font-awesome-icon icon="spinner" spin class="text-6xl text-blue-500 mb-4" />
+        <p class="text-lg font-semibold text-gray-700">Printing sales report...</p>
+        <p class="text-sm text-gray-500 mt-2">Please wait while we process your print request</p>
+      </div>
+    </Modal>
+
     <Toast ref="toastRef" />
   </div>
 </template>
@@ -198,12 +207,17 @@ const summary = ref({
   totalProfit: 0,
   totalProductsSold: 0
 })
+const sessionInfo = ref({
+  startedAt: null,
+  endedAt: null
+})
 const sessionActive = ref(false)
 const isLoading = ref(false)
 const toastRef = ref(null)
 const selectedPrinter = ref(null)
 const currentStore = ref(null)
 const isPrintConfirmModalOpen = ref(false)
+const isPrintingReceipt = ref(false)
 
 // Filter and pagination
 const searchQuery = ref('')
@@ -289,6 +303,7 @@ const fetchSalesData = async () => {
     if (response.data.success) {
       summary.value = response.data.summary
       productSales.value = response.data.productSales
+      sessionInfo.value = response.data.sessionInfo || { startedAt: null, endedAt: null }
       
       // Show message if no active session
       if (response.data.hasActiveSession === false) {
@@ -329,6 +344,9 @@ const confirmPrintSalesReport = async () => {
     // Close confirmation modal
     isPrintConfirmModalOpen.value = false
 
+    // Show loading modal
+    isPrintingReceipt.value = true
+
     // Verify Electron is available
     if (!window.electronAPI) {
       showToast('Thermal printing requires desktop application', 'error')
@@ -347,7 +365,11 @@ const confirmPrintSalesReport = async () => {
       storeName: String(currentStore.value?.storeName || 'POSXPRESS'),
       address: String(currentStore.value?.address || ''),
       contact: String(currentStore.value?.contact || ''),
+      tin: String(currentStore.value?.tin || ''),
       date: String(new Date().toISOString()),
+      sessionActive: Boolean(sessionActive.value),
+      sessionStartedAt: sessionInfo.value.startedAt ? String(sessionInfo.value.startedAt) : null,
+      sessionEndedAt: sessionInfo.value.endedAt ? String(sessionInfo.value.endedAt) : null,
       summary: {
         todaySales: Number(summary.value.todaySales || 0),
         totalProfit: Number(summary.value.totalProfit || 0),
@@ -372,6 +394,8 @@ const confirmPrintSalesReport = async () => {
   } catch (error) {
     console.error('Print error:', error)
     showToast(`Print failed: ${error.message || 'Unknown error'}`, 'error')
+  } finally {
+    isPrintingReceipt.value = false
   }
 }
 

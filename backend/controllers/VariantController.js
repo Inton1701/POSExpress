@@ -86,6 +86,32 @@ const variant = {
                 return res.status(404).json({ success: false, message: 'Variant not found' });
             }
 
+            // Authorization check for Co-Admin
+            if (req.user && req.user.role === 'Co-Admin') {
+                // Get the product to check ownership
+                const product = await Product.findById(variant.productId);
+                
+                if (!product) {
+                    return res.status(404).json({ success: false, message: 'Product not found' });
+                }
+                
+                // Co-Admin can only modify variants of products in their store or global products (status only)
+                if (product.isGlobal) {
+                    // For global products, Co-Admin can only change status
+                    if (Object.keys(req.body).length > 1 || (Object.keys(req.body).length === 1 && !req.body.hasOwnProperty('status'))) {
+                        return res.status(403).json({ success: false, message: 'You can only change the status of variants for global products' });
+                    }
+                } else {
+                    // For non-global products, check if product belongs to Co-Admin's store
+                    const productStores = product.stores.map(s => s.toString());
+                    const userStoreId = req.user.store._id.toString();
+                    
+                    if (!productStores.includes(userStoreId)) {
+                        return res.status(403).json({ success: false, message: 'Access denied. This variant does not belong to your store.' });
+                    }
+                }
+            }
+
             // If updating SKU, check if new SKU already exists
             if (req.body.sku && req.body.sku !== variant.sku) {
                 const existingVariant = await Variant.findOne({ sku: req.body.sku });
@@ -113,6 +139,29 @@ const variant = {
             
             if (!variant) {
                 return res.status(404).json({ success: false, message: 'Variant not found' });
+            }
+
+            // Authorization check for Co-Admin
+            if (req.user && req.user.role === 'Co-Admin') {
+                // Get the product to check ownership
+                const product = await Product.findById(variant.productId);
+                
+                if (!product) {
+                    return res.status(404).json({ success: false, message: 'Product not found' });
+                }
+                
+                // Co-Admin cannot delete variants of global products
+                if (product.isGlobal) {
+                    return res.status(403).json({ success: false, message: 'Access denied. You cannot delete variants of global products.' });
+                }
+                
+                // Check if product belongs to Co-Admin's store
+                const productStores = product.stores.map(s => s.toString());
+                const userStoreId = req.user.store._id.toString();
+                
+                if (!productStores.includes(userStoreId)) {
+                    return res.status(403).json({ success: false, message: 'Access denied. This variant does not belong to your store.' });
+                }
             }
 
             variant.status = 'deleted';

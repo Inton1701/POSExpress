@@ -303,6 +303,40 @@ const customer = {
         }
     }),
 
+    // Verify customer password (for transaction confirmation) - Returns 200 to avoid logout
+    verifyCustomerPassword: asyncHandler(async (req, res) => {
+        try {
+            const { username, password } = req.body;
+
+            if (!username || !password) {
+                return res.status(200).json({ success: false, verified: false, message: 'Username and password are required' });
+            }
+
+            // Find customer by username
+            const customer = await Customer.findOne({ username });
+            
+            if (!customer) {
+                return res.status(200).json({ success: false, verified: false, message: 'Invalid username or password' });
+            }
+
+            // Check if customer is disabled
+            if (customer.status === 'disabled') {
+                return res.status(200).json({ success: false, verified: false, message: 'Customer account is disabled' });
+            }
+
+            // Verify password
+            const isPasswordValid = await bcrypt.compare(password, customer.password);
+            if (!isPasswordValid) {
+                return res.status(200).json({ success: false, verified: false, message: 'Invalid password' });
+            }
+
+            // Return success without customer data (just verification result)
+            res.status(200).json({ success: true, verified: true, message: 'Password verified successfully' });
+        } catch (error) {
+            res.status(500).json({ success: false, verified: false, message: 'Verification failed', error: error.message });
+        }
+    }),
+
     // Void customer transaction (Cash-in/Cash-out)
     voidCustomerTransaction: asyncHandler(async (req, res) => {
         try {

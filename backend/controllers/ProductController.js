@@ -108,6 +108,25 @@ const product = {
                 return res.status(404).json({ success: false, message: 'Product not found' });
             }
 
+            // Authorization check for Co-Admin
+            if (req.user && req.user.role === 'Co-Admin') {
+                // Co-Admin can only modify products in their store or global products (status only)
+                if (product.isGlobal) {
+                    // For global products, Co-Admin can only change status
+                    if (Object.keys(req.body).length > 1 || (Object.keys(req.body).length === 1 && !req.body.hasOwnProperty('status'))) {
+                        return res.status(403).json({ success: false, message: 'You can only change the status of global products' });
+                    }
+                } else {
+                    // For non-global products, check if product belongs to Co-Admin's store
+                    const productStores = product.stores.map(s => s.toString());
+                    const userStoreId = req.user.store._id.toString();
+                    
+                    if (!productStores.includes(userStoreId)) {
+                        return res.status(403).json({ success: false, message: 'Access denied. This product does not belong to your store.' });
+                    }
+                }
+            }
+
             // If updating SKU, check if new SKU already exists
             if (req.body.sku && req.body.sku !== product.sku) {
                 const existingProduct = await Product.findOne({ sku: req.body.sku });
@@ -135,6 +154,22 @@ const product = {
             
             if (!product) {
                 return res.status(404).json({ success: false, message: 'Product not found' });
+            }
+
+            // Authorization check for Co-Admin
+            if (req.user && req.user.role === 'Co-Admin') {
+                // Co-Admin cannot delete global products
+                if (product.isGlobal) {
+                    return res.status(403).json({ success: false, message: 'Access denied. You cannot delete global products.' });
+                }
+                
+                // Check if product belongs to Co-Admin's store
+                const productStores = product.stores.map(s => s.toString());
+                const userStoreId = req.user.store._id.toString();
+                
+                if (!productStores.includes(userStoreId)) {
+                    return res.status(403).json({ success: false, message: 'Access denied. This product does not belong to your store.' });
+                }
             }
 
             // Soft delete by setting status to 'deleted'

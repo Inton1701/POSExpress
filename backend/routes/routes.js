@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 // Import middleware
-const { extractUserInfo, isAdmin, isCoAdminOrAdmin, isCashier } = require("../middleware/AuthMiddleware");
+const { extractUserInfo, isAdmin, isCoAdminOrAdmin, isCashier, canManageCustomers } = require("../middleware/AuthMiddleware");
 
 // Import controllers
 const CategoriesController = require("../controllers/CategoriesController");
@@ -28,6 +28,7 @@ router.get("/health", (req, res) => {
 // User authentication
 router.post("/users/login", UserController.loginUser);
 router.post("/customers/login", CustomerController.loginCustomer);
+router.post("/customers/verify-password", CustomerController.verifyCustomerPassword);
 
 // ========== PROTECTED ROUTES (Authentication Required) ==========
 
@@ -43,7 +44,7 @@ router.get("/products", extractUserInfo, ProductController.getAllProducts);
 router.post("/products", extractUserInfo, isCoAdminOrAdmin, ProductController.createProduct);
 router.get("/products/:id", extractUserInfo, ProductController.getProduct);
 router.put("/products/:id", extractUserInfo, isCoAdminOrAdmin, ProductController.updateProduct);
-router.delete("/products/:id", extractUserInfo, isAdmin, ProductController.deleteProduct);
+router.delete("/products/:id", extractUserInfo, isCoAdminOrAdmin, ProductController.deleteProduct);
 router.get("/products/store/:storeId", extractUserInfo, ProductController.getProductsByStore);
 router.get("/products/category/:category", extractUserInfo, ProductController.getProductsByCategory);
 router.get("/products/stock/low", extractUserInfo, ProductController.getLowStock);
@@ -114,7 +115,7 @@ router.get("/variants", extractUserInfo, VariantController.getAllVariants);
 router.get("/variants/product/:productId", extractUserInfo, VariantController.getProductVariants);
 router.post("/variants", extractUserInfo, isCoAdminOrAdmin, VariantController.createVariants);
 router.put("/variants/:id", extractUserInfo, isCoAdminOrAdmin, VariantController.updateVariant);
-router.delete("/variants/:id", extractUserInfo, isAdmin, VariantController.deleteVariant);
+router.delete("/variants/:id", extractUserInfo, isCoAdminOrAdmin, VariantController.deleteVariant);
 router.get("/variants/sku/:sku", extractUserInfo, VariantController.getVariantBySku);
 
 // Add-on routes (Admin & Co-Admin)
@@ -128,7 +129,7 @@ router.delete("/addons/:id", extractUserInfo, isAdmin, AddonController.deleteAdd
 router.post("/customer-transactions", extractUserInfo, CustomerController.logTransaction);
 router.get("/customer-transactions/:rfid", extractUserInfo, CustomerController.getTransactionsByRFID);
 router.get("/customer-transactions", extractUserInfo, CustomerController.getAllCustomerTransactions);
-router.post("/customer-transactions/void", extractUserInfo, isCoAdminOrAdmin, CustomerController.voidCustomerTransaction);
+router.post("/customer-transactions/void", extractUserInfo, canManageCustomers, CustomerController.voidCustomerTransaction);
 
 // Settings routes (Admin & Co-Admin)
 router.get("/settings/vat-config", extractUserInfo, SettingsController.getVATConfig);

@@ -88,6 +88,21 @@ ipcMain.handle('get-printers', async () => {
   }
 })
 
+// Execute system command
+ipcMain.handle('execute-command', async (event, command) => {
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Command execution error:', error)
+        reject(error)
+      } else {
+        console.log('Command output:', stdout)
+        resolve({ success: true, stdout, stderr })
+      }
+    })
+  })
+})
+
 // Helper function to print via CUPS on Linux (using lp command)
 async function printViaCUPS(printerName, imagePath) {
   return new Promise((resolve, reject) => {
@@ -104,6 +119,86 @@ async function printViaCUPS(printerName, imagePath) {
       } else {
         console.log('CUPS output:', stdout)
         if (stderr) console.log('CUPS stderr:', stderr)
+        resolve({ success: true })
+      }
+    })
+  })
+}
+
+// Helper function to print via Windows using PowerShell
+async function printViaWindows(printerName, imagePath) {
+  return new Promise((resolve, reject) => {
+    // Escape paths for PowerShell
+    const escapedImagePath = imagePath.replace(/\\/g, '\\\\').replace(/'/g, "''")
+    const escapedPrinterName = printerName.replace(/'/g, "''")
+    
+    // Create PowerShell script to print the image
+    // This uses Add-PrinterJob which is more reliable for thermal printers
+    const psScript = `
+      $image = Get-Item '${escapedImagePath}'
+      $printer = Get-Printer -Name '${escapedPrinterName}' -ErrorAction SilentlyContinue
+      
+      if ($null -eq $printer) {
+        Write-Error "Printer not found: ${escapedPrinterName}"
+        exit 1
+      }
+      
+      # Try using Windows Forms to print (most reliable for images)
+      Add-Type -AssemblyName System.Drawing
+      Add-Type -AssemblyName System.Windows.Forms
+      
+      $img = [System.Drawing.Image]::FromFile('${escapedImagePath}')
+      $printDoc = New-Object System.Drawing.Printing.PrintDocument
+      $printDoc.PrinterSettings.PrinterName = '${escapedPrinterName}'
+      
+      # Set to not fit to page - use actual size
+      $printDoc.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0,0,0,0)
+      
+      $printDoc.add_PrintPage({
+        param($sender, $ev)
+        $ev.Graphics.DrawImage($img, 0, 0, $img.Width, $img.Height)
+        $ev.HasMorePages = $false
+      })
+      
+      try {
+        $printDoc.Print()
+        Write-Output "Print job sent successfully"
+      }
+      catch {
+        Write-Error $_.Exception.Message
+        exit 1
+      }
+      finally {
+        $img.Dispose()
+        $printDoc.Dispose()
+      }
+    `
+    
+    // Save script to temp file
+    const scriptPath = path.join(os.tmpdir(), `print-script-${Date.now()}.ps1`)
+    fs.writeFileSync(scriptPath, psScript, 'utf8')
+    
+    console.log('Executing PowerShell print script:', scriptPath)
+    
+    // Execute PowerShell script
+    const psCommand = `powershell -ExecutionPolicy Bypass -File "${scriptPath}"`
+    
+    exec(psCommand, (error, stdout, stderr) => {
+      // Clean up script file
+      try {
+        fs.unlinkSync(scriptPath)
+      } catch (e) {
+        console.warn('Could not delete script file:', e.message)
+      }
+      
+      if (error) {
+        console.error('PowerShell print error:', error)
+        console.error('stderr:', stderr)
+        console.error('stdout:', stdout)
+        reject(new Error(`Failed to print: ${stderr || error.message}`))
+      } else {
+        console.log('PowerShell print output:', stdout)
+        if (stderr) console.log('PowerShell stderr:', stderr)
         resolve({ success: true })
       }
     })
@@ -167,19 +262,20 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         }
       }
       
-      // Create print window (visible on Linux for proper rendering)
+      // Create print window
       const printWindow = new BrowserWindow({
         width: 220, // 58mm ≈ 220px at 96 DPI
         height: 1200,
-        show: process.platform === 'linux', // Must be visible on Linux for PDF to render
+        show: true, // Must be visible to render content properly
+        skipTaskbar: true,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true
         }
       })
       
-      // Minimize on Linux to keep it out of the way
-      if (process.platform === 'linux') {
+      // Minimize to keep out of the way
+      if (process.platform === 'linux' || process.platform === 'win32') {
         printWindow.minimize()
       }
       
@@ -220,9 +316,9 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               box-sizing: border-box;
             }
             body {
-              font-family: 'Courier New', monospace;
-              font-size: 10px;
-              line-height: 1.3;
+              font-family: Arial, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
               padding: 5px;
               padding-bottom: 40px;
               width: 48mm;
@@ -286,6 +382,15 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           <div class="center bold large">SALES REPORT</div>
           <div class="divider">================================</div>
           <div class="line">Date: ${new Date(receiptData.date).toLocaleString()}</div>
+          ${receiptData.sessionStartedAt ? `
+          <div class="divider">- - - - - - - - - - - - - - - -</div>
+          <div class="line bold">Session Start: ${new Date(receiptData.sessionStartedAt).toLocaleString()}</div>
+          ${receiptData.sessionActive 
+            ? `<div class="line bold">Current Time: ${new Date().toLocaleString()}</div>` 
+            : receiptData.sessionEndedAt 
+              ? `<div class="line bold">Session End: ${new Date(receiptData.sessionEndedAt).toLocaleString()}</div>` 
+              : ''}
+          ` : ''}
           <div class="divider">================================</div>
           
           <div class="summary-box">
@@ -303,11 +408,6 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           <div class="divider">================================</div>
           <div class="center bold" style="margin-top: 10px;">End of Report</div>
           <div style="height: 30px;"></div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
         </body>
         </html>
         `
@@ -372,11 +472,11 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               box-sizing: border-box;
             }
             body {
-              font-family: 'Courier New', monospace;
-              font-size: 10px;
-              width: 80mm;
+              font-family: Arial, sans-serif;
+              font-size: 11px;
+              width: 48mm;
               padding: 5mm;
-              line-height: 1.3;
+              line-height: 1.4;
             }
             .center {
               text-align: center;
@@ -477,13 +577,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           <div class="divider">================================</div>
           <div class="center bold" style="margin-top: 10px;">Refund Processed</div>
           <div class="center" style="margin-top: 5px;">Thank you!</div>
-          <div class="center" style="margin-top: 15px; font-size: 9px;">Powered by POSEXPRESS</div>
           <div style="height: 30px;"></div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
         </body>
         </html>
         `
@@ -556,9 +650,9 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               box-sizing: border-box;
             }
             body {
-              font-family: 'Courier New', monospace;
-              font-size: 10px;
-              line-height: 1.3;
+              font-family: Arial, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
               padding: 5px;
               padding-bottom: 40px;
               width: 48mm;
@@ -694,11 +788,6 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           <div class="center bold" style="margin-top: 10px;">Thank you!</div>
           <div class="center" style="margin-top: 5px;">Please come again</div>
           <div style="height: 30px;"></div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
         </body>
         </html>
         `
@@ -716,9 +805,9 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               box-sizing: border-box;
             }
             body {
-              font-family: 'Courier New', monospace;
-              font-size: 10px;
-              line-height: 1.3;
+              font-family: Arial, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
               padding: 5px;
               padding-bottom: 40px;
               width: 48mm;
@@ -766,11 +855,6 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           <div class="divider">================================</div>
           <div class="center bold" style="margin-top: 10px;">Thank you!</div>
           <div style="height: 30px;"></div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
-          <div class="center">.</div>
         </body>
         </html>
         `
@@ -782,14 +866,14 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
       printWindow.webContents.on('did-finish-load', () => {
         console.log('Print window loaded, preparing to print...')
         
-        // Small delay to ensure content is rendered
+        // Longer delay to ensure content is rendered, especially on Windows
         setTimeout(async () => {
           console.log('Attempting to print...')
           
-          // Linux-specific: Capture as PNG and print via CUPS
+          // PNG-based printing for Linux only
           if (process.platform === 'linux') {
             try {
-              console.log('Linux detected - using CUPS printing workflow')
+              console.log('Linux detected - using PNG printing workflow')
               
               // Step 1: Wait for content to fully render
               console.log('Waiting for content to render...')
@@ -803,12 +887,12 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               
               printWindow.close()
               
-              // Step 3: Save to disk (file must exist for CUPS)
+              // Step 3: Save to disk
               const tempImageFile = path.join(os.tmpdir(), `receipt-${Date.now()}.png`)
               fs.writeFileSync(tempImageFile, pngBuffer)
               console.log('PNG saved to:', tempImageFile)
               
-              // Step 4: Print via CUPS lp command
+              // Step 4: Print via CUPS
               console.log('Printing to:', targetPrinter.name)
               await printViaCUPS(targetPrinter.name, tempImageFile)
               
@@ -822,46 +906,68 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
                 }
               }, 10000)
               
-              console.log('✓ Printed successfully via CUPS')
-              resolve({ success: true, printer: targetPrinter.name, mode: 'cups-png', platform: process.platform })
+              console.log('✓ Printed successfully via PNG printing')
+              resolve({ success: true, printer: targetPrinter.name, mode: 'png', platform: process.platform })
               
             } catch (error) {
               if (printWindow && !printWindow.isDestroyed()) {
                 printWindow.close()
               }
-              console.error('CUPS printing failed:', error)
-              reject(new Error('CUPS printing failed: ' + error.message))
+              console.error('PNG printing failed:', error)
+              reject(new Error('PNG printing failed: ' + error.message))
             }
             return
           }
           
-          // Windows/Mac: Use standard Electron print API
+          // Windows/Mac: Use standard Electron silent print API
+          console.log(`${process.platform} detected - using Electron silent printing`)
+          
+          // Try to generate PDF first to ensure content is rendered
+          try {
+            const pdfData = await printWindow.webContents.printToPDF({
+              pageSize: 'A4',
+              printBackground: true,
+              margins: {
+                marginType: 'none'
+              }
+            })
+            console.log('PDF generated successfully, size:', pdfData.length, 'bytes')
+          } catch (pdfError) {
+            console.warn('PDF test failed:', pdfError.message)
+          }
+          
           const printOptions = {
             silent: true,
             printBackground: true,
+            color: false,
             deviceName: targetPrinter.name,
             copies: 1,
-            margins: { marginType: 'none' },
+            landscape: false,
+            margins: { 
+              marginType: 'none'
+            },
             pageSize: {
-              width: 48000, // 48mm in microns
-              height: 999999 // Dynamic height for continuous roll
+              width: 58000, // 58mm in microns
+              height: 297000 // A4 height
             },
             scaleFactor: 100
           }
+          
+          console.log('Printing with options:', JSON.stringify(printOptions, null, 2))
           
           printWindow.webContents.print(printOptions, (success, errorType) => {
             console.log('Print callback - Success:', success, 'ErrorType:', errorType)
             printWindow.close()
             
             if (success) {
-              console.log('✓ Printed successfully')
+              console.log('✓ Printed successfully via Electron silent print')
               resolve({ success: true, printer: targetPrinter.name, mode: 'electron', platform: process.platform })
             } else {
               console.error('Print failed:', errorType)
               reject(new Error(errorType || 'Print failed'))
             }
           })
-        }, 1000)
+        }, 2000) // Increased from 1000ms to 2000ms
       })
       
       printWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {

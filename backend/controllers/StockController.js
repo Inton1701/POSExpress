@@ -90,7 +90,43 @@ const stock = {
             const history = await StockHistory.find({ isDeleted: false })
                 .sort({ updatedAt: -1 })
                 .limit(500);
-            res.status(200).json({ success: true, history });
+            
+            // Enhance history with current product names
+            const enhancedHistory = await Promise.all(history.map(async (entry) => {
+                let currentProductName = entry.product; // Default to stored name
+                
+                try {
+                    // Try to find current product/variant by SKU to get updated name
+                    const variant = await Variant.findOne({ sku: entry.sku, status: { $ne: 'deleted' } })
+                        .populate('productId', 'name');
+                    
+                    if (variant && variant.productId) {
+                        currentProductName = `${variant.productId.name} - ${variant.value}`;
+                    } else {
+                        // Try to find as product
+                        const product = await Product.findOne({ sku: entry.sku, status: { $ne: 'deleted' } });
+                        if (product) {
+                            currentProductName = product.name;
+                        } else {
+                            // Try to find as addon
+                            const addon = await Addon.findOne({ sku: entry.sku, status: { $ne: 'deleted' } });
+                            if (addon) {
+                                currentProductName = addon.name;
+                            }
+                        }
+                    }
+                } catch (lookupError) {
+                    console.error('Error looking up current product name:', lookupError);
+                    // Keep the stored name if lookup fails
+                }
+                
+                return {
+                    ...entry.toObject(),
+                    product: currentProductName
+                };
+            }));
+            
+            res.status(200).json({ success: true, history: enhancedHistory });
         } catch (error) {
             res.status(500).json({ success: false, message: 'Failed to fetch stock history', error: error.message });
         }

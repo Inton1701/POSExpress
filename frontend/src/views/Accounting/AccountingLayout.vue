@@ -13,6 +13,14 @@
           </button>
           <!-- Popover Menu -->
           <div v-if="isMenuOpen" class="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-300 shadow-lg z-50">
+            <button @click="openImportModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
+              <font-awesome-icon icon="upload" />
+              <span>Import Customers</span>
+            </button>
+            <button @click="exportCustomers" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
+              <font-awesome-icon icon="download" />
+              <span>Export Customers</span>
+            </button>
             <button @click="goToTransactionHistory" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
               <font-awesome-icon icon="history" />
               <span>Transaction History</span>
@@ -658,7 +666,7 @@
         <p class="text-3xl font-bold text-green-600">₱{{ selectedCustomer?.balance.toFixed(2) }}</p>
       </div>
       <div class="flex gap-4 mt-4">
-        <button @click="printThermalReceipt({ transactionType: 'Balance Inquiry', amount: 0, previousBalance: selectedCustomer?.balance, currentBalance: selectedCustomer?.balance, customerName: selectedCustomer?.fullName, date: new Date() }, selectedPrinter)" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-2xl flex items-center justify-center gap-2">
+        <button @click="printBalanceReceipt" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-2xl flex items-center justify-center gap-2">
           <font-awesome-icon icon="print" />
           Print
         </button>
@@ -804,6 +812,117 @@
       </div>
     </Modal>
 
+    <!-- Import Customers Modal -->
+    <Modal :is-open="isImportModalOpen" title="Import Customers" @close="closeImportModal" size="lg">
+      <div class="space-y-4">
+        <!-- File Upload Section -->
+        <div>
+          <label class="block text-sm font-semibold mb-2">Upload CSV File</label>
+          <input 
+            type="file" 
+            ref="fileInput"
+            accept=".csv"
+            @change="handleFileSelect"
+            class="w-full p-2 border rounded-lg text-sm"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            Required columns: fullName, birthdate | Optional: rfid, balance
+          </p>
+        </div>
+
+        <!-- Sample File Download -->
+        <div class="flex gap-2">
+          <button 
+            @click="downloadSampleFile" 
+            class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"
+          >
+            <font-awesome-icon icon="file-download" />
+            Download Sample File
+          </button>
+        </div>
+
+        <!-- Validation Status -->
+        <div v-if="importValidation.checked" class="p-3 rounded-lg" :class="importValidation.valid ? 'bg-green-50 border border-green-300' : 'bg-red-50 border border-red-300'">
+          <p class="font-semibold text-sm" :class="importValidation.valid ? 'text-green-700' : 'text-red-700'">
+            {{ importValidation.message }}
+          </p>
+          <ul v-if="importValidation.errors.length > 0" class="text-xs mt-2 space-y-1 text-red-600">
+            <li v-for="(error, index) in importValidation.errors" :key="index">• {{ error }}</li>
+          </ul>
+        </div>
+
+        <!-- Preview Table -->
+        <div v-if="importPreview.length > 0" class="max-h-64 overflow-auto">
+          <h3 class="text-sm font-semibold mb-2">Preview (First 5 rows)</h3>
+          <table class="w-full text-xs">
+            <thead class="bg-gray-100 sticky top-0">
+              <tr>
+                <th class="py-2 px-2 text-left">Full Name</th>
+                <th class="py-2 px-2 text-left">Username (Auto)</th>
+                <th class="py-2 px-2 text-left">Password (Auto)</th>
+                <th class="py-2 px-2 text-left">Birthdate</th>
+                <th class="py-2 px-2 text-left">RFID</th>
+                <th class="py-2 px-2 text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in importPreview.slice(0, 5)" :key="index" class="border-t">
+                <td class="py-1 px-2">{{ row.fullName }}</td>
+                <td class="py-1 px-2">{{ row.username }}</td>
+                <td class="py-1 px-2">{{ row.password }}</td>
+                <td class="py-1 px-2">{{ row.birthdate }}</td>
+                <td class="py-1 px-2">{{ row.rfid || '-' }}</td>
+                <td class="py-1 px-2 text-right">{{ row.balance }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="text-xs text-gray-500 mt-2">Total rows to import: {{ importPreview.length }}</p>
+        </div>
+
+        <!-- Import Progress -->
+        <div v-if="importProgress.importing" class="p-3 bg-blue-50 border border-blue-300 rounded-lg">
+          <p class="text-sm font-semibold text-blue-700">Importing customers...</p>
+          <p class="text-xs text-blue-600 mt-1">{{ importProgress.current }} / {{ importProgress.total }}</p>
+          <div class="w-full bg-blue-200 rounded-full h-2 mt-2">
+            <div class="bg-blue-600 h-2 rounded-full transition-all" :style="{ width: (importProgress.current / importProgress.total * 100) + '%' }"></div>
+          </div>
+        </div>
+
+        <!-- Import Results -->
+        <div v-if="importResults.completed" class="space-y-2">
+          <div class="p-3 bg-green-50 border border-green-300 rounded-lg">
+            <p class="text-sm font-semibold text-green-700">Import Completed!</p>
+            <p class="text-xs text-green-600 mt-1">Successfully imported: {{ importResults.success }}</p>
+            <p v-if="importResults.failed > 0" class="text-xs text-red-600">Failed: {{ importResults.failed }}</p>
+          </div>
+          <div v-if="importResults.errors.length > 0" class="max-h-32 overflow-auto">
+            <p class="text-xs font-semibold text-red-700 mb-1">Errors:</p>
+            <ul class="text-xs space-y-1 text-red-600">
+              <li v-for="(error, index) in importResults.errors" :key="index">• {{ error }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4 mt-6">
+        <button 
+          @click="closeImportModal" 
+          class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl"
+          :disabled="importProgress.importing"
+        >
+          {{ importResults.completed ? 'Close' : 'Cancel' }}
+        </button>
+        <button 
+          v-if="!importResults.completed"
+          @click="processImport" 
+          class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-2xl"
+          :disabled="!importValidation.valid || importProgress.importing || importPreview.length === 0"
+        >
+          Import {{ importPreview.length }} Customers
+        </button>
+      </div>
+    </Modal>
+
     <!-- Delete Confirmation Modal -->
     <Modal :is-open="isDeleteModalOpen" title="Confirm Delete" @close="cancelDeleteCustomer">
       <div class="text-center py-4">
@@ -821,6 +940,15 @@
       </div>
     </Modal>
 
+    <!-- Print Loading Modal -->
+    <Modal :is-open="isPrintingReceipt" title="Printing Receipt">
+      <div class="text-center py-8">
+        <font-awesome-icon icon="spinner" spin class="text-6xl text-blue-500 mb-4" />
+        <p class="text-lg font-semibold text-gray-700">Printing receipt...</p>
+        <p class="text-sm text-gray-500 mt-2">Please wait while we process your print request</p>
+      </div>
+    </Modal>
+
     <!-- Toast Notification Component -->
     <Toast ref="toastRef" />
   </div>
@@ -834,6 +962,7 @@ import Toast from '../../components/Toast.vue'
 import { api } from '@/utils/api'
 import { auth } from '@/utils/auth'
 import { printThermalReceipt, getAvailablePrinters } from '../../utils/printReceipt.js'
+import Papa from 'papaparse'
 
 const router = useRouter()
 
@@ -893,6 +1022,13 @@ const transactionSortDirection = ref('desc')
 const transactionCurrentPage = ref(1)
 const transactionItemsPerPage = ref(10)
 const transactionTypeFilter = ref('all')
+const isImportModalOpen = ref(false)
+const fileInput = ref(null)
+const importValidation = ref({ checked: false, valid: false, message: '', errors: [] })
+const importPreview = ref([])
+const importProgress = ref({ importing: false, current: 0, total: 0 })
+const importResults = ref({ completed: false, success: 0, failed: 0, errors: [] })
+const isPrintingReceipt = ref(false)
 
 const toastRef = ref(null)
 
@@ -1150,15 +1286,18 @@ const verifyPasswordConfirmation = async () => {
   }
 
   try {
-    // Verify password using the selected customer's username
-    const loginResponse = await api.post('/customers/login', {
+    // Verify password using the dedicated verification endpoint (doesn't trigger logout on failure)
+    const verifyResponse = await api.post('/customers/verify-password', {
       username: selectedCustomer.value.username,
       password: password
     })
 
-    if (loginResponse.data.success) {
+    if (verifyResponse.data.verified) {
       // Password verified, proceed with the action
       await proceedWithAction()
+    } else {
+      rfidConfirmError.value = verifyResponse.data.message || 'Invalid password'
+      passwordVerifyForm.value.password = ''
     }
   } catch (error) {
     rfidConfirmError.value = error.response?.data?.message || 'Invalid password'
@@ -1289,7 +1428,11 @@ const processCashIn = async () => {
       
       if (printMode.value === 'auto') {
         // Auto print immediately
+        isPrintingReceipt.value = true
         printThermalReceipt(transactionData, selectedPrinter.value)
+          .finally(() => {
+            isPrintingReceipt.value = false
+          })
       } else if (printMode.value === 'manual') {
         // Show confirmation modal
         pendingPrintTransaction.value = transactionData
@@ -1345,7 +1488,11 @@ const processCashOut = async () => {
       
       if (printMode.value === 'auto') {
         // Auto print immediately
+        isPrintingReceipt.value = true
         printThermalReceipt(transactionData, selectedPrinter.value)
+          .finally(() => {
+            isPrintingReceipt.value = false
+          })
       } else if (printMode.value === 'manual') {
         // Show confirmation modal
         pendingPrintTransaction.value = transactionData
@@ -1534,10 +1681,29 @@ const confirmLogout = () => {
 
 const confirmPrint = () => {
   if (pendingPrintTransaction.value) {
+    isPrintingReceipt.value = true
     printThermalReceipt(pendingPrintTransaction.value, selectedPrinter.value)
+      .finally(() => {
+        isPrintingReceipt.value = false
+      })
     isPrintConfirmModalOpen.value = false
     pendingPrintTransaction.value = null
   }
+}
+
+const printBalanceReceipt = () => {
+  isPrintingReceipt.value = true
+  printThermalReceipt({
+    transactionType: 'Balance Inquiry',
+    amount: 0,
+    previousBalance: selectedCustomer.value?.balance,
+    currentBalance: selectedCustomer.value?.balance,
+    customerName: selectedCustomer.value?.fullName,
+    date: new Date()
+  }, selectedPrinter.value)
+    .finally(() => {
+      isPrintingReceipt.value = false
+    })
 }
 
 const cancelPrint = () => {
@@ -1775,6 +1941,324 @@ const exportCustomerTransactionsPDF = () => {
   }, 250)
   
   showToast('Report ready for printing/PDF export!', 'success')
+}
+
+// Auto-generation functions
+const generateUsername = (fullName, birthdate) => {
+  try {
+    const date = new Date(birthdate)
+    const day = date.getDate()
+    const cleanName = fullName.trim().replace(/\s+/g, '').toLowerCase()
+    return `${cleanName}${day}`
+  } catch (error) {
+    return fullName.trim().replace(/\s+/g, '').toLowerCase()
+  }
+}
+
+const generatePassword = (fullName, birthdate) => {
+  try {
+    const date = new Date(birthdate)
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const year = String(date.getFullYear()).slice(-2)
+    const cleanName = fullName.trim().replace(/\s+/g, '').toLowerCase()
+    return `${cleanName}${month}${day}${year}`
+  } catch (error) {
+    return fullName.trim().replace(/\s+/g, '').toLowerCase()
+  }
+}
+
+// Import/Export functions
+const openImportModal = () => {
+  isImportModalOpen.value = true
+  importValidation.value = { checked: false, valid: false, message: '', errors: [] }
+  importPreview.value = []
+  importProgress.value = { importing: false, current: 0, total: 0 }
+  importResults.value = { completed: false, success: 0, failed: 0, errors: [] }
+}
+
+const closeImportModal = () => {
+  isImportModalOpen.value = false
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+  if (importResults.value.completed && importResults.value.success > 0) {
+    fetchCustomers()
+  }
+}
+
+const handleFileSelect = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (results) => {
+      validateAndPreviewImport(results.data)
+    },
+    error: (error) => {
+      showToast('Failed to parse CSV file', 'error')
+      importValidation.value = {
+        checked: true,
+        valid: false,
+        message: 'Error parsing CSV file',
+        errors: [error.message]
+      }
+    }
+  })
+}
+
+const validateAndPreviewImport = async (data) => {
+  const errors = []
+  const preview = []
+
+  // Check if data is empty
+  if (!data || data.length === 0) {
+    importValidation.value = {
+      checked: true,
+      valid: false,
+      message: 'CSV file is empty',
+      errors: ['No data found in the file']
+    }
+    return
+  }
+
+  // Check required headers
+  const firstRow = data[0]
+  const requiredHeaders = ['fullName', 'birthdate']
+  const missingHeaders = requiredHeaders.filter(header => !(header in firstRow))
+
+  if (missingHeaders.length > 0) {
+    importValidation.value = {
+      checked: true,
+      valid: false,
+      message: 'Missing required columns',
+      errors: [`Required columns: ${missingHeaders.join(', ')}`]
+    }
+    return
+  }
+
+  // Get existing customers to check for conflicts
+  const existingUsernames = new Set(customers.value.map(c => c.username.toLowerCase()))
+  const existingRFIDs = new Set(customers.value.filter(c => c.rfid).map(c => c.rfid.toLowerCase()))
+
+  // Track usernames and RFIDs in the import file to check for duplicates within the file
+  const importUsernames = new Set()
+  const importRFIDs = new Set()
+
+  // Validate each row
+  data.forEach((row, index) => {
+    const rowNum = index + 2 // +2 because index starts at 0 and row 1 is header
+
+    // Validate fullName
+    if (!row.fullName || row.fullName.trim() === '') {
+      errors.push(`Row ${rowNum}: Full Name is required`)
+      return
+    }
+
+    // Validate birthdate
+    if (!row.birthdate || row.birthdate.trim() === '') {
+      errors.push(`Row ${rowNum}: Birthdate is required`)
+      return
+    }
+
+    const birthdate = new Date(row.birthdate)
+    if (isNaN(birthdate.getTime())) {
+      errors.push(`Row ${rowNum}: Invalid birthdate format (use YYYY-MM-DD)`)
+      return
+    }
+
+    // Generate username and password
+    const username = generateUsername(row.fullName, row.birthdate)
+    const password = generatePassword(row.fullName, row.birthdate)
+    const rfid = row.rfid?.trim() || ''
+
+    // Check if username already exists in database
+    if (existingUsernames.has(username.toLowerCase())) {
+      errors.push(`Row ${rowNum}: Username "${username}" already exists in database`)
+      return
+    }
+
+    // Check if username is duplicate within the import file
+    if (importUsernames.has(username.toLowerCase())) {
+      errors.push(`Row ${rowNum}: Duplicate username "${username}" found in import file`)
+      return
+    }
+
+    // Check if RFID already exists in database (only if RFID is provided)
+    if (rfid && existingRFIDs.has(rfid.toLowerCase())) {
+      errors.push(`Row ${rowNum}: RFID "${rfid}" already exists in database`)
+      return
+    }
+
+    // Check if RFID is duplicate within the import file (only if RFID is provided)
+    if (rfid && importRFIDs.has(rfid.toLowerCase())) {
+      errors.push(`Row ${rowNum}: Duplicate RFID "${rfid}" found in import file`)
+      return
+    }
+
+    // Add to tracking sets
+    importUsernames.add(username.toLowerCase())
+    if (rfid) {
+      importRFIDs.add(rfid.toLowerCase())
+    }
+
+    // Prepare preview data
+    preview.push({
+      fullName: row.fullName.trim(),
+      username: username,
+      password: password,
+      birthdate: row.birthdate,
+      rfid: rfid,
+      balance: parseFloat(row.balance) || 0
+    })
+  })
+
+  if (errors.length > 0) {
+    importValidation.value = {
+      checked: true,
+      valid: false,
+      message: `Found ${errors.length} validation error(s)`,
+      errors: errors.slice(0, 20) // Show first 20 errors
+    }
+    importPreview.value = []
+  } else {
+    importValidation.value = {
+      checked: true,
+      valid: true,
+      message: `File validated successfully! ${preview.length} customers ready to import.`,
+      errors: []
+    }
+    importPreview.value = preview
+  }
+}
+
+const processImport = async () => {
+  if (importPreview.value.length === 0) return
+
+  importProgress.value = {
+    importing: true,
+    current: 0,
+    total: importPreview.value.length
+  }
+
+  importResults.value = {
+    completed: false,
+    success: 0,
+    failed: 0,
+    errors: []
+  }
+
+  for (const customer of importPreview.value) {
+    try {
+      // Generate a unique RFID if not provided
+      const rfid = customer.rfid || `AUTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      
+      const response = await api.post('/customers', {
+        rfid: rfid,
+        fullName: customer.fullName,
+        username: customer.username,
+        password: customer.password,
+        birthday: customer.birthdate,
+        balance: customer.balance
+      })
+
+      if (response.data.success) {
+        importResults.value.success++
+      } else {
+        importResults.value.failed++
+        importResults.value.errors.push(`${customer.fullName}: ${response.data.message}`)
+      }
+    } catch (error) {
+      importResults.value.failed++
+      const errorMsg = error.response?.data?.message || error.message
+      importResults.value.errors.push(`${customer.fullName}: ${errorMsg}`)
+    }
+
+    importProgress.value.current++
+  }
+
+  importProgress.value.importing = false
+  importResults.value.completed = true
+
+  if (importResults.value.success > 0) {
+    showToast(`Successfully imported ${importResults.value.success} customer(s)`, 'success')
+    await fetchCustomers()
+  }
+
+  if (importResults.value.failed > 0) {
+    showToast(`${importResults.value.failed} customer(s) failed to import`, 'error')
+  }
+}
+
+const exportCustomers = () => {
+  if (customers.value.length === 0) {
+    showToast('No customers to export', 'warning')
+    return
+  }
+
+  // Prepare CSV data
+  const csvData = customers.value.map(customer => ({
+    rfid: customer.rfid || '',
+    fullName: customer.fullName,
+    username: customer.username,
+    birthdate: customer.birthday ? new Date(customer.birthday).toISOString().split('T')[0] : '',
+    balance: customer.balance,
+    status: customer.status
+  }))
+
+  // Convert to CSV using PapaParse
+  const csv = Papa.unparse(csvData)
+
+  // Create download link
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', `customers_export_${new Date().toISOString().split('T')[0]}.csv`)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  showToast(`Exported ${customers.value.length} customers`, 'success')
+}
+
+const downloadSampleFile = () => {
+  const sampleData = [
+    {
+      rfid: 'RFID123456',
+      fullName: 'Juan Dela Cruz',
+      birthdate: '1990-05-15',
+      balance: 100
+    },
+    {
+      rfid: 'RFID789012',
+      fullName: 'Maria Santos',
+      birthdate: '1985-12-25',
+      balance: 500
+    },
+    {
+      rfid: '',
+      fullName: 'Pedro Reyes',
+      birthdate: '2000-03-10',
+      balance: 0
+    }
+  ]
+
+  const csv = Papa.unparse(sampleData)
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', 'customer_import_sample.csv')
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  showToast('Sample file downloaded', 'success')
 }
 
 onMounted(async () => {

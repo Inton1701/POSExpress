@@ -104,6 +104,8 @@ build_linux() {
     print_status "Building Linux Packages (AppImage + DEB)..."
     
     cd frontend
+    # Fix permissions on dist directory before building
+    sudo chown -R posexpress:posexpress dist/ 2>/dev/null || true
     npm run build:electron:linux
     cd ..
     

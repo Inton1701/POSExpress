@@ -143,7 +143,7 @@
           </div>
           
           <!-- Products View -->
-          <div v-if="!viewingVariants" class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+          <div v-if="!viewingVariants" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
           <!-- Loading state -->
           <div v-if="isLoading" class="col-span-full text-center py-12 text-gray-500">
             Loading products...
@@ -158,49 +158,58 @@
             v-for="product in filteredProducts" 
             :key="product._id" 
             @click="handleProductClick(product)" 
-            class="relative font-bold p-2 flex items-center justify-center aspect-square bg-green-500 hover:bg-green-600 text-white"
+            class="relative font-bold p-2 flex flex-col items-center justify-center aspect-square bg-green-500 hover:bg-green-600 text-white overflow-hidden"
           >
-            <span class="text-sm text-center">{{ product.name }}</span>
-            <!-- Stock indicator -->
-            <div v-if="getStockStatus(product) !== 'ok'" class="absolute top-1 right-1">
+            <!-- Stock indicator at top left -->
+            <div v-if="getStockStatus(product) !== 'ok'" class="absolute top-1 left-1">
               <span v-if="getStockStatus(product) === 'out'" class="bg-red-600 text-white text-xs px-2 py-1 font-bold">SOLD OUT</span>
-              <span v-else-if="getStockStatus(product) === 'low'" class="bg-yellow-500 text-white text-xs px-2 py-1 font-bold">!</span>
+              <span v-else-if="getStockStatus(product) === 'low'" class="bg-yellow-500 text-white text-xs px-2 py-1 font-bold">LOW</span>
             </div>
+            
+            <span class="text-lg sm:text-xl md:text-xl lg:text-2xl xl:text-2xl text-center font-bold leading-tight line-clamp-3 px-1">{{ product.name }}</span>
+            
+            <!-- Show stock count only if product has no variants - bottom right -->
+            <span v-if="!productsWithVariants.has(String(product._id))" class="absolute bottom-1 right-2 text-xs sm:text-xs md:text-sm font-semibold bg-black bg-opacity-40 px-1.5 py-0.5 rounded">{{ product.quantity || 0 }}</span>
           </button>
         </div>
         
         <!-- Variants View -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
           <button 
             v-for="variant in selectedProductVariants" 
             :key="variant._id" 
             @click="addVariantToOrder(variant)"
             :disabled="getVariantStockStatus(variant) === 'out'"
             :class="[
-              'relative font-bold p-2 flex items-center justify-center aspect-square',
+              'relative font-bold p-2 flex flex-col items-center justify-center aspect-square overflow-hidden',
               getVariantStockStatus(variant) === 'out' ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'
             ]"
           >
-            <span class="text-sm text-center">{{ variant.value }} - ₱{{ variant.price.toFixed(2) }}</span>
-            <!-- Variant stock indicator -->
-            <div v-if="getVariantStockStatus(variant) !== 'ok'" class="absolute top-1 right-1">
+            <!-- Variant stock indicator at top left -->
+            <div v-if="getVariantStockStatus(variant) !== 'ok'" class="absolute top-1 left-1">
               <span v-if="getVariantStockStatus(variant) === 'out'" class="bg-red-600 text-white text-xs px-2 py-1 font-bold">SOLD OUT</span>
-              <span v-else-if="getVariantStockStatus(variant) === 'low'" class="bg-yellow-500 text-white text-xs px-2 py-1 font-bold">!</span>
+              <span v-else-if="getVariantStockStatus(variant) === 'low'" class="bg-yellow-500 text-white text-xs px-2 py-1 font-bold">LOW</span>
             </div>
+            
+            <span class="text-lg sm:text-xl md:text-xl lg:text-2xl xl:text-2xl text-center font-bold leading-tight line-clamp-2 px-1 mb-1">{{ variant.value }}</span>
+            <span class="text-base sm:text-base md:text-lg lg:text-lg">₱{{ variant.price.toFixed(2) }}</span>
+            
+            <!-- Stock at bottom right -->
+            <span class="absolute bottom-1 right-2 text-xs sm:text-xs md:text-sm font-semibold bg-black bg-opacity-40 px-1.5 py-0.5 rounded">{{ variant.quantity || 0 }}</span>
           </button>
         </div>
         </div>
       </div>
 
       <!-- Categories (Right Sidebar) -->
-      <div class="w-40 bg-orange-500 flex flex-col">
+      <div class="w-40 bg-white flex flex-col shadow-lg border-l border-gray-200">
         <!-- Quick Adjust for Last Item -->
-        <div class="bg-orange-600 border-b border-orange-700 flex">
+        <div class="bg-gray-50 border-b border-gray-200 flex">
           <button 
             @click="adjustLastItem(-1)" 
             :disabled="orderItems.length === 0"
             :class="orderItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'"
-            class="bg-red-500 text-white font-bold flex-1 py-3 text-xl"
+            class="bg-red-500 text-white font-bold flex-1 py-3 text-xl transition-colors"
           >
             -
           </button>
@@ -208,7 +217,7 @@
             @click="adjustLastItem(1)" 
             :disabled="orderItems.length === 0"
             :class="orderItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'"
-            class="bg-green-500 text-white font-bold flex-1 py-3 text-xl"
+            class="bg-green-500 text-white font-bold flex-1 py-3 text-xl transition-colors"
           >
             +
           </button>
@@ -220,8 +229,8 @@
             v-for="category in categories" 
             :key="category._id"
             @click="selectedCategory = category._id"
-            :class="selectedCategory === category._id ? 'bg-orange-700' : 'bg-orange-500 hover:bg-orange-600'"
-            class="w-full text-white font-bold py-6 px-4 border-b border-orange-600 text-sm"
+            :class="selectedCategory === category._id ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50'"
+            class="w-full font-semibold py-8 px-4 border-b border-gray-200 text-base transition-all duration-200"
           >
             {{ category.name }}
           </button>
@@ -232,17 +241,17 @@
     <!-- Action Buttons at Bottom (Static) -->
     <div class="bg-white border-t p-2">
       <div class="grid grid-cols-3 gap-2">
-        <button @click="openVoidModal" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 text-base">
+        <button @click="openVoidModal" class="bg-red-500 hover:bg-red-600 text-white font-bold py-6 text-lg">
           Void
         </button>
-        <button @click="openRefundModal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 text-base">
+        <button @click="openRefundModal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-6 text-lg">
           Refund
         </button>
         <button 
           @click="openPayModal" 
           :disabled="orderItems.length === 0"
           :class="orderItems.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'"
-          class="text-white font-bold py-4 text-base"
+          class="text-white font-bold py-6 text-lg"
         >
           Pay
         </button>
@@ -614,6 +623,14 @@
           </div>
           
           <button 
+            @click="verifyCashInRfid"
+            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 text-lg transition-colors"
+          >
+            <font-awesome-icon icon="credit-card" class="text-xl" />
+            Confirm
+          </button>
+          
+          <button 
             @click="closeCashInVerificationModal" 
             class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-xl">
             Back to Amount
@@ -863,6 +880,46 @@
             </div>
           </div>
         </div>
+
+        <!-- System Control Section -->
+        <div class="border-b pb-4">
+          <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <font-awesome-icon icon="cog" class="text-gray-600" />
+            System Controls
+          </h3>
+          <div class="grid grid-cols-2 gap-3">
+            <button 
+              @click="toggleFullScreen" 
+              class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+            >
+              <font-awesome-icon icon="expand" />
+              Full Screen
+            </button>
+            <button 
+              @click="reloadApp" 
+              class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+            >
+              <font-awesome-icon icon="sync-alt" />
+              Reload
+            </button>
+            <button 
+              v-if="isElectron" 
+              @click="rebootSystem" 
+              class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+            >
+              <font-awesome-icon icon="redo" />
+              Reboot System
+            </button>
+            <button 
+              v-if="isElectron" 
+              @click="shutdownSystem" 
+              class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+            >
+              <font-awesome-icon icon="power-off" />
+              Shutdown
+            </button>
+          </div>
+        </div>
       </div>
       
       <div class="flex gap-4 mt-6">
@@ -1057,6 +1114,28 @@
       </div>
     </Modal>
 
+    <!-- Payment Processing Modal -->
+    <Modal :is-open="isPaymentProcessing" title="Processing Payment" :show-close="false">
+      <div class="text-center py-8">
+        <div class="mb-6">
+          <font-awesome-icon icon="spinner" class="text-6xl text-blue-500 animate-spin" />
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-3">{{ paymentProcessingMessage }}</h3>
+        <p class="text-gray-600">Please wait while we process your transaction...</p>
+      </div>
+    </Modal>
+
+    <!-- Printing Receipt Modal -->
+    <Modal :is-open="isPrintingReceipt" title="Printing Receipt" :show-close="false">
+      <div class="text-center py-8">
+        <div class="mb-6">
+          <font-awesome-icon icon="print" class="text-6xl text-purple-500 animate-pulse" />
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-3">Printing receipt...</h3>
+        <p class="text-gray-600">Please wait while we print your receipt</p>
+      </div>
+    </Modal>
+
     <!-- Toast Notification Component -->
     <Toast ref="toastRef" />
   </div>
@@ -1126,6 +1205,9 @@ const balanceError = ref('')
 const currentUser = ref(null)
 const currentStore = ref(null)
 const isLoading = ref(false)
+const isPrintingReceipt = ref(false)
+const isPaymentProcessing = ref(false)
+const paymentProcessingMessage = ref('')
 const barcodeValue = ref('')
 const productsWithVariants = ref(new Set())
 const manualBarcode = ref('')
@@ -1694,6 +1776,9 @@ const openRefundModal = () => {
   refundTransactionId.value = ''
   refundError.value = ''
   isRefundModalOpen.value = true
+  nextTick(() => {
+    transactionIdInput.value?.focus()
+  })
 }
 
 const openPayModal = () => {
@@ -1788,6 +1873,10 @@ const processCashPayment = async () => {
     return
   }
 
+  // Show loading modal
+  isPaymentProcessing.value = true
+  paymentProcessingMessage.value = 'Processing cash payment...'
+
   try {
     const cash = parseFloat(cashAmount.value)
     const change = changeAmount.value
@@ -1854,6 +1943,7 @@ const processCashPayment = async () => {
           storeName: currentStore.value?.storeName || '',
           address: currentStore.value?.address || '',
           contact: currentStore.value?.contact || '',
+          tin: currentStore.value?.tin || '',
           vatConfig: {
             type: vatConfig.value.type,
             value: Number(vatConfig.value.value)
@@ -1862,7 +1952,12 @@ const processCashPayment = async () => {
         
         if (printMode.value === 'auto') {
           // Auto print immediately
-          await printThermalReceipt(printData, selectedPrinter.value)
+          isPrintingReceipt.value = true
+          try {
+            await printThermalReceipt(printData, selectedPrinter.value)
+          } finally {
+            isPrintingReceipt.value = false
+          }
         } else if (printMode.value === 'manual') {
           // Show confirmation modal
           pendingPrintData.value = printData
@@ -1878,6 +1973,10 @@ const processCashPayment = async () => {
       isCashPaymentModalOpen.value = false
       cashAmount.value = ''
       
+      // Refresh products to update stock
+      await fetchProducts()
+      await fetchProductsWithVariants()
+      
       setTimeout(() => {
         showChange.value = false
       }, 3000)
@@ -1885,6 +1984,9 @@ const processCashPayment = async () => {
   } catch (error) {
     console.error('Payment error:', error)
     showAlertModal('Payment failed: ' + (error.response?.data?.message || error.message), 'Payment Error')
+  } finally {
+    // Hide loading modal
+    isPaymentProcessing.value = false
   }
 }
 
@@ -1902,6 +2004,10 @@ const processRfidPayment = async () => {
     showAlertModal('Transaction session is not active. Please contact administrator to start the session.', 'Session Inactive')
     return
   }
+
+  // Show loading modal
+  isPaymentProcessing.value = true
+  paymentProcessingMessage.value = 'Processing E-wallet payment...'
 
   try {
     // Prepare cart items for transaction
@@ -1984,6 +2090,7 @@ const processRfidPayment = async () => {
           storeName: currentStore.value?.storeName || '',
           address: currentStore.value?.address || '',
           contact: currentStore.value?.contact || '',
+          tin: currentStore.value?.tin || '',
           vatConfig: {
             type: vatConfig.value.type,
             value: Number(vatConfig.value.value)
@@ -1992,7 +2099,12 @@ const processRfidPayment = async () => {
         
         if (printMode.value === 'auto') {
           // Auto print immediately
-          await printThermalReceipt(printData, selectedPrinter.value)
+          isPrintingReceipt.value = true
+          try {
+            await printThermalReceipt(printData, selectedPrinter.value)
+          } finally {
+            isPrintingReceipt.value = false
+          }
         } else if (printMode.value === 'manual') {
           // Show confirmation modal
           pendingPrintData.value = printData
@@ -2008,10 +2120,17 @@ const processRfidPayment = async () => {
       isRfidPaymentModalOpen.value = false
       rfidCustomer.value = null
       rfidPaymentValue.value = ''
+      
+      // Refresh products to update stock
+      await fetchProducts()
+      await fetchProductsWithVariants()
     }
   } catch (error) {
     console.error('Payment error:', error)
     showAlertModal('Payment failed: ' + (error.response?.data?.message || error.message), 'Payment Error')
+  } finally {
+    // Hide loading modal
+    isPaymentProcessing.value = false
   }
 }
 
@@ -2078,19 +2197,30 @@ const printBalanceReceipt = async () => {
     date: new Date().toISOString(),
     storeName: String(currentStore.value?.storeName || ''),
     address: String(currentStore.value?.address || ''),
-    contact: String(currentStore.value?.contact || '')
+    contact: String(currentStore.value?.contact || ''),
+    tin: String(currentStore.value?.tin || '')
   }
 
   try {
     if (printMode.value === 'auto' && selectedPrinter.value) {
-      await printThermalReceipt(receiptData, selectedPrinter.value)
-      showToast('Receipt printed successfully', 'success')
+      isPrintingReceipt.value = true
+      try {
+        await printThermalReceipt(receiptData, selectedPrinter.value)
+        showToast('Receipt printed successfully', 'success')
+      } finally {
+        isPrintingReceipt.value = false
+      }
     } else if (printMode.value === 'manual') {
       pendingPrintData.value = receiptData
       isPrintConfirmModalOpen.value = true
     } else {
-      await printThermalReceipt(receiptData, selectedPrinter.value)
-      showToast('Receipt printed successfully', 'success')
+      isPrintingReceipt.value = true
+      try {
+        await printThermalReceipt(receiptData, selectedPrinter.value)
+        showToast('Receipt printed successfully', 'success')
+      } finally {
+        isPrintingReceipt.value = false
+      }
     }
   } catch (error) {
     console.error('Print error:', error)
@@ -2224,13 +2354,6 @@ const processPayment = () => {
 }
 
 const processCashIn = async () => {
-  // Check session status
-  const isSessionActive = await checkSessionStatus()
-  if (!isSessionActive) {
-    showAlertModal('Transaction session is not active. Cash-in operations are disabled.', 'Session Inactive')
-    return
-  }
-
   const amount = parseFloat(cashInAmount.value)
   if (!amount || amount <= 0) {
     showAlertModal('Please enter a valid amount', 'Invalid Amount')
@@ -2272,14 +2395,20 @@ const processCashIn = async () => {
         date: new Date().toISOString(),
         storeName: String(currentStore.value?.storeName || ''),
         address: String(currentStore.value?.address || ''),
-        contact: String(currentStore.value?.contact || '')
+        contact: String(currentStore.value?.contact || ''),
+        tin: String(currentStore.value?.tin || '')
       }
       
       // Print receipt based on mode
       try {
         if (printMode.value === 'auto' && selectedPrinter.value) {
-          await printThermalReceipt(receiptData, selectedPrinter.value)
-          showToast(`₱${amount.toFixed(2)} added successfully. Receipt printed.`, 'success')
+          isPrintingReceipt.value = true
+          try {
+            await printThermalReceipt(receiptData, selectedPrinter.value)
+            showToast(`₱${amount.toFixed(2)} added successfully. Receipt printed.`, 'success')
+          } finally {
+            isPrintingReceipt.value = false
+          }
         } else if (printMode.value === 'manual') {
           pendingPrintData.value = receiptData
           isPrintConfirmModalOpen.value = true
@@ -2495,6 +2624,7 @@ const processRefund = async () => {
         storeName: String(currentStore.value?.storeName || ''),
         address: String(currentStore.value?.address || ''),
         contact: String(currentStore.value?.contact || ''),
+        tin: String(currentStore.value?.tin || ''),
         vatConfig: {
           type: String(vatConfig.value.type),
           value: Number(vatConfig.value.value)
@@ -2503,9 +2633,14 @@ const processRefund = async () => {
 
       try {
         if (printMode.value === 'auto' && selectedPrinter.value) {
-          await printThermalReceipt(printData, selectedPrinter.value)
-          if (refundTransaction.value.paymentMethod !== 'E-wallet') {
-            showToast('Refund processed and receipt printed', 'success')
+          isPrintingReceipt.value = true
+          try {
+            await printThermalReceipt(printData, selectedPrinter.value)
+            if (refundTransaction.value.paymentMethod !== 'E-wallet') {
+              showToast('Refund processed and receipt printed', 'success')
+            }
+          } finally {
+            isPrintingReceipt.value = false
           }
         } else {
           pendingPrintData.value = printData
@@ -2830,6 +2965,58 @@ const openSettingsModal = () => {
   isSettingsModalOpen.value = true
 }
 
+const toggleFullScreen = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      showToast('Failed to enter fullscreen mode', 'error')
+    })
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    }
+  }
+}
+
+const reloadApp = () => {
+  window.location.reload()
+}
+
+const rebootSystem = async () => {
+  if (!isElectron.value) return
+  
+  const confirmed = confirm('Are you sure you want to reboot the system? This will close all applications.')
+  if (!confirmed) return
+  
+  try {
+    if (process.platform === 'win32') {
+      await window.electronAPI.executeCommand('shutdown /r /t 5')
+    } else if (process.platform === 'linux') {
+      await window.electronAPI.executeCommand('sudo reboot')
+    }
+    showToast('System will reboot in 5 seconds...', 'info')
+  } catch (error) {
+    showToast('Failed to reboot system. You may need administrator privileges.', 'error')
+  }
+}
+
+const shutdownSystem = async () => {
+  if (!isElectron.value) return
+  
+  const confirmed = confirm('Are you sure you want to shutdown the system? This will close all applications.')
+  if (!confirmed) return
+  
+  try {
+    if (process.platform === 'win32') {
+      await window.electronAPI.executeCommand('shutdown /s /t 5')
+    } else if (process.platform === 'linux') {
+      await window.electronAPI.executeCommand('sudo shutdown -h now')
+    }
+    showToast('System will shutdown in 5 seconds...', 'info')
+  } catch (error) {
+    showToast('Failed to shutdown system. You may need administrator privileges.', 'error')
+  }
+}
+
 const saveSettings = async () => {
   try {
     const user = auth.getUser()
@@ -2919,12 +3106,15 @@ const loadPrinterPreference = async () => {
 
 const confirmPrint = async () => {
   if (pendingPrintData.value) {
+    isPrintingReceipt.value = true
     try {
       await printThermalReceipt(pendingPrintData.value, selectedPrinter.value)
       showToast('Receipt printed successfully', 'success')
     } catch (error) {
       console.error('Print error:', error)
       showAlertModal('Failed to print receipt: ' + error.message, 'Print Error')
+    } finally {
+      isPrintingReceipt.value = false
     }
     isPrintConfirmModalOpen.value = false
     pendingPrintData.value = null

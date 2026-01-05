@@ -145,6 +145,8 @@ read -p "Do you want to build the Electron app? (y/n) [y]: " BUILD_ELECTRON
 BUILD_ELECTRON=${BUILD_ELECTRON:-y}
 
 if [[ "$BUILD_ELECTRON" =~ ^[Yy]$ ]]; then
+    # Fix permissions on dist directory before building
+    sudo chown -R posexpress:posexpress dist/ 2>/dev/null || true
     npm run build:electron:linux
     echo -e "${GREEN}✓ Electron app built successfully${NC}"
     echo -e "${GREEN}  Output: $FRONTEND_DIR/dist-electron/${NC}"

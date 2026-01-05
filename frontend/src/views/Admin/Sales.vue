@@ -945,6 +945,7 @@ const fetchSessionStatus = async () => {
     
     if (response.data.success) {
       sessionStatus.value = response.data.session
+      hasActiveSession.value = response.data.session?.isActive || false
     }
   } catch (error) {
     console.error('Error fetching session status:', error)
@@ -957,6 +958,7 @@ const fetchSalesReport = async () => {
     const response = await api.get('/transactions/sales-report')
     if (response.data.success) {
       hasActiveSession.value = response.data.hasActiveSession || false
+      sessionStatus.value = { ...sessionStatus.value, isActive: response.data.hasActiveSession || false }
       summary.value = response.data.summary
       productSales.value = response.data.productSales
     }
@@ -1003,6 +1005,9 @@ const startSession = async () => {
     if (response.data.success) {
       showStartSessionModal.value = false
       showToast('Transaction session started successfully!', 'success')
+      // Update states immediately
+      sessionStatus.value = { isActive: true, startedAt: new Date().toISOString(), startedBy: employee }
+      hasActiveSession.value = true
       await fetchSessionStatus()
       await fetchSalesReport()
     }
@@ -1031,6 +1036,9 @@ const endSession = async () => {
     if (response.data.success) {
       showEndSessionModal.value = false
       showToast('Transaction session ended successfully!', 'success')
+      // Update states immediately
+      sessionStatus.value = { ...sessionStatus.value, isActive: false }
+      hasActiveSession.value = false
       await fetchSessionStatus()
       await fetchSalesReport()
       await fetchSalesHistory()

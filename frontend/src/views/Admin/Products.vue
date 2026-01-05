@@ -1289,7 +1289,10 @@ const submitForm = async () => {
           value: v.value,
           price: parseFloat(v.price) || 0,
           cost: parseFloat(v.cost) || 0,
-          sku: v.sku || `${form.value.sku}-${v.value.substring(0, 3).toUpperCase()}`
+          sku: v.sku || `${form.value.sku}-${v.value.substring(0, 3).toUpperCase()}`,
+          status: v.status || 'active',
+          quantity: v.quantity !== undefined ? parseFloat(v.quantity) : 0,
+          quantityAlert: v.quantityAlert !== undefined ? parseFloat(v.quantityAlert) : 5
         }))
       }
       await api.post('/variants', variantsData)
