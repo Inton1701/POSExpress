@@ -847,6 +847,14 @@
                   <font-awesome-icon icon="sync-alt" :class="{ 'animate-spin': isRefreshingPrinters }" />
                   Refresh
                 </button>
+                <button 
+                  @click="testPrint" 
+                  class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"
+                  :disabled="isRefreshingPrinters"
+                >
+                  <font-awesome-icon icon="print" />
+                  Test
+                </button>
               </div>
             </div>
             
@@ -940,6 +948,70 @@
       <div class="flex gap-4">
         <button @click="cancelPrint" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Skip</button>
         <button @click="confirmPrint" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-2xl flex items-center justify-center gap-2">
+
+    <!-- Admin Verification Modal for System Actions -->
+    <Modal :is-open="isAdminVerificationModalOpen" title="Administrator Verification Required" @close="closeAdminVerificationModal">
+      <div class="p-4">
+        <div class="mb-4 text-center">
+          <font-awesome-icon icon="shield-alt" class="text-6xl text-yellow-500" />
+          <p class="mt-4 text-gray-700">{{ adminVerificationMessage }}</p>
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-semibold mb-2">Verification Method</label>
+          <div class="flex gap-4 mb-4">
+            <button 
+              @click="adminVerificationMethod = 'password'" 
+              :class="adminVerificationMethod === 'password' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
+              class="flex-1 py-2 px-4 rounded-lg font-semibold"
+            >
+              Password
+            </button>
+            <button 
+              @click="adminVerificationMethod = 'rfid'" 
+              :class="adminVerificationMethod === 'rfid' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
+              class="flex-1 py-2 px-4 rounded-lg font-semibold"
+            >
+              RFID
+            </button>
+          </div>
+        </div>
+
+        <div v-if="adminVerificationMethod === 'password'" class="mb-4">
+          <label class="block text-sm font-semibold mb-2">Admin Password</label>
+          <input 
+            ref="adminPasswordInput"
+            type="password" 
+            v-model="adminPassword" 
+            @keyup.enter="verifyAdminCredentials"
+            class="w-full p-3 border rounded-lg"
+            placeholder="Enter admin password"
+          />
+        </div>
+
+        <div v-if="adminVerificationMethod === 'rfid'" class="mb-4">
+          <label class="block text-sm font-semibold mb-2">Admin RFID</label>
+          <input 
+            ref="adminRfidInput"
+            type="text" 
+            v-model="adminRfid" 
+            @keyup.enter="verifyAdminCredentials"
+            class="w-full p-3 border rounded-lg"
+            placeholder="Scan admin RFID"
+            autocomplete="off"
+          />
+        </div>
+
+        <div v-if="adminVerificationError" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+          {{ adminVerificationError }}
+        </div>
+      </div>
+      
+      <div class="flex gap-4">
+        <button @click="closeAdminVerificationModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="verifyAdminCredentials" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-2xl">Verify & Continue</button>
+      </div>
+    </Modal>
           <font-awesome-icon icon="print" />
           Print Receipt
         </button>
@@ -1229,6 +1301,17 @@ const sessionActive = ref(false)
 const isAlertModalOpen = ref(false)
 const alertModalTitle = ref('')
 const alertModalMessage = ref('')
+
+// Admin verification state
+const isAdminVerificationModalOpen = ref(false)
+const adminVerificationMethod = ref('password')
+const adminPassword = ref('')
+const adminRfid = ref('')
+const adminVerificationError = ref('')
+const adminVerificationMessage = ref('')
+const adminVerificationAction = ref(null)
+const adminPasswordInput = ref(null)
+const adminRfidInput = ref(null)
 
 // Data from backend
 const categories = ref([])
@@ -2984,9 +3067,71 @@ const reloadApp = () => {
 const rebootSystem = async () => {
   if (!isElectron.value) return
   
-  const confirmed = confirm('Are you sure you want to reboot the system? This will close all applications.')
-  if (!confirmed) return
+  // Require admin verification
+  adminVerificationMessage.value = 'System reboot requires administrator privileges. Please verify your credentials.'
+  adminVerificationAction.value = 'reboot'
+  isAdminVerificationModalOpen.value = true
+  nextTick(() => {
+    if (adminVerificationMethod.value === 'password') {
+      adminPasswordInput.value?.focus()
+    } else {
+      adminRfidInput.value?.focus()
+    }
+  })
+}
+
+const shutdownSystem = async () => {
+  if (!isElectron.value) return
   
+  // Require admin verification
+  adminVerificationMessage.value = 'System shutdown requires administrator privileges. Please verify your credentials.'
+  adminVerificationAction.value = 'shutdown'
+  isAdminVerificationModalOpen.value = true
+  nextTick(() => {
+    if (adminVerificationMethod.value === 'password') {
+      adminPasswordInput.value?.focus()
+    } else {
+      adminRfidInput.value?.focus()
+    }
+  })
+}
+
+const closeAdminVerificationModal = () => {
+  isAdminVerificationModalOpen.value = false
+  adminPassword.value = ''
+  adminRfid.value = ''
+  adminVerificationError.value = ''
+  adminVerificationAction.value = null
+}
+
+const verifyAdminCredentials = async () => {
+  adminVerificationError.value = ''
+  
+  try {
+    const credentials = adminVerificationMethod.value === 'password' 
+      ? { password: adminPassword.value }
+      : { rfid: adminRfid.value }
+    
+    const response = await api.post('/users/verify-admin', credentials)
+    
+    if (response.data.success) {
+      // Admin verified, execute the action
+      closeAdminVerificationModal()
+      
+      if (adminVerificationAction.value === 'reboot') {
+        await executeReboot()
+      } else if (adminVerificationAction.value === 'shutdown') {
+        await executeShutdown()
+      }
+    } else {
+      adminVerificationError.value = 'Invalid admin credentials'
+    }
+  } catch (error) {
+    adminVerificationError.value = error.response?.data?.message || 'Verification failed'
+  }
+}
+
+const executeReboot = async () => {
   try {
     if (process.platform === 'win32') {
       await window.electronAPI.executeCommand('shutdown /r /t 5')
@@ -2995,25 +3140,20 @@ const rebootSystem = async () => {
     }
     showToast('System will reboot in 5 seconds...', 'info')
   } catch (error) {
-    showToast('Failed to reboot system. You may need administrator privileges.', 'error')
+    showToast('Reboot failed. Run: sudo bash deploy-frontend.sh to configure permissions', 'error')
   }
 }
 
-const shutdownSystem = async () => {
-  if (!isElectron.value) return
-  
-  const confirmed = confirm('Are you sure you want to shutdown the system? This will close all applications.')
-  if (!confirmed) return
-  
+const executeShutdown = async () => {
   try {
     if (process.platform === 'win32') {
       await window.electronAPI.executeCommand('shutdown /s /t 5')
     } else if (process.platform === 'linux') {
-      await window.electronAPI.executeCommand('sudo shutdown -h now')
+      await window.electronAPI.executeCommand('sudo poweroff')
     }
     showToast('System will shutdown in 5 seconds...', 'info')
   } catch (error) {
-    showToast('Failed to shutdown system. You may need administrator privileges.', 'error')
+    showToast('Shutdown failed. Run: sudo bash deploy-frontend.sh to configure permissions', 'error')
   }
 }
 
@@ -3121,6 +3261,35 @@ const confirmPrint = async () => {
   }
 }
 
+const testPrint = async () => {
+  const testData = {
+    isTestPrint: true,
+    storeName: '',
+    address: '',
+    contact: '',
+    tin: '',
+    transactionId: 'TEST',
+    date: new Date().toISOString(),
+    employee: 'Test',
+    paymentMethod: 'Cash',
+    totalAmount: 0,
+    cash: 0,
+    change: 0,
+    cart: [{ name: 'TEST PRINT', quantity: 1, price: 0, isVattable: false }],
+    vatConfig: { type: 'percent', value: 0 }
+  }
+
+  try {
+    isPrintingReceipt.value = true
+    await printThermalReceipt(testData, selectedPrinter.value)
+    showToast('Test print sent', 'success')
+  } catch (error) {
+    showToast('Failed: ' + error.message, 'error')
+  } finally {
+    isPrintingReceipt.value = false
+  }
+}
+
 const cancelPrint = () => {
   isPrintConfirmModalOpen.value = false
   pendingPrintData.value = null
@@ -3162,6 +3331,19 @@ watch(unlockMethod, () => {
         unlockPasswordInput.value.focus()
       } else if (unlockMethod.value === 'rfid' && unlockRFIDInput.value) {
         unlockRFIDInput.value.focus()
+      }
+    })
+  }
+})
+
+// Watch adminVerificationMethod to refocus input
+watch(adminVerificationMethod, () => {
+  if (isAdminVerificationModalOpen.value) {
+    nextTick(() => {
+      if (adminVerificationMethod.value === 'password') {
+        adminPasswordInput.value?.focus()
+      } else {
+        adminRfidInput.value?.focus()
       }
     })
   }

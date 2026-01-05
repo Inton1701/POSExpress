@@ -96,6 +96,7 @@ router.get("/users", extractUserInfo, isCoAdminOrAdmin, UserController.getAllUse
 router.post("/users", extractUserInfo, isCoAdminOrAdmin, UserController.createUser);
 router.post("/users/verify-password", extractUserInfo, UserController.verifyPassword);
 router.post("/users/verify-rfid", extractUserInfo, UserController.verifyUserRFID);
+router.post("/users/verify-admin", UserController.verifyAdminCredentials);
 router.get("/users/:id", extractUserInfo, UserController.getUser);
 router.put("/users/:id", extractUserInfo, UserController.updateUser);
 router.delete("/users/:id", extractUserInfo, isAdmin, UserController.deleteUser);

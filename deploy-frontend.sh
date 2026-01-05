@@ -270,6 +270,75 @@ else
 fi
 
 echo ""
+echo -e "${YELLOW}[7/7] Configuring passwordless sudo for reboot/shutdown...${NC}"
+# Create sudoers file for POS system shutdown/reboot
+SUDOERS_FILE="/etc/sudoers.d/posexpress-system-control"
+cat > "$SUDOERS_FILE" << EOF
+# Allow user to reboot and shutdown without password for POS system
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/sbin/reboot, /usr/sbin/poweroff, /sbin/reboot, /sbin/poweroff
+EOF
+chmod 0440 "$SUDOERS_FILE"
+echo -e "${GREEN}✓ Configured passwordless sudo for reboot/shutdown${NC}"
+echo ""
+
+# Configure auto-login
+read -p "Enable auto-login for $ACTUAL_USER (no password required at boot)? (y/n) [y]: " ENABLE_AUTOLOGIN
+ENABLE_AUTOLOGIN=${ENABLE_AUTOLOGIN:-y}
+
+if [[ "$ENABLE_AUTOLOGIN" =~ ^[Yy]$ ]]; then
+    echo -e "${YELLOW}Configuring auto-login...${NC}"
+    
+    # Detect display manager and configure
+    if [ -f /etc/gdm3/custom.conf ]; then
+        # GDM3 (GNOME Display Manager)
+        echo -e "${BLUE}Detected GDM3 display manager${NC}"
+        sed -i 's/^#.*AutomaticLoginEnable.*=.*false/AutomaticLoginEnable = true/' /etc/gdm3/custom.conf
+        sed -i 's/^#.*AutomaticLogin.*=.*/AutomaticLogin = '"$ACTUAL_USER"'/' /etc/gdm3/custom.conf
+        
+        # If lines don't exist, add them
+        if ! grep -q "AutomaticLoginEnable" /etc/gdm3/custom.conf; then
+            sed -i '/\[daemon\]/a AutomaticLoginEnable = true' /etc/gdm3/custom.conf
+            sed -i '/AutomaticLoginEnable/a AutomaticLogin = '"$ACTUAL_USER" /etc/gdm3/custom.conf
+        fi
+        echo -e "${GREEN}✓ GDM3 auto-login configured${NC}"
+        
+    elif [ -f /etc/lightdm/lightdm.conf ]; then
+        # LightDM
+        echo -e "${BLUE}Detected LightDM display manager${NC}"
+        sed -i 's/^#.*autologin-user=.*/autologin-user='"$ACTUAL_USER"'/' /etc/lightdm/lightdm.conf
+        sed -i 's/^#.*autologin-user-timeout=.*/autologin-user-timeout=0/' /etc/lightdm/lightdm.conf
+        
+        # If lines don't exist, add them under [Seat:*]
+        if ! grep -q "autologin-user" /etc/lightdm/lightdm.conf; then
+            sed -i '/\[Seat:\*\]/a autologin-user='"$ACTUAL_USER" /etc/lightdm/lightdm.conf
+            sed -i '/autologin-user=/a autologin-user-timeout=0' /etc/lightdm/lightdm.conf
+        fi
+        echo -e "${GREEN}✓ LightDM auto-login configured${NC}"
+        
+    elif [ -f /etc/sddm.conf ] || [ -d /etc/sddm.conf.d ]; then
+        # SDDM (KDE)
+        echo -e "${BLUE}Detected SDDM display manager${NC}"
+        SDDM_CONF="/etc/sddm.conf.d/autologin.conf"
+        mkdir -p /etc/sddm.conf.d
+        cat > "$SDDM_CONF" << EOF
+[Autologin]
+User=$ACTUAL_USER
+Session=plasma
+EOF
+        echo -e "${GREEN}✓ SDDM auto-login configured${NC}"
+        
+    else
+        echo -e "${YELLOW}⚠ Could not detect display manager. Manual configuration may be required.${NC}"
+        echo -e "${YELLOW}Common display managers: GDM3, LightDM, SDDM${NC}"
+    fi
+    
+    echo -e "${GREEN}✓ Auto-login enabled for $ACTUAL_USER${NC}"
+    echo -e "${YELLOW}Note: Changes will take effect after reboot${NC}"
+else
+    echo -e "${YELLOW}Skipped auto-login configuration${NC}"
+fi
+
+echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Frontend Deployment Complete! 🚀${NC}"
 echo -e "${GREEN}========================================${NC}"

@@ -243,6 +243,91 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
       console.log(`Printing to: ${targetPrinter.name}`)
       console.log('Receipt data:', JSON.stringify(receiptData, null, 2))
       
+      // Handle test print - minimal output
+      if (receiptData.isTestPrint) {
+        const printWindow = new BrowserWindow({
+          width: 220,
+          height: 400,
+          show: true,
+          skipTaskbar: true,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+          }
+        })
+        
+        if (process.platform === 'linux' || process.platform === 'win32') {
+          printWindow.minimize()
+        }
+        
+        const testHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 24px;
+              font-weight: bold;
+              text-align: center;
+              padding: 20px;
+              width: 48mm;
+            }
+          </style>
+        </head>
+        <body>
+          <div>TEST PRINT</div>
+        </body>
+        </html>
+        `
+        
+        printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(testHTML))
+        
+        printWindow.webContents.on('did-finish-load', () => {
+          setTimeout(async () => {
+            if (process.platform === 'linux') {
+              try {
+                const image = await printWindow.webContents.capturePage()
+                const pngBuffer = image.toPNG()
+                printWindow.close()
+                
+                const tempImageFile = path.join(os.tmpdir(), `test-print-${Date.now()}.png`)
+                fs.writeFileSync(tempImageFile, pngBuffer)
+                
+                await printViaCUPS(targetPrinter.name, tempImageFile)
+                
+                setTimeout(() => {
+                  try { fs.unlinkSync(tempImageFile) } catch(e) {}
+                }, 10000)
+                
+                resolve({ success: true, printer: targetPrinter.name })
+              } catch (error) {
+                if (printWindow && !printWindow.isDestroyed()) printWindow.close()
+                reject(error)
+              }
+            } else {
+              const printOptions = {
+                silent: true,
+                deviceName: targetPrinter.name,
+                pageSize: { width: 58000, height: 100000 }
+              }
+              
+              printWindow.webContents.print(printOptions, (success, errorType) => {
+                printWindow.close()
+                if (success) {
+                  resolve({ success: true, printer: targetPrinter.name })
+                } else {
+                  reject(new Error(errorType || 'Print failed'))
+                }
+              })
+            }
+          }, 1000)
+        })
+        
+        return
+      }
+      
       // Generate barcode as base64 image (if transaction ID exists)
       let barcodeBase64 = ''
       if (receiptData.transactionId) {

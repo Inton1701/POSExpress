@@ -396,6 +396,67 @@ const user = {
                 error: error.message 
             });
         }
+    }),
+
+    // Verify admin credentials for system actions (shutdown, reboot)
+    verifyAdminCredentials: asyncHandler(async (req, res) => {
+        try {
+            const { password, rfid } = req.body;
+
+            if (!password && !rfid) {
+                return res.status(400).json({ success: false, message: 'Password or RFID is required' });
+            }
+
+            let user;
+
+            if (password) {
+                // Find all admins and Co-Admins
+                const admins = await User.find({ 
+                    role: { $in: ['Admin', 'Co-Admin'] },
+                    status: 'active'
+                });
+
+                // Check password against all admin users
+                for (const admin of admins) {
+                    const isPasswordValid = await bcrypt.compare(password, admin.password);
+                    if (isPasswordValid) {
+                        user = admin;
+                        break;
+                    }
+                }
+
+                if (!user) {
+                    return res.status(401).json({ success: false, message: 'Invalid admin credentials' });
+                }
+            } else if (rfid) {
+                // Find admin by RFID
+                user = await User.findOne({ 
+                    rfid: rfid,
+                    role: { $in: ['Admin', 'Co-Admin'] },
+                    status: 'active'
+                });
+
+                if (!user) {
+                    return res.status(401).json({ success: false, message: 'Invalid admin credentials' });
+                }
+            }
+
+            res.status(200).json({ 
+                success: true, 
+                message: 'Admin verified',
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    role: user.role
+                }
+            });
+        } catch (error) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Failed to verify admin credentials', 
+                error: error.message 
+            });
+        }
     })
 };
 
