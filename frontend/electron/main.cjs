@@ -7,7 +7,6 @@ const { exec } = require('child_process')
 const bwipjs = require('bwip-js')
 
 let mainWindow
-let secondWindow
 
 function createWindow() {
   // Determine correct paths for packaged vs unpackaged app
@@ -15,9 +14,13 @@ function createWindow() {
     ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.cjs')
     : path.join(__dirname, 'preload.cjs')
   
+  // On Linux production, start fullscreen
+  const isLinuxProduction = process.platform === 'linux' && app.isPackaged
+  
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    fullscreen: isLinuxProduction,
     show: false, // Don't show window until ready
     webPreferences: {
       nodeIntegration: false,
@@ -30,126 +33,60 @@ function createWindow() {
   global.API_URL = process.env.API_URL || 'http://localhost:5000/api'
 
   // Load your Vue app
-  // Check if running in development mode OR if app is NOT packaged
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
-  
-  if (isDev && process.env.NODE_ENV === 'development') {
-    // Only use dev server if explicitly in development mode
+  if (process.env.NODE_ENV === 'development') {
+    // Development mode - use Vite dev server
     mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools() // Open dev tools in development
+    mainWindow.webContents.openDevTools()
   } else {
-    // In production, load from dist folder using url.format
+    // Production mode - load from dist folder
     const indexPath = app.isPackaged
       ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
       : path.join(__dirname, '../dist/index.html')
     
+    console.log('=== Electron App Starting ===')
+    console.log('Platform:', process.platform)
     console.log('App packaged:', app.isPackaged)
     console.log('NODE_ENV:', process.env.NODE_ENV)
     console.log('Loading index from:', indexPath)
     console.log('File exists:', fs.existsSync(indexPath))
+    console.log('Preload path:', preloadPath)
     
-    mainWindow.loadURL(url.format({
-      pathname: indexPath,
-      protocol: 'file:',
-      slashes: true
-    })).catch(err => {
+    // Use loadFile instead of loadURL for better file:// handling
+    mainWindow.loadFile(indexPath).catch(err => {
       console.error('Failed to load:', err)
     })
   }
 
-  // Inject API URL into preload and show window when ready
-  mainWindow.webContents.on('did-finish-load', () => {
+  // Show window when DOM is ready (not waiting for all resources)
+  mainWindow.webContents.on('dom-ready', () => {
+    console.log('DOM ready - showing window')
     mainWindow.webContents.executeJavaScript(`
       window.__APP_CONFIG__ = {
         API_URL: '${global.API_URL}'
-      }
-    `).catch(() => {}) // Ignore errors from this injection
-    
-    // Show window after a delay to ensure Vue has fully rendered
-    setTimeout(() => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        if (process.platform === 'linux') {
-          // On Linux, minimize the first window
-          mainWindow.show()
-          mainWindow.minimize()
-        } else {
-          // On Windows, show normally
-          mainWindow.show()
-        }
-      }
-    }, 2000)
-    
-    // Open second window after 5 seconds (Linux only)
-    if (process.platform === 'linux') {
-      setTimeout(() => {
-        createSecondWindow()
-      }, 5000)
-    }
-  })
-}
-
-function createSecondWindow() {
-  const preloadPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.cjs')
-    : path.join(__dirname, 'preload.cjs')
-  
-  secondWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    fullscreen: true,
-    show: false,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: preloadPath
-    }
-  })
-
-  // Load the app in second window
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
-  
-  if (isDev && process.env.NODE_ENV === 'development') {
-    secondWindow.loadURL('http://localhost:5173')
-    secondWindow.webContents.openDevTools()
-  } else {
-    const indexPath = app.isPackaged
-      ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
-      : path.join(__dirname, '../dist/index.html')
-    
-    console.log('Second window - App packaged:', app.isPackaged)
-    console.log('Second window - NODE_ENV:', process.env.NODE_ENV)
-    console.log('Second window - Loading index from:', indexPath)
-    
-    secondWindow.loadURL(url.format({
-      pathname: indexPath,
-      protocol: 'file:',
-      slashes: true
-    })).catch(err => {
-      console.error('Failed to load second window:', err)
-    })
-  }
-
-  // Inject API URL and show second window
-  secondWindow.webContents.on('did-finish-load', () => {
-    secondWindow.webContents.executeJavaScript(`
-      window.__APP_CONFIG__ = {
-        API_URL: '${global.API_URL}'
-      }
+      };
     `).catch(() => {})
     
-    setTimeout(() => {
-      if (secondWindow && !secondWindow.isDestroyed()) {
-        secondWindow.show()
-        secondWindow.setFullScreen(true)
-        
-        // Close first window after 3 seconds
-        setTimeout(() => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.close()
-          }
-        }, 3000)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show()
+      if (process.platform === 'linux' && app.isPackaged) {
+        mainWindow.setFullScreen(true)
       }
-    }, 100)
+    }
+  })
+  
+  // Log when page finishes loading
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Page finished loading')
+  })
+  
+  // Add error handler
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('Failed to load:', errorCode, errorDescription, validatedURL)
+  })
+  
+  // Log console messages from renderer
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`Renderer [${level}]:`, message)
   })
 }
 

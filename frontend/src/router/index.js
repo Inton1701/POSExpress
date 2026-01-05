@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import Login from '../views/Login.vue'
 import AdminLayout from '../views/Admin/AdminLayout.vue'
 import Dashboard from '../views/Admin/Dashboard.vue'
@@ -19,8 +19,14 @@ import CustomerDashboard from '../views/Customer/CustomerDashboard.vue'
 import AccountingLayout from '../views/Accounting/AccountingLayout.vue'
 import CustomerTransactionHistory from '../views/Accounting/CustomerTransactionHistory.vue'
 
+// Use hash history for Electron (file:// protocol) and web history for browser
+const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined
+const history = isElectron || window.location.protocol === 'file:'
+  ? createWebHashHistory()
+  : createWebHistory(import.meta.env.BASE_URL)
+
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history,
   routes: [
     {
       path: '/',
