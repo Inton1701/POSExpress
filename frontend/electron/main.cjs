@@ -8,18 +8,23 @@ const bwipjs = require('bwip-js')
 let mainWindow
 
 function createWindow() {
+  // Determine correct paths for packaged vs unpackaged app
+  const preloadPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.cjs')
+    : path.join(__dirname, 'preload.cjs')
+  
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.cjs')
+      preload: preloadPath
     }
   })
 
   // Set global API URL before loading the app
-  global.API_URL = process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api' : 'http://localhost:5000/api')
+  global.API_URL = process.env.API_URL || 'http://localhost:5000/api'
 
   // Load your Vue app
   if (process.env.NODE_ENV === 'development') {
@@ -27,16 +32,17 @@ function createWindow() {
     mainWindow.webContents.openDevTools() // Open dev tools in development
   } else {
     // In production, load from dist folder
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    const indexPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
+      : path.join(__dirname, '../dist/index.html')
     
-    // Check if running from AppImage or portable executable
-    const isAppImage = process.env.APPIMAGE
-    const isPortable = process.env.PORTABLE_EXECUTABLE_DIR
+    console.log('App packaged:', app.isPackaged)
+    console.log('Loading index from:', indexPath)
+    console.log('File exists:', fs.existsSync(indexPath))
     
-    // For packaged app, set API URL based on environment
-    if (isAppImage || isPortable || process.platform === 'linux' || process.platform === 'win32') {
-      global.API_URL = process.env.API_URL || 'http://localhost:5000/api'
-    }
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error('Failed to load:', err)
+    })
   }
 
   // Inject API URL into preload
