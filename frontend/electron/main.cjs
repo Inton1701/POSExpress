@@ -30,7 +30,11 @@ function createWindow() {
   global.API_URL = process.env.API_URL || 'http://localhost:5000/api'
 
   // Load your Vue app
-  if (process.env.NODE_ENV === 'development') {
+  // Check if running in development mode OR if app is NOT packaged
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+  
+  if (isDev && process.env.NODE_ENV === 'development') {
+    // Only use dev server if explicitly in development mode
     mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools() // Open dev tools in development
   } else {
@@ -40,6 +44,7 @@ function createWindow() {
       : path.join(__dirname, '../dist/index.html')
     
     console.log('App packaged:', app.isPackaged)
+    console.log('NODE_ENV:', process.env.NODE_ENV)
     console.log('Loading index from:', indexPath)
     console.log('File exists:', fs.existsSync(indexPath))
     
@@ -101,13 +106,19 @@ function createSecondWindow() {
   })
 
   // Load the app in second window
-  if (process.env.NODE_ENV === 'development') {
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+  
+  if (isDev && process.env.NODE_ENV === 'development') {
     secondWindow.loadURL('http://localhost:5173')
     secondWindow.webContents.openDevTools()
   } else {
     const indexPath = app.isPackaged
       ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
       : path.join(__dirname, '../dist/index.html')
+    
+    console.log('Second window - App packaged:', app.isPackaged)
+    console.log('Second window - NODE_ENV:', process.env.NODE_ENV)
+    console.log('Second window - Loading index from:', indexPath)
     
     secondWindow.loadURL(url.format({
       pathname: indexPath,
