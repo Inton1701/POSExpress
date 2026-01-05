@@ -16,6 +16,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    show: false, // Don't show window until ready
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -45,13 +46,20 @@ function createWindow() {
     })
   }
 
-  // Inject API URL into preload
+  // Inject API URL into preload and show window when ready
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.executeJavaScript(`
       window.__APP_CONFIG__ = {
         API_URL: '${global.API_URL}'
       }
     `).catch(() => {}) // Ignore errors from this injection
+    
+    // Show window after a slight delay to ensure Vue has rendered
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show()
+      }
+    }, 100)
   })
 }
 

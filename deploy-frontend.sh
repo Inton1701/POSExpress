@@ -160,6 +160,19 @@ read -p "Do you want to build the Electron app? (y/n) [y]: " BUILD_ELECTRON
 BUILD_ELECTRON=${BUILD_ELECTRON:-y}
 
 if [[ "$BUILD_ELECTRON" =~ ^[Yy]$ ]]; then
+    echo "Performing clean install of Electron app..."
+    
+    # Stop the running service if it exists
+    if systemctl is-active --quiet posexpress-frontend 2>/dev/null; then
+        echo "Stopping running posexpress-frontend service..."
+        systemctl stop posexpress-frontend
+        sleep 2
+    fi
+    
+    # Remove old AppImage and other dist-electron files
+    echo "Cleaning old build files..."
+    sudo -u "$ACTUAL_USER" bash -c "cd '$FRONTEND_DIR' && rm -rf dist-electron"
+    
     echo "Building Electron app... This may take several minutes."
     sudo -u "$ACTUAL_USER" bash -c "cd '$FRONTEND_DIR' && npm run electron:build"
     echo -e "${GREEN}✓ Electron app built successfully${NC}"
@@ -192,11 +205,17 @@ if [[ "$ENABLE_AUTOSTART" =~ ^[Yy]$ ]]; then
         # Make it executable
         chmod +x "$APPIMAGE"
         
+        # Check and install FUSE if needed
+        if ! command -v fusermount &> /dev/null; then
+            echo -e "${YELLOW}FUSE not found. Installing libfuse2...${NC}"
+            apt install -y libfuse2 || echo -e "${YELLOW}Could not install libfuse2 automatically${NC}"
+        fi
+        
         SERVICE_NAME="posexpress-frontend"
         SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
         USER_HOME=$(eval echo "~$ACTUAL_USER")
         
-        # Create systemd service file
+        # Create systemd service file with --appimage-extract-and-run (no FUSE required)
         cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=RFID POS Express Frontend (Electron)
@@ -209,7 +228,7 @@ User=$ACTUAL_USER
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=${USER_HOME}/.Xauthority
 WorkingDirectory=$FRONTEND_DIR
-ExecStart=$APPIMAGE --no-sandbox
+ExecStart=$APPIMAGE --no-sandbox --appimage-extract-and-run
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
@@ -237,7 +256,7 @@ EOF
 [Desktop Entry]
 Name=RFID POS Express
 Comment=Point of Sale System
-Exec=$APPIMAGE --no-sandbox
+Exec=$APPIMAGE --no-sandbox --appimage-extract-and-run
 Icon=pos
 Terminal=false
 Type=Application

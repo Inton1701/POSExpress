@@ -33,7 +33,7 @@
   },
   "build": {
     "appId": "com.rfidpos.app",
-    "productName": "RFID POS System",
+    "productName": "RFID-POS-System",
     "directories": {
       "output": "dist-electron",
       "buildResources": "build"
