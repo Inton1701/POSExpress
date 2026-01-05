@@ -3048,20 +3048,38 @@ const openSettingsModal = () => {
   isSettingsModalOpen.value = true
 }
 
-const toggleFullScreen = () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(err => {
-      showToast('Failed to enter fullscreen mode', 'error')
-    })
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen()
+const toggleFullScreen = async () => {
+  try {
+    // Use Electron API if available
+    if (window.electronAPI?.toggleFullscreen) {
+      await window.electronAPI.toggleFullscreen()
+    } else {
+      // Fallback to browser fullscreen API
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        }
+      }
     }
+  } catch (err) {
+    showToast('Failed to toggle fullscreen mode', 'error')
   }
 }
 
-const reloadApp = () => {
-  window.location.reload()
+const reloadApp = async () => {
+  try {
+    // Use Electron API if available
+    if (window.electronAPI?.reloadApp) {
+      await window.electronAPI.reloadApp()
+    } else {
+      // Fallback to browser reload
+      window.location.reload()
+    }
+  } catch (err) {
+    showToast('Failed to reload application', 'error')
+  }
 }
 
 const rebootSystem = async () => {

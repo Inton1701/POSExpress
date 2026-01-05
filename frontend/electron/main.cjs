@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
+const url = require('url')
 const fs = require('fs')
 const os = require('os')
 const { exec } = require('child_process')
@@ -33,7 +34,7 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools() // Open dev tools in development
   } else {
-    // In production, load from dist folder
+    // In production, load from dist folder using url.format
     const indexPath = app.isPackaged
       ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
       : path.join(__dirname, '../dist/index.html')
@@ -42,7 +43,11 @@ function createWindow() {
     console.log('Loading index from:', indexPath)
     console.log('File exists:', fs.existsSync(indexPath))
     
-    mainWindow.loadFile(indexPath).catch(err => {
+    mainWindow.loadURL(url.format({
+      pathname: indexPath,
+      protocol: 'file:',
+      slashes: true
+    })).catch(err => {
       console.error('Failed to load:', err)
     })
   }
@@ -59,9 +64,9 @@ function createWindow() {
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         if (process.platform === 'linux') {
-          // On Linux, keep first window hidden (don't show it at all)
-          // It will load in background and be closed later
-          console.log('First window loaded, keeping hidden')
+          // On Linux, minimize the first window
+          mainWindow.show()
+          mainWindow.minimize()
         } else {
           // On Windows, show normally
           mainWindow.show()
@@ -104,7 +109,11 @@ function createSecondWindow() {
       ? path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html')
       : path.join(__dirname, '../dist/index.html')
     
-    secondWindow.loadFile(indexPath).catch(err => {
+    secondWindow.loadURL(url.format({
+      pathname: indexPath,
+      protocol: 'file:',
+      slashes: true
+    })).catch(err => {
       console.error('Failed to load second window:', err)
     })
   }
@@ -144,6 +153,25 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
+  }
+})
+
+// Toggle fullscreen handler
+ipcMain.handle('toggle-fullscreen', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  if (window) {
+    const isFullScreen = window.isFullScreen()
+    window.setFullScreen(!isFullScreen)
+    return !isFullScreen
+  }
+  return false
+})
+
+// Reload handler that preserves navigation
+ipcMain.handle('reload-app', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  if (window) {
+    window.reload()
   }
 })
 
