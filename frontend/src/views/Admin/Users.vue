@@ -52,10 +52,6 @@
               </button>
               <button v-if="canDeleteUser(user)" @click="deleteUser(user._id)" class="text-red-500 hover:text-red-700" title="Delete">
                 <font-awesome-icon :icon="['fas', 'trash']" class="text-lg" />
-                <font-awesome-icon :icon="['fas', 'edit']" />
-              </button>
-              <button v-if="canDeleteUser(user)" @click="deleteUser(user._id)" class="text-red-500 hover:text-red-700" title="Delete">
-                <font-awesome-icon :icon="['fas', 'trash']" />
               </button>
             </td>
           </tr>

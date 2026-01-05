@@ -57,7 +57,7 @@ router.get("/customers/:id", extractUserInfo, CustomerController.getCustomer);
 router.get("/customers/rfid/:rfid", extractUserInfo, CustomerController.getCustomerByRFID);
 router.put("/customers/:id", extractUserInfo, CustomerController.updateCustomer);
 router.put("/customers/:id/balance", extractUserInfo, CustomerController.updateBalance);
-router.delete("/customers/:id", extractUserInfo, isAdmin, CustomerController.deleteCustomer);
+router.delete("/customers/:id", extractUserInfo, canManageCustomers, CustomerController.deleteCustomer);
 
 // Discount routes (Admin & Co-Admin)
 router.get("/discounts", extractUserInfo, DiscountController.getAllDiscounts);
@@ -95,6 +95,7 @@ router.put("/transactions/:id/void", extractUserInfo, isCoAdminOrAdmin, Transact
 router.get("/users", extractUserInfo, isCoAdminOrAdmin, UserController.getAllUsers);
 router.post("/users", extractUserInfo, isCoAdminOrAdmin, UserController.createUser);
 router.post("/users/verify-password", extractUserInfo, UserController.verifyPassword);
+router.post("/users/verify-rfid", extractUserInfo, UserController.verifyUserRFID);
 router.get("/users/:id", extractUserInfo, UserController.getUser);
 router.put("/users/:id", extractUserInfo, UserController.updateUser);
 router.delete("/users/:id", extractUserInfo, isAdmin, UserController.deleteUser);

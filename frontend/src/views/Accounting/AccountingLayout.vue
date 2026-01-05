@@ -25,6 +25,10 @@
               <font-awesome-icon icon="history" />
               <span>Transaction History</span>
             </button>
+            <button @click="openProfileModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
+              <font-awesome-icon icon="user" />
+              <span>My Profile</span>
+            </button>
             <button @click="openSettingsModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
               <font-awesome-icon icon="cog" />
               <span>Settings</span>
@@ -685,10 +689,10 @@
     </Modal>
 
     <!-- Settings Modal -->
-    <Modal :is-open="isSettingsModalOpen" title="Settings" @close="isSettingsModalOpen = false" size="lg">
+    <Modal :is-open="isSettingsModalOpen" title="Printer Settings" @close="isSettingsModalOpen = false" size="lg">
       <div class="space-y-6">
         <!-- Printer Settings Section -->
-        <div class="border-b pb-4">
+        <div>
           <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
             <font-awesome-icon icon="print" class="text-blue-600" />
             Thermal Printer Settings
@@ -751,6 +755,117 @@
       <div class="flex gap-4 mt-6">
         <button @click="isSettingsModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
         <button @click="saveSettings" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-2xl">Save Settings</button>
+      </div>
+    </Modal>
+
+    <!-- Profile Modal -->
+    <Modal :is-open="isProfileModalOpen" title="My Profile" @close="closeProfileModal" size="md">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold mb-2">Username</label>
+          <input 
+            v-model="profileForm.username" 
+            type="text" 
+            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            placeholder="Enter new username"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">RFID <span class="text-gray-500 text-xs">(Optional)</span></label>
+          <input 
+            v-model="profileForm.rfid" 
+            type="text" 
+            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            placeholder="Scan or enter RFID"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">Current Password (required to save changes)</label>
+          <div class="relative">
+            <input 
+              v-model="profileForm.currentPassword" 
+              :type="showCurrentPassword ? 'text' : 'password'" 
+              class="w-full p-3 pr-12 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              placeholder="Enter current password"
+            />
+            <button
+              type="button"
+              @click="showCurrentPassword = !showCurrentPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              <svg v-if="!showCurrentPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">New Password <span class="text-gray-500 text-xs">(Optional - Leave blank to keep current)</span></label>
+          <div class="relative">
+            <input 
+              v-model="profileForm.newPassword" 
+              :type="showNewPassword ? 'text' : 'password'" 
+              class="w-full p-3 pr-12 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              placeholder="Enter new password"
+            />
+            <button
+              type="button"
+              @click="showNewPassword = !showNewPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              <svg v-if="!showNewPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">Confirm New Password</label>
+          <div class="relative">
+            <input 
+              v-model="profileForm.confirmPassword" 
+              :type="showConfirmPassword ? 'text' : 'password'" 
+              class="w-full p-3 pr-12 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              placeholder="Confirm new password"
+            />
+            <button
+              type="button"
+              @click="showConfirmPassword = !showConfirmPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              <svg v-if="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mt-4">
+          <p class="text-sm text-blue-700">
+            <strong>Note:</strong> Your current password is required to save any changes. Your role cannot be changed.
+          </p>
+        </div>
+      </div>
+      
+      <div class="flex gap-4 mt-6">
+        <button @click="closeProfileModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="saveProfile" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-2xl">Save Profile</button>
       </div>
     </Modal>
 
@@ -931,8 +1046,60 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
           </svg>
         </div>
-        <p class="text-lg text-gray-700 mb-2">Are you sure you want to delete this customer?</p>
-        <p class="text-sm text-gray-500">This action cannot be undone.</p>
+        <p class="text-lg font-bold text-gray-800 mb-2">Delete Customer Confirmation</p>
+        <p class="text-sm text-gray-600 mb-4">For security, verify your identity to delete this customer.</p>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 text-left">
+          <p class="text-sm text-gray-700">Please enter <strong>your own password</strong> or scan <strong>your own RFID</strong> to confirm.</p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-gray-700 font-semibold mb-2 text-left">Your Password</label>
+            <div class="relative">
+              <input 
+                v-model="deleteVerifyForm.password" 
+                :type="showDeletePassword ? 'text' : 'password'" 
+                placeholder="Enter your password"
+                @keyup.enter="confirmDeleteCustomer"
+                class="w-full p-3 pr-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-500" 
+                :disabled="!!deleteVerifyForm.rfid"
+              />
+              <button
+                type="button"
+                @click="showDeletePassword = !showDeletePassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                :disabled="!!deleteVerifyForm.rfid"
+              >
+                <svg v-if="!showDeletePassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="text-center text-gray-500 text-sm">- OR -</div>
+
+          <div>
+            <label class="block text-gray-700 font-semibold mb-2 text-left">Your RFID</label>
+            <input 
+              v-model="deleteVerifyForm.rfid" 
+              type="text" 
+              placeholder="Scan your RFID card"
+              @keyup.enter="confirmDeleteCustomer"
+              class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-500" 
+              :disabled="!!deleteVerifyForm.password"
+            />
+          </div>
+
+          <div v-if="deleteVerifyError" class="bg-red-50 border-2 border-red-300 rounded-lg p-3">
+            <p class="text-red-600 font-bold text-sm">{{ deleteVerifyError }}</p>
+          </div>
+        </div>
       </div>
       <div class="flex gap-4 mt-6">
         <button @click="cancelDeleteCustomer" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
@@ -1016,6 +1183,7 @@ const isRefreshingPrinters = ref(false)
 const isPrintConfirmModalOpen = ref(false)
 const pendingPrintTransaction = ref(null)
 const isSettingsModalOpen = ref(false)
+const isProfileModalOpen = ref(false)
 const printMode = ref('manual')
 const transactionSortColumn = ref('createdAt')
 const transactionSortDirection = ref('desc')
@@ -1029,6 +1197,23 @@ const importPreview = ref([])
 const importProgress = ref({ importing: false, current: 0, total: 0 })
 const importResults = ref({ completed: false, success: 0, failed: 0, errors: [] })
 const isPrintingReceipt = ref(false)
+const currentUser = ref(null)
+const deleteVerifyForm = ref({
+  password: '',
+  rfid: ''
+})
+const showDeletePassword = ref(false)
+const deleteVerifyError = ref('')
+const profileForm = ref({
+  username: '',
+  rfid: '',
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+const showCurrentPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const toastRef = ref(null)
 
@@ -1600,8 +1785,42 @@ const deleteCustomer = (customerId) => {
 
 const confirmDeleteCustomer = async () => {
   if (!customerToDelete.value) return
+  if (!currentUser.value) {
+    showToast('User session not found. Please log in again.', 'error')
+    return
+  }
+
+  // Check if either password or RFID is provided
+  if (!deleteVerifyForm.value.password && !deleteVerifyForm.value.rfid) {
+    deleteVerifyError.value = 'Please enter your password or scan your RFID to confirm'
+    return
+  }
 
   try {
+    // Verify user's password or RFID
+    if (deleteVerifyForm.value.password) {
+      const verifyResponse = await api.post('/users/verify-password', {
+        userId: currentUser.value._id,
+        password: deleteVerifyForm.value.password
+      })
+      
+      if (!verifyResponse.data.success) {
+        deleteVerifyError.value = 'Invalid password. Please try again.'
+        return
+      }
+    } else if (deleteVerifyForm.value.rfid) {
+      const verifyResponse = await api.post('/users/verify-rfid', {
+        userId: currentUser.value._id,
+        rfid: deleteVerifyForm.value.rfid
+      })
+      
+      if (!verifyResponse.data.success) {
+        deleteVerifyError.value = 'Invalid RFID. Please use your own RFID card.'
+        return
+      }
+    }
+
+    // If verification successful, proceed with deletion
     const response = await api.delete(`/customers/${customerToDelete.value}`)
     if (response.data.success) {
       showToast('Customer deleted successfully', 'success')
@@ -1611,16 +1830,34 @@ const confirmDeleteCustomer = async () => {
       await fetchCustomers()
     }
   } catch (error) {
-    showToast('Failed to delete customer', 'error')
+    if (error.response?.status === 401) {
+      deleteVerifyError.value = 'Verification failed. Please check your credentials.'
+    } else if (error.response?.status === 403) {
+      showToast('You do not have permission to delete customers', 'error')
+      cancelDeleteCustomer()
+    } else {
+      showToast(error.response?.data?.message || 'Failed to delete customer', 'error')
+    }
+    return
   } finally {
-    customerToDelete.value = null
-    isDeleteModalOpen.value = false
+    // Only close if successful
+    if (deleteVerifyError.value === '') {
+      customerToDelete.value = null
+      isDeleteModalOpen.value = false
+      deleteVerifyForm.value.password = ''
+      deleteVerifyForm.value.rfid = ''
+      showDeletePassword.value = false
+    }
   }
 }
 
 const cancelDeleteCustomer = () => {
   customerToDelete.value = null
   isDeleteModalOpen.value = false
+  deleteVerifyForm.value.password = ''
+  deleteVerifyForm.value.rfid = ''
+  deleteVerifyError.value = ''
+  showDeletePassword.value = false
 }
 
 const openTransactionsModal = async () => {
@@ -1647,6 +1884,112 @@ const openSettingsModal = () => {
   isSettingsModalOpen.value = true
 }
 
+const openProfileModal = () => {
+  isMenuOpen.value = false
+  
+  // Initialize profile form with current user data
+  if (currentUser.value) {
+    profileForm.value = {
+      username: currentUser.value.username || '',
+      rfid: currentUser.value.rfid || '',
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
+  }
+  
+  isProfileModalOpen.value = true
+}
+
+const saveProfile = async () => {
+  try {
+    const user = auth.getUser()
+    if (!user || !user._id) {
+      showToast('User not found', 'error')
+      return
+    }
+
+    // Require current password
+    if (!profileForm.value.currentPassword) {
+      showToast('Current password is required to save changes', 'error')
+      return
+    }
+
+    // Validate username
+    if (!profileForm.value.username || profileForm.value.username.trim() === '') {
+      showToast('Username cannot be empty', 'error')
+      return
+    }
+
+    // Validate new password if provided
+    if (profileForm.value.newPassword || profileForm.value.confirmPassword) {
+      if (profileForm.value.newPassword !== profileForm.value.confirmPassword) {
+        showToast('New passwords do not match', 'error')
+        return
+      }
+      if (profileForm.value.newPassword.length < 4) {
+        showToast('New password must be at least 4 characters', 'error')
+        return
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      username: profileForm.value.username,
+      rfid: profileForm.value.rfid || undefined,
+      currentPassword: profileForm.value.currentPassword
+    }
+
+    // Add new password if provided
+    if (profileForm.value.newPassword) {
+      updateData.newPassword = profileForm.value.newPassword
+    }
+
+    // Update profile
+    const profileResponse = await api.put(`/users/${user._id}`, updateData)
+    
+    if (profileResponse.data.success) {
+      // Update local storage with new user data
+      const updatedUser = { 
+        ...user, 
+        username: profileForm.value.username,
+        rfid: profileForm.value.rfid || undefined
+      }
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      currentUser.value = updatedUser
+      
+      showToast('Profile updated successfully', 'success')
+      isProfileModalOpen.value = false
+      
+      // Clear password fields
+      profileForm.value.currentPassword = ''
+      profileForm.value.newPassword = ''
+      profileForm.value.confirmPassword = ''
+    }
+  } catch (error) {
+    if (error.response?.status === 400) {
+      showToast(error.response.data.message || 'Invalid current password', 'error')
+    } else {
+      showToast('Failed to update profile', 'error')
+    }
+  }
+}
+
+const closeProfileModal = () => {
+  isProfileModalOpen.value = false
+  // Reset profile form
+  profileForm.value = {
+    username: '',
+    rfid: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+  showCurrentPassword.value = false
+  showNewPassword.value = false
+  showConfirmPassword.value = false
+}
+
 const saveSettings = async () => {
   try {
     const user = auth.getUser()
@@ -1655,7 +1998,7 @@ const saveSettings = async () => {
       return
     }
 
-    // Save to backend
+    // Save printer settings
     const response = await api.put(`/users/${user._id}/print-preferences`, {
       selectedPrinter: selectedPrinter.value,
       printMode: printMode.value
@@ -1666,7 +2009,7 @@ const saveSettings = async () => {
       localStorage.setItem('selectedPrinter', selectedPrinter.value || '')
       localStorage.setItem('printMode', printMode.value)
       
-      showToast('Settings saved successfully', 'success')
+      showToast('Printer settings saved successfully', 'success')
       isSettingsModalOpen.value = false
     }
   } catch (error) {
@@ -2262,6 +2605,7 @@ const downloadSampleFile = () => {
 }
 
 onMounted(async () => {
+  currentUser.value = auth.getUser()
   await fetchCustomers()
   await loadPrinterPreference()
 })

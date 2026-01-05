@@ -363,6 +363,39 @@ const user = {
                 error: error.message 
             });
         }
+    }),
+
+    // Verify RFID for user confirmation
+    verifyUserRFID: asyncHandler(async (req, res) => {
+        try {
+            const { userId, rfid } = req.body;
+
+            if (!userId || !rfid) {
+                return res.status(400).json({ success: false, message: 'User ID and RFID are required' });
+            }
+
+            const user = await User.findById(userId);
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            if (!user.rfid) {
+                return res.status(400).json({ success: false, message: 'User does not have an RFID assigned' });
+            }
+
+            if (user.rfid === rfid) {
+                res.status(200).json({ success: true, message: 'RFID verified' });
+            } else {
+                res.status(401).json({ success: false, message: 'Invalid RFID' });
+            }
+        } catch (error) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Failed to verify RFID', 
+                error: error.message 
+            });
+        }
     })
 };
 

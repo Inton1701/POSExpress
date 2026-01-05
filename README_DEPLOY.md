@@ -86,9 +86,13 @@ docker compose ps
 
 ## Deploy Natively (Without Docker)
 
-Perfect for local development or running directly on your Ubuntu/Linux machine.
+Perfect for production deployment on Ubuntu/Linux using systemd for process management.
 
-### 1. Install Dependencies
+### Quick Deploy (Automated)
+
+The fastest way to deploy using automated scripts:
+
+#### 1. Install Prerequisites
 
 ```bash
 # Update system
@@ -108,176 +112,273 @@ sudo apt install -y mongodb-org
 sudo systemctl start mongod
 sudo systemctl enable mongod
 
-# Install PM2 (process manager)
-sudo npm install -g pm2
-
 # Install Nginx
 sudo apt install -y nginx
 ```
 
-### 2. Setup Backend (API)
+#### 2. Deploy Backend (Automated)
 
 ```bash
-# Clone or navigate to project
-cd ~/POSExpress/backend
+cd /path/to/RFID-POS
+sudo bash deploy-backend.sh
+```
 
-# Install dependencies
+**What it does:**
+- Installs dependencies
+- Generates secure JWT secret
+- Configures .env file
+- Creates systemd service (`posexpress-backend`)
+- Enables auto-start on boot
+- Creates admin user
+
+#### 3. Deploy Frontend (Automated)
+
+```bash
+sudo bash deploy-frontend.sh
+```
+
+**What it does:**
+- Builds Vue.js web app
+- Deploys to Nginx (port 80)
+- Builds Electron app (AppImage + .deb)
+- Creates systemd service (`posexpress-frontend`)
+- Enables auto-start on boot
+- Creates desktop entry
+
+### Access Application
+
+- **Web:** http://posexpress.local
+- **API:** http://posexpress.local/api/health
+- **Desktop:** Launch "RFID POS Express" from Applications menu
+
+### System Architecture
+
+```
+System Boot
+    ↓
+┌──────────────┬──────────────┐
+│   Backend    │   Frontend   │
+│  (systemd)   │  (systemd)   │
+│  Port: 5000  │  Auto-open   │
+│  Auto-start  │  Desktop App │
+└──────────────┴──────────────┘
+```
+
+### Service Management
+
+#### Backend Service
+
+```bash
+# Start
+sudo systemctl start posexpress-backend
+
+# Stop
+sudo systemctl stop posexpress-backend
+
+# Restart
+sudo systemctl restart posexpress-backend
+
+# Status
+sudo systemctl status posexpress-backend
+
+# View logs (real-time)
+sudo journalctl -u posexpress-backend -f
+
+# Disable auto-start
+sudo systemctl disable posexpress-backend
+```
+
+#### Frontend Service (Electron)
+
+```bash
+# Start
+sudo systemctl start posexpress-frontend
+
+# Stop
+sudo systemctl stop posexpress-frontend
+
+# Restart
+sudo systemctl restart posexpress-frontend
+
+# Status
+sudo systemctl status posexpress-frontend
+
+# View logs (real-time)
+sudo journalctl -u posexpress-frontend -f
+
+# Disable auto-start
+sudo systemctl disable posexpress-frontend
+```
+
+#### Nginx (Web Server)
+
+```bash
+# Status
+sudo systemctl status nginx
+
+# Restart
+sudo systemctl restart nginx
+
+# View error logs
+sudo tail -f /var/log/nginx/error.log
+
+# View access logs
+sudo tail -f /var/log/nginx/access.log
+```
+
+#### MongoDB
+
+```bash
+# Status
+sudo systemctl status mongod
+
+# Restart
+sudo systemctl restart mongod
+
+# Access database
+mongosh
+
+# Backup database
+mongodump --db posexpress --out ~/backups/mongo-$(date +%Y%m%d)
+```
+
+### Updating the System
+
+#### Full System Update
+
+```bash
+# Stop services
+sudo systemctl stop posexpress-frontend
+sudo systemctl stop posexpress-backend
+
+# Pull latest code
+cd /path/to/RFID-POS
+git pull
+
+# Redeploy
+sudo bash deploy-backend.sh
+sudo bash deploy-frontend.sh
+```
+
+#### Backend Only
+
+```bash
+sudo systemctl stop posexpress-backend
+cd backend
 npm install
-
-# Generate a secure JWT secret
-JWT_SECRET=$(openssl rand -base64 32)
-
-# Create .env file
-cat > .env << EOF
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/posexpress
-JWT_SECRET=$JWT_SECRET
-NODE_ENV=production
-EOF
-
-# Display the generated JWT secret (save this!)
-echo "Generated JWT_SECRET: $JWT_SECRET"
-
-# Start with PM2
-pm2 start app.js --name posexpress-backend
-pm2 save
-pm2 startup  # Follow the command it gives you
+sudo systemctl start posexpress-backend
 ```
 
-### 3. Setup Frontend (Web)
+#### Frontend Only
 
 ```bash
-cd ~/POSExpress/frontend
-
-# Install dependencies
-npm install
-
-# Create .env file
-cat > .env << 'EOF'
-VITE_API_URL=http://posexpress.local/api
-EOF
-
-# Build for production
-npm run build
-
-# Copy to Nginx
-sudo rm -rf /var/www/html
-sudo cp -r dist /var/www/html
-sudo chown -R www-data:www-data /var/www/html
+sudo systemctl stop posexpress-frontend
+sudo bash deploy-frontend.sh
 ```
 
-### 4. Configure Nginx
+### Troubleshooting
+
+#### Backend Not Starting
 
 ```bash
-# Create Nginx config
-sudo nano /etc/nginx/sites-available/posexpress
+# Check logs
+sudo journalctl -u posexpress-backend -n 50
+
+# Common issues:
+# 1. MongoDB not running
+sudo systemctl start mongod
+
+# 2. Port already in use
+sudo lsof -i :5000
+
+# 3. Permission issues
+sudo chown -R $USER:$USER backend/
 ```
 
-Add this configuration:
-
-```nginx
-server {
-    listen 80;
-    server_name posexpress.local;
-
-    # Frontend
-    location / {
-        root /var/www/html;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Backend API proxy
-    location /api {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
-
-Enable and restart:
+#### Frontend Not Starting
 
 ```bash
-# Enable site
-sudo ln -sf /etc/nginx/sites-available/posexpress /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
+# Check logs
+sudo journalctl -u posexpress-frontend -n 50
+
+# Common issues:
+# 1. Backend not running
+sudo systemctl status posexpress-backend
+
+# 2. Display not set
+echo $DISPLAY  # Should output :0
+
+# 3. X authority issues
+xhost +local:
+```
+
+#### Web Version Not Accessible
+
+```bash
+# Check Nginx status
+sudo systemctl status nginx
 
 # Test configuration
 sudo nginx -t
 
+# Check port 80
+sudo lsof -i :80
+
 # Restart Nginx
 sudo systemctl restart nginx
-sudo systemctl enable nginx
 ```
 
-### 5. Create Admin User
+### Manual Desktop App Launch
+
+If you don't want auto-start:
 
 ```bash
-cd ~/POSExpress/backend
-node seedAdmin.js
+# Find the AppImage
+find /path/to/RFID-POS/frontend/dist-electron -name "*.AppImage"
+
+# Run it
+/path/to/app.AppImage --no-sandbox
+
+# Or install .deb and launch from menu
+sudo dpkg -i /path/to/frontend/dist-electron/*.deb
 ```
 
-### 6. Access Application
+### Backup and Restore
 
-- **Web:** http://posexpress.local
-- **API:** http://posexpress.local/api/health
-
-### Native Management Commands
+#### Backup
 
 ```bash
-# Backend
-pm2 status                    # Check status
-pm2 logs posexpress-backend     # View logs
-pm2 restart posexpress-backend  # Restart
-pm2 stop posexpress-backend     # Stop
-pm2 delete posexpress-backend   # Remove
+# Backup MongoDB
+mongodump --db posexpress --out ~/backups/mongo-$(date +%Y%m%d)
 
-# Frontend
-cd ~/POSExpress/frontend
-npm run build                 # Rebuild
-sudo cp -r dist/* /var/www/html/  # Update
+# Backup configuration
+cp backend/.env ~/backups/env-$(date +%Y%m%d)
 
-# Nginx
-sudo systemctl status nginx   # Check status
-sudo systemctl restart nginx  # Restart
-sudo nginx -t                 # Test config
-
-# MongoDB
-sudo systemctl status mongod  # Check status
-sudo systemctl restart mongod # Restart
-mongosh                       # Access database
-
-# Backup database
-mongodump --out ~/backup/$(date +%Y%m%d)
+# Backup uploads/assets
+tar -czf ~/backups/uploads-$(date +%Y%m%d).tar.gz backend/public
 ```
 
-### Run Electron Desktop App (Linux)
-
-Instead of accessing via browser, run the native desktop app:
+#### Restore
 
 ```bash
-cd ~/POSExpress/frontend
+# Restore MongoDB
+mongorestore --db posexpress ~/backups/mongo-YYYYMMDD/posexpress
 
-# Development mode
-npm run electron:dev
+# Restore configuration
+cp ~/backups/env-YYYYMMDD backend/.env
 
-# Or build and install
-npm run build:electron:linux
-
-# Install the AppImage
-sudo chmod +x dist-electron/*.AppImage
-./dist-electron/*.AppImage
-
-# Or install the .deb package
-sudo dpkg -i dist-electron/*.deb
+# Restore uploads
+tar -xzf ~/backups/uploads-YYYYMMDD.tar.gz -C backend/
 ```
 
-The Electron app will automatically connect to your local API at `http://localhost:5000/api` or `http://posexpress.local/api`.
+### Why systemd Instead of PM2?
+
+✅ **Native Integration** - Works seamlessly with Linux  
+✅ **Better Logging** - Integrated with journalctl  
+✅ **Auto-start** - Reliable boot-time startup  
+✅ **Resource Management** - Better process control  
+✅ **No Dependencies** - No need to install PM2  
+✅ **Standard Tool** - Used by most Linux distributions
 
 ---
 
