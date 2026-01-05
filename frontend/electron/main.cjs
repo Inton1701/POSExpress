@@ -17,7 +17,6 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    fullscreen: process.platform === 'linux',
     show: false, // Don't show window until ready
     webPreferences: {
       nodeIntegration: false,
@@ -56,16 +55,19 @@ function createWindow() {
       }
     `).catch(() => {}) // Ignore errors from this injection
     
-    // Show window after a slight delay to ensure Vue has rendered
+    // Show window after a delay to ensure Vue has fully rendered
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.show()
-        // Set to fullscreen on Linux after showing
         if (process.platform === 'linux') {
-          mainWindow.setFullScreen(true)
+          // On Linux, keep first window hidden (don't show it at all)
+          // It will load in background and be closed later
+          console.log('First window loaded, keeping hidden')
+        } else {
+          // On Windows, show normally
+          mainWindow.show()
         }
       }
-    }, 100)
+    }, 2000)
     
     // Open second window after 5 seconds (Linux only)
     if (process.platform === 'linux') {
@@ -84,7 +86,7 @@ function createSecondWindow() {
   secondWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    fullscreen: process.platform === 'linux',
+    fullscreen: true,
     show: false,
     webPreferences: {
       nodeIntegration: false,
@@ -118,19 +120,14 @@ function createSecondWindow() {
     setTimeout(() => {
       if (secondWindow && !secondWindow.isDestroyed()) {
         secondWindow.show()
-        // Set to fullscreen on Linux after showing
-        if (process.platform === 'linux') {
-          secondWindow.setFullScreen(true)
-        }
+        secondWindow.setFullScreen(true)
         
-        // Close first window after 2 seconds (Linux only)
-        if (process.platform === 'linux') {
-          setTimeout(() => {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.close()
-            }
-          }, 2000)
-        }
+        // Close first window after 3 seconds
+        setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.close()
+          }
+        }, 3000)
       }
     }, 100)
   })
