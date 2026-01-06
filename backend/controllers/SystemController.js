@@ -123,11 +123,11 @@ const checkForUpdates = async (req, res) => {
 };
 
 /**
- * Trigger system update
+ * Trigger automated system update (no prompts)
  */
 const triggerUpdate = async (req, res) => {
     try {
-        const scriptPath = path.join(__dirname, '../../auto-update.sh');
+        const scriptPath = path.join(__dirname, '../../update-system.sh');
         
         // Check if update script exists
         try {
@@ -140,36 +140,34 @@ const triggerUpdate = async (req, res) => {
         }
 
         // Execute update script in background
-        // Note: This will update and restart the system
         res.json({
             success: true,
-            message: 'Update process started. The system will restart automatically.',
-            note: 'You may need to refresh the page in a few moments.'
+            message: 'Automated update started. System will update and restart automatically.',
+            note: 'The application will restart in a few moments. Please wait...'
         });
 
         // Execute after response is sent
         setTimeout(async () => {
             try {
-                // Try to make script executable (skip if permission denied)
+                // Make script executable
                 try {
                     await execPromise(`chmod +x "${scriptPath}"`);
                 } catch (chmodErr) {
-                    console.log('chmod skipped (already executable or permission denied):', chmodErr.message);
+                    console.log('chmod skipped:', chmodErr.message);
                 }
                 
-                // Run update script (this will restart the system)
-                exec(`bash "${scriptPath}" << EOF\ny\n3\nEOF`, (error, stdout, stderr) => {
+                // Run automated update script (no prompts)
+                console.log('Starting automated update...');
+                exec(`sudo bash "${scriptPath}"`, (error, stdout, stderr) => {
                     if (error) {
                         console.error('Update execution error:', error);
-                        console.error('Note: If you see permission errors, run: sudo ./fix-permissions.sh');
                         return;
                     }
                     console.log('Update output:', stdout);
-                    if (stderr) console.error('Update stderr:', stderr);
+                    if (stderr) console.log('Update stderr:', stderr);
                 });
             } catch (err) {
                 console.error('Error triggering update:', err);
-                console.error('Fix permissions with: sudo ./fix-permissions.sh');
             }
         }, 1000);
 
@@ -182,6 +180,166 @@ const triggerUpdate = async (req, res) => {
         });
     }
 };
+
+/**
+ * List available backup versions for revert
+ */
+const listBackups = async (req, res) => {
+    try {
+        const os = require('os');
+        const homeDir = os.homedir();
+        const backupDir = path.join(homeDir, 'posexpress-backups');
+        
+        // Check if backup directory exists
+        try {
+            await fs.access(backupDir);
+        } catch (err) {
+            return res.json({
+                success: true,
+                backups: [],
+                message: 'No backups found'
+            });
+        }
+        
+        // Read backup directory
+        const files = await fs.readdir(backupDir);
+        
+        // Filter and parse backups
+        const backups = [];
+        for (const file of files) {
+            const backupPath = path.join(backupDir, file);
+            const stats = await fs.stat(backupPath);
+            
+            if (stats.isDirectory()) {
+                // Try to read metadata
+                let metadata = null;
+                try {
+                    const metadataPath = path.join(backupPath, 'metadata.json');
+                    const metadataContent = await fs.readFile(metadataPath, 'utf8');
+                    metadata = JSON.parse(metadataContent);
+                } catch (err) {
+                    // No metadata, extract from folder name
+                    const match = file.match(/v?([\d.]+)-(\d{8}-\d{6})/);
+                    if (match) {
+                        metadata = {
+                            version: match[1],
+                            timestamp: match[2],
+                            date: stats.mtime.toISOString()
+                        };
+                    }
+                }
+                
+                if (metadata) {
+                    backups.push({
+                        path: file,
+                        fullPath: backupPath,
+                        version: metadata.version,
+                        date: metadata.date,
+                        timestamp: metadata.timestamp,
+                        size: await getDirectorySize(backupPath)
+                    });
+                }
+            }
+        }
+        
+        // Sort by date (newest first)
+        backups.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        res.json({
+            success: true,
+            backups,
+            backupDir
+        });
+        
+    } catch (error) {
+        console.error('Error listing backups:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to list backups',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Revert to a previous backup version
+ */
+const revertUpdate = async (req, res) => {
+    try {
+        const { backupPath } = req.body;
+        
+        if (!backupPath) {
+            return res.status(400).json({
+                success: false,
+                message: 'Backup path is required'
+            });
+        }
+        
+        const scriptPath = path.join(__dirname, '../../revert-update.sh');
+        
+        // Check if revert script exists
+        try {
+            await fs.access(scriptPath);
+        } catch (err) {
+            return res.status(404).json({
+                success: false,
+                message: 'Revert script not found. Please revert manually.'
+            });
+        }
+        
+        // Execute revert script in background
+        res.json({
+            success: true,
+            message: 'Revert started. System will restore and restart automatically.',
+            note: 'The application will restart in a few moments. Please wait...'
+        });
+        
+        // Execute after response is sent
+        setTimeout(async () => {
+            try {
+                // Make script executable
+                try {
+                    await execPromise(`chmod +x "${scriptPath}"`);
+                } catch (chmodErr) {
+                    console.log('chmod skipped:', chmodErr.message);
+                }
+                
+                // Run revert script
+                console.log(`Starting revert to: ${backupPath}`);
+                exec(`sudo bash "${scriptPath}" "${backupPath}"`, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error('Revert execution error:', error);
+                        return;
+                    }
+                    console.log('Revert output:', stdout);
+                    if (stderr) console.log('Revert stderr:', stderr);
+                });
+            } catch (err) {
+                console.error('Error triggering revert:', err);
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error reverting update:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to revert update',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Helper: Get directory size
+ */
+async function getDirectorySize(dirPath) {
+    try {
+        const { stdout } = await execPromise(`du -sh "${dirPath}" 2>/dev/null | cut -f1`);
+        return stdout.trim() || 'N/A';
+    } catch (err) {
+        return 'N/A';
+    }
+}
 
 /**
  * Compare semantic versions
@@ -283,6 +441,8 @@ module.exports = {
     getCurrentVersion,
     checkForUpdates,
     triggerUpdate,
+    listBackups,
+    revertUpdate,
     rebootSystem,
     shutdownSystem
 };

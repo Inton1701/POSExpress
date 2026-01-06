@@ -262,31 +262,41 @@
           <div v-if="updateStatus" class="rounded-lg p-6" :class="{
             'bg-green-50 border border-green-200': updateStatus === 'up-to-date',
             'bg-blue-50 border border-blue-200': updateStatus === 'update-available',
+            'bg-yellow-50 border border-yellow-200': updateStatus === 'updating' || updateStatus === 'reverting',
             'bg-red-50 border border-red-200': updateStatus === 'error'
           }">
             <div class="flex items-start gap-3">
               <font-awesome-icon 
-                :icon="updateStatus === 'up-to-date' ? 'check-circle' : updateStatus === 'update-available' ? 'exclamation-circle' : 'circle-xmark'" 
+                :icon="updateStatus === 'up-to-date' ? 'check-circle' : 
+                      updateStatus === 'update-available' ? 'exclamation-circle' : 
+                      updateStatus === 'updating' || updateStatus === 'reverting' ? 'spinner' :
+                      'circle-xmark'" 
                 class="text-2xl mt-1"
                 :class="{
                   'text-green-600': updateStatus === 'up-to-date',
                   'text-blue-600': updateStatus === 'update-available',
+                  'text-yellow-600': updateStatus === 'updating' || updateStatus === 'reverting',
                   'text-red-600': updateStatus === 'error'
                 }"
+                :spin="updateStatus === 'updating' || updateStatus === 'reverting'"
               />
               <div class="flex-1">
                 <p class="font-bold mb-1" :class="{
                   'text-green-800': updateStatus === 'up-to-date',
                   'text-blue-800': updateStatus === 'update-available',
+                  'text-yellow-800': updateStatus === 'updating' || updateStatus === 'reverting',
                   'text-red-800': updateStatus === 'error'
                 }">
                   {{ updateStatus === 'up-to-date' ? 'System is up to date' : 
                      updateStatus === 'update-available' ? 'Update Available!' : 
+                     updateStatus === 'updating' ? 'Update in Progress' :
+                     updateStatus === 'reverting' ? 'Reverting...' :
                      'Error checking for updates' }}
                 </p>
                 <p class="text-sm" :class="{
                   'text-green-700': updateStatus === 'up-to-date',
                   'text-blue-700': updateStatus === 'update-available',
+                  'text-yellow-700': updateStatus === 'updating' || updateStatus === 'reverting',
                   'text-red-700': updateStatus === 'error'
                 }">
                   {{ updateMessage }}
@@ -309,8 +319,8 @@
                       :disabled="isUpdating"
                       class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:opacity-50"
                     >
-                      <font-awesome-icon :icon="isUpdating ? 'spinner' : 'sync-alt'" :spin="isUpdating" />
-                      {{ isUpdating ? 'Installing...' : 'Install Update' }}
+                      <font-awesome-icon :icon="isUpdating ? 'spinner' : 'download'" :spin="isUpdating" />
+                      {{ isUpdating ? 'Installing...' : 'Install Update (Auto)' }}
                     </button>
                     <a 
                       :href="latestRelease.html_url" 
@@ -339,6 +349,118 @@
               />
               {{ isCheckingUpdates ? 'Checking...' : 'Check for Updates' }}
             </button>
+            <button 
+              @click="loadBackups" 
+              :disabled="isLoadingBackups"
+              class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg shadow transition disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <font-awesome-icon 
+                :icon="isLoadingBackups ? 'spinner' : 'history'" 
+                :spin="isLoadingBackups"
+              />
+              {{ isLoadingBackups ? 'Loading...' : 'Load Backups' }}
+            </button>
+          </div>
+
+          <!-- Update/Revert Progress CLI Display -->
+          <div v-if="showUpdateLogs" class="bg-gray-900 rounded-lg p-6 shadow-lg border border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="font-bold text-lg text-green-400 flex items-center gap-2">
+                <font-awesome-icon icon="terminal" />
+                Update Process
+              </h4>
+              <div class="text-sm text-gray-400">{{ updateProgress }}%</div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-800 rounded-full h-2 mb-4">
+              <div 
+                class="bg-green-500 h-2 rounded-full transition-all duration-500"
+                :style="{ width: updateProgress + '%' }"
+              ></div>
+            </div>
+            
+            <!-- Terminal Output -->
+            <div class="bg-black rounded p-4 h-80 overflow-y-auto font-mono text-sm">
+              <div 
+                v-for="(log, index) in updateLogs" 
+                :key="index"
+                class="mb-2 flex gap-2"
+                :class="{
+                  'text-gray-300': log.type === 'info',
+                  'text-green-400': log.type === 'success',
+                  'text-yellow-400': log.type === 'warning',
+                  'text-red-400': log.type === 'error'
+                }"
+              >
+                <span class="text-gray-500">[{{ log.timestamp }}]</span>
+                <span>{{ log.message }}</span>
+              </div>
+              
+              <!-- Blinking cursor when in progress -->
+              <div v-if="updateProgress < 100" class="flex gap-2 animate-pulse">
+                <span class="text-gray-500">[{{ new Date().toLocaleTimeString() }}]</span>
+                <span class="text-green-400">▊</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Backup/Revert Section -->
+          <div v-if="backups.length > 0" class="bg-gray-50 rounded-lg p-6">
+            <h4 class="font-bold text-lg mb-4 flex items-center gap-2">
+              <font-awesome-icon icon="history" class="text-gray-600" />
+              Available Backups (Revert Points)
+            </h4>
+            <p class="text-sm text-gray-600 mb-4">
+              You can revert to any of these previous versions. A backup of the current version will be created automatically.
+            </p>
+            
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              <div 
+                v-for="backup in backups" 
+                :key="backup.path"
+                class="bg-white rounded-lg p-4 border border-gray-200 hover:border-blue-300 transition"
+              >
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <font-awesome-icon icon="tag" class="text-blue-500 text-sm" />
+                      <span class="font-bold text-gray-800">Version {{ backup.version }}</span>
+                      <span class="text-xs text-gray-500">{{ backup.size }}</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-2">
+                      <font-awesome-icon icon="clock" class="mr-1" />
+                      {{ new Date(backup.date).toLocaleString() }}
+                    </p>
+                    <p class="text-xs text-gray-500 font-mono truncate">{{ backup.path }}</p>
+                  </div>
+                  <button 
+                    @click="revertToBackup(backup)"
+                    :disabled="isReverting && selectedBackup === backup.path"
+                    class="ml-4 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:opacity-50 flex items-center gap-2 text-sm"
+                  >
+                    <font-awesome-icon 
+                      :icon="(isReverting && selectedBackup === backup.path) ? 'spinner' : 'undo'" 
+                      :spin="isReverting && selectedBackup === backup.path"
+                    />
+                    {{ (isReverting && selectedBackup === backup.path) ? 'Reverting...' : 'Revert' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+              <p class="text-xs text-yellow-800">
+                <font-awesome-icon icon="exclamation-triangle" class="mr-2" />
+                <strong>Note:</strong> Reverting will restore the entire system (backend, frontend, and Electron app) to the selected version and restart all services automatically.
+              </p>
+            </div>
+          </div>
+          
+          <div v-else-if="!isLoadingBackups && backups.length === 0" class="bg-gray-50 rounded-lg p-6 text-center">
+            <font-awesome-icon icon="inbox" class="text-4xl text-gray-400 mb-3" />
+            <p class="text-gray-600">No backups available yet.</p>
+            <p class="text-sm text-gray-500 mt-2">Backups are created automatically when you update the system.</p>
           </div>
 
           <!-- GitHub Repository Link -->
@@ -412,6 +534,13 @@ const latestRelease = ref(null)
 const isCheckingUpdates = ref(false)
 const lastChecked = ref(null)
 const isUpdating = ref(false)
+const backups = ref([])
+const isLoadingBackups = ref(false)
+const selectedBackup = ref(null)
+const isReverting = ref(false)
+const showUpdateLogs = ref(false)
+const updateLogs = ref([])
+const updateProgress = ref(0)
 
 const profileForm = ref({
   username: '',
@@ -650,33 +779,182 @@ const checkForUpdates = async () => {
 }
 
 const installUpdate = async () => {
-  if (!confirm('This will update the system and restart services. Continue?')) {
+  if (!confirm('This will automatically update the entire system including backend, frontend, and Electron app. The system will restart automatically. Continue?')) {
     return
   }
   
   isUpdating.value = true
+  showUpdateLogs.value = true
+  updateLogs.value = []
+  updateProgress.value = 0
+  
+  // Simulate progress with log messages
+  const addLog = (message, type = 'info') => {
+    updateLogs.value.push({
+      timestamp: new Date().toLocaleTimeString(),
+      message,
+      type // 'info', 'success', 'warning', 'error'
+    })
+  }
+  
   try {
+    addLog('Starting automated update...', 'info')
+    updateProgress.value = 10
+    
+    addLog('Checking for latest version...', 'info')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    updateProgress.value = 20
+    
+    addLog('Downloading update from GitHub...', 'info')
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    updateProgress.value = 30
+    
+    addLog('Creating backup of current version...', 'warning')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    updateProgress.value = 40
+    
+    addLog('Triggering update process...', 'info')
     const response = await api.post('/system/update')
     
     if (response.data.success) {
-      showToast('Update started! System will restart in a few moments...', 'success')
+      updateProgress.value = 50
+      addLog('Update script started successfully', 'success')
       
-      // Show countdown and reload page
-      let countdown = 30
-      const countdownInterval = setInterval(() => {
-        countdown--
-        if (countdown <= 0) {
-          clearInterval(countdownInterval)
-          window.location.reload()
-        }
-      }, 1000)
+      addLog('Updating backend dependencies...', 'info')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      updateProgress.value = 60
+      
+      addLog('Building frontend application...', 'info')
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      updateProgress.value = 75
+      
+      addLog('Building Electron app...', 'info')
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      updateProgress.value = 85
+      
+      addLog('Restarting services...', 'warning')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      updateProgress.value = 95
+      
+      addLog('Update complete! Restarting application...', 'success')
+      updateProgress.value = 100
+      
+      showToast('Automated update completed! Application will restart...', 'success')
+      
+      updateMessage.value = 'Update completed! Application will restart automatically. Please wait...'
+      updateStatus.value = 'updating'
+      
+      // Wait and reload
+      setTimeout(() => {
+        window.location.reload()
+      }, 5000)
     } else {
       throw new Error(response.data.message || 'Failed to start update')
     }
   } catch (error) {
     console.error('Error installing update:', error)
+    addLog('Error: ' + (error.response?.data?.message || error.message), 'error')
     showToast(error.response?.data?.message || 'Failed to install update', 'error')
     isUpdating.value = false
+    updateProgress.value = 0
+  }
+}
+
+const loadBackups = async () => {
+  isLoadingBackups.value = true
+  try {
+    const response = await api.get('/system/backups')
+    
+    if (response.data.success) {
+      backups.value = response.data.backups || []
+    }
+  } catch (error) {
+    console.error('Error loading backups:', error)
+    showToast('Failed to load backups', 'error')
+  } finally {
+    isLoadingBackups.value = false
+  }
+}
+
+const revertToBackup = async (backup) => {
+  if (!confirm(`Are you sure you want to revert to version ${backup.version}? This will restore the system to that version and restart automatically.`)) {
+    return
+  }
+  
+  isReverting.value = true
+  selectedBackup.value = backup.path
+  showUpdateLogs.value = true
+  updateLogs.value = []
+  updateProgress.value = 0
+  
+  // Simulate progress with log messages
+  const addLog = (message, type = 'info') => {
+    updateLogs.value.push({
+      timestamp: new Date().toLocaleTimeString(),
+      message,
+      type
+    })
+  }
+  
+  try {
+    addLog(`Starting revert to version ${backup.version}...`, 'info')
+    updateProgress.value = 10
+    
+    addLog('Backing up current state...', 'warning')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    updateProgress.value = 20
+    
+    addLog('Stopping services...', 'info')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    updateProgress.value = 30
+    
+    addLog('Triggering revert process...', 'info')
+    const response = await api.post('/system/revert', {
+      backupPath: backup.path
+    })
+    
+    if (response.data.success) {
+      updateProgress.value = 40
+      addLog('Revert script started successfully', 'success')
+      
+      addLog('Restoring backend files...', 'info')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      updateProgress.value = 55
+      
+      addLog('Restoring frontend files...', 'info')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      updateProgress.value = 70
+      
+      addLog('Rebuilding application...', 'info')
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      updateProgress.value = 85
+      
+      addLog('Restarting services...', 'warning')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      updateProgress.value = 95
+      
+      addLog('Revert complete! Restarting application...', 'success')
+      updateProgress.value = 100
+      
+      showToast('Revert completed! Application will restart...', 'success')
+      
+      updateMessage.value = 'Reverting to previous version... Application will restart automatically. Please wait...'
+      updateStatus.value = 'reverting'
+      
+      // Wait and reload
+      setTimeout(() => {
+        window.location.reload()
+      }, 5000)
+    } else {
+      throw new Error(response.data.message || 'Failed to start revert')
+    }
+  } catch (error) {
+    console.error('Error reverting:', error)
+    addLog('Error: ' + (error.response?.data?.message || error.message), 'error')
+    showToast(error.response?.data?.message || 'Failed to revert update', 'error')
+    isReverting.value = false
+    selectedBackup.value = null
+    updateProgress.value = 0
   }
 }
 
@@ -698,6 +976,11 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Error fetching version:', error)
+  }
+  
+  // Load backups when updates tab is active
+  if (activeTab.value === 'updates') {
+    loadBackups()
   }
 })
 

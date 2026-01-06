@@ -14,15 +14,15 @@ function createWindow() {
     ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.cjs')
     : path.join(__dirname, 'preload.cjs')
   
-  // On Linux production, start maximized (not fullscreen to keep menu visible)
+  // On Linux production, start in fullscreen mode
   const isLinuxProduction = process.platform === 'linux' && app.isPackaged
   
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    fullscreen: false, // Don't use fullscreen - it hides the menu
+    fullscreen: isLinuxProduction, // Start in fullscreen on Linux production
     show: false, // Don't show window until ready
-    autoHideMenuBar: false, // Always show menu bar
+    autoHideMenuBar: false, // Always show menu bar (visible when exiting fullscreen)
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -70,7 +70,7 @@ function createWindow() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show()
       if (process.platform === 'linux' && app.isPackaged) {
-        mainWindow.maximize() // Maximize instead of fullscreen to keep menu visible
+        mainWindow.setFullScreen(true) // Start in fullscreen (menu visible when exiting fullscreen)
       }
     }
   })
