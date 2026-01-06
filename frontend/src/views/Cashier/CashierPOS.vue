@@ -262,20 +262,20 @@
     <Modal :is-open="isPayModalOpen" title="Select Payment Method" size="full" @close="closePayModal">
       <div class="flex flex-col justify-center items-center" style="min-height: 70vh;">
         <!-- Total on top -->
-        <div class="text-center mb-12">
-          <p class="text-2xl text-gray-600 mb-4">Total Amount</p>
+        <div class="text-center mb-4">
+          <p class="text-2xl text-gray-600 mb-2">Total Amount</p>
           <p class="text-7xl font-bold text-gray-800">₱{{ totalAmount.toFixed(2) }}</p>
         </div>
         
         <!-- Payment buttons side by side -->
         <div class="grid grid-cols-2 gap-12 w-full max-w-6xl px-8">
-          <button @click="selectPaymentMethod('Cash')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-20 px-12 rounded-xl flex flex-col items-center gap-6 shadow-lg transition transform hover:scale-105">
-            <font-awesome-icon icon="money-bill-wave" class="text-8xl" />
-            <span class="text-4xl">Cash</span>
+          <button @click="selectPaymentMethod('Cash')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-16 px-10 rounded-xl flex flex-col items-center gap-4 shadow-lg transition transform hover:scale-105">
+            <font-awesome-icon icon="money-bill-wave" class="text-7xl" />
+            <span class="text-3xl">Cash</span>
           </button>
-          <button @click="selectPaymentMethod('E-wallet')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-20 px-12 rounded-xl flex flex-col items-center gap-6 shadow-lg transition transform hover:scale-105">
-            <font-awesome-icon icon="credit-card" class="text-8xl" />
-            <span class="text-4xl">E-wallet/RFID</span>
+          <button @click="selectPaymentMethod('E-wallet')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-16 px-10 rounded-xl flex flex-col items-center gap-4 shadow-lg transition transform hover:scale-105">
+            <font-awesome-icon icon="credit-card" class="text-7xl" />
+            <span class="text-3xl">E-wallet/RFID</span>
           </button>
         </div>
       </div>
