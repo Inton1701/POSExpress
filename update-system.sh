@@ -49,7 +49,8 @@ if [ -z "$LATEST_RELEASE" ] || echo "$LATEST_RELEASE" | grep -q "Not Found"; the
     exit 1
 fi
 
-LATEST_VERSION=$(echo "$LATEST_RELEASE" | grep -oP '"tag_name":\s*"\K[^"]+' | sed 's/v//')
+# Parse version using sed (compatible with all Linux systems)
+LATEST_VERSION=$(echo "$LATEST_RELEASE" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | sed 's/v//')
 echo "Latest version: v$LATEST_VERSION" | tee -a "$LOG_FILE"
 
 if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then

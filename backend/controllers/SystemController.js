@@ -156,15 +156,29 @@ const triggerUpdate = async (req, res) => {
                     console.log('chmod skipped:', chmodErr.message);
                 }
                 
-                // Run automated update script (no prompts)
+                // Run automated update script with sudo
+                // Note: User must have passwordless sudo configured (see deploy-frontend.sh)
                 console.log('Starting automated update...');
-                exec(`sudo bash "${scriptPath}"`, (error, stdout, stderr) => {
+                const updateProcess = exec(`sudo /bin/bash "${scriptPath}" 2>&1`, {
+                    timeout: 600000, // 10 minute timeout
+                    maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+                }, (error, stdout, stderr) => {
                     if (error) {
                         console.error('Update execution error:', error);
+                        console.error('Exit code:', error.code);
+                        console.error('stderr:', stderr);
                         return;
                     }
                     console.log('Update output:', stdout);
                     if (stderr) console.log('Update stderr:', stderr);
+                });
+                
+                updateProcess.stdout?.on('data', (data) => {
+                    console.log('Update:', data.toString());
+                });
+                
+                updateProcess.stderr?.on('data', (data) => {
+                    console.error('Update error:', data.toString());
                 });
             } catch (err) {
                 console.error('Error triggering update:', err);
@@ -304,15 +318,29 @@ const revertUpdate = async (req, res) => {
                     console.log('chmod skipped:', chmodErr.message);
                 }
                 
-                // Run revert script
+                // Run revert script with sudo
+                // Note: User must have passwordless sudo configured (see deploy-frontend.sh)
                 console.log(`Starting revert to: ${backupPath}`);
-                exec(`sudo bash "${scriptPath}" "${backupPath}"`, (error, stdout, stderr) => {
+                const revertProcess = exec(`sudo /bin/bash "${scriptPath}" "${backupPath}" 2>&1`, {
+                    timeout: 600000, // 10 minute timeout
+                    maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+                }, (error, stdout, stderr) => {
                     if (error) {
                         console.error('Revert execution error:', error);
+                        console.error('Exit code:', error.code);
+                        console.error('stderr:', stderr);
                         return;
                     }
                     console.log('Revert output:', stdout);
                     if (stderr) console.log('Revert stderr:', stderr);
+                });
+                
+                revertProcess.stdout?.on('data', (data) => {
+                    console.log('Revert:', data.toString());
+                });
+                
+                revertProcess.stderr?.on('data', (data) => {
+                    console.error('Revert error:', data.toString());
                 });
             } catch (err) {
                 console.error('Error triggering revert:', err);

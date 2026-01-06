@@ -64,7 +64,7 @@ echo "Reverting to: $BACKUP_PATH" | tee -a "$LOG_FILE"
 
 # Get backup metadata
 if [ -f "$BACKUP_PATH/metadata.json" ]; then
-    BACKUP_VERSION=$(grep -oP '"version":\s*"\K[^"]+' "$BACKUP_PATH/metadata.json" 2>/dev/null || echo "unknown")
+    BACKUP_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p' "$BACKUP_PATH/metadata.json" 2>/dev/null || echo "unknown")
     echo "Backup version: v$BACKUP_VERSION" | tee -a "$LOG_FILE"
 fi
 

@@ -289,15 +289,22 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}[7/7] Configuring passwordless sudo for reboot/shutdown...${NC}"
-# Create sudoers file for POS system shutdown/reboot
+echo -e "${YELLOW}[7/7] Configuring passwordless sudo for system operations...${NC}"
+# Create sudoers file for POS system operations (shutdown, reboot, updates)
 SUDOERS_FILE="/etc/sudoers.d/posexpress-system-control"
 cat > "$SUDOERS_FILE" << EOF
 # Allow user to reboot and shutdown without password for POS system
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/sbin/reboot, /usr/sbin/poweroff, /sbin/reboot, /sbin/poweroff
+# Allow update and revert scripts without password
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $SCRIPT_DIR/update-system.sh
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $SCRIPT_DIR/revert-update.sh *
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/bash $SCRIPT_DIR/update-system.sh
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/bash $SCRIPT_DIR/revert-update.sh *
+# Allow systemctl for service management
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start posexpress-*, /usr/bin/systemctl stop posexpress-*, /usr/bin/systemctl restart posexpress-*, /usr/bin/systemctl reload nginx, /usr/bin/systemctl daemon-reload
 EOF
 chmod 0440 "$SUDOERS_FILE"
-echo -e "${GREEN}✓ Configured passwordless sudo for reboot/shutdown${NC}"
+echo -e "${GREEN}✓ Configured passwordless sudo for system operations${NC}"
 echo ""
 
 # Configure auto-login

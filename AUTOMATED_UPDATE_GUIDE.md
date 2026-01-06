@@ -17,6 +17,24 @@ The RFID POS system now supports **fully automated updates** via the web GUI. Wh
 
 ---
 
+## ⚠️ First-Time Setup (REQUIRED)
+
+Before using automated updates from the web GUI, you must configure permissions:
+
+```bash
+cd /path/to/RFID-POS
+sudo ./setup-update-permissions.sh
+```
+
+This script configures:
+- Passwordless sudo for update scripts
+- Proper permissions for log files
+- Backup directory with correct ownership
+
+**Run this once after initial deployment!**
+
+---
+
 ## Features
 
 ### 1. **One-Click Updates**
