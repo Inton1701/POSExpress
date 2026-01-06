@@ -14,14 +14,15 @@ function createWindow() {
     ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.cjs')
     : path.join(__dirname, 'preload.cjs')
   
-  // On Linux production, start fullscreen
+  // On Linux production, start maximized (not fullscreen to keep menu visible)
   const isLinuxProduction = process.platform === 'linux' && app.isPackaged
   
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    fullscreen: isLinuxProduction,
+    fullscreen: false, // Don't use fullscreen - it hides the menu
     show: false, // Don't show window until ready
+    autoHideMenuBar: false, // Always show menu bar
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -69,7 +70,7 @@ function createWindow() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show()
       if (process.platform === 'linux' && app.isPackaged) {
-        mainWindow.setFullScreen(true)
+        mainWindow.maximize() // Maximize instead of fullscreen to keep menu visible
       }
     }
   })
@@ -310,13 +311,16 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           height: 400,
           show: true,
           skipTaskbar: true,
+          x: -9999, // Position off-screen instead of minimizing (allows capture on Linux)
+          y: -9999,
           webPreferences: {
             nodeIntegration: false,
             contextIsolation: true
           }
         })
         
-        if (process.platform === 'linux' || process.platform === 'win32') {
+        // Don't minimize on Linux - it breaks capturePage()
+        if (process.platform === 'win32') {
           printWindow.minimize()
         }
         
@@ -413,14 +417,16 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         height: 1200,
         show: true, // Must be visible to render content properly
         skipTaskbar: true,
+        x: -9999, // Position off-screen instead of minimizing (allows capture on Linux)
+        y: -9999,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true
         }
       })
       
-      // Minimize to keep out of the way
-      if (process.platform === 'linux' || process.platform === 'win32') {
+      // Only minimize on Windows - on Linux minimizing breaks capturePage()
+      if (process.platform === 'win32') {
         printWindow.minimize()
       }
       
@@ -1020,7 +1026,13 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
             try {
               console.log('Linux detected - using PNG printing workflow')
               
-              // Step 1: Wait for content to fully render
+              // Step 1: Ensure window is visible and focused for capture
+              console.log('Ensuring window is visible for capture...')
+              printWindow.setPosition(100, 100) // Move on-screen temporarily
+              printWindow.show()
+              printWindow.focus()
+              
+              // Step 2: Wait for content to fully render
               console.log('Waiting for content to render...')
               await new Promise(resolve => setTimeout(resolve, 1500))
               
