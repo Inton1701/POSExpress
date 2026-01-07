@@ -17,10 +17,10 @@ NC='\033[0m'
 LOG_FILE="/var/log/posexpress-update.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-echo "========================================" | tee -a "$LOG_FILE"
-echo "RFID POS - Automated Update" | tee -a "$LOG_FILE"
-echo "$(date)" | tee -a "$LOG_FILE"
-echo "========================================" | tee -a "$LOG_FILE"
+echo "========================================"
+echo "RFID POS - Automated Update"
+echo "$(date)"
+echo "========================================"
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,33 +30,58 @@ ACTUAL_USER="${SUDO_USER:-$USER}"
 
 # Exit if not root
 if [ "$EUID" -ne 0 ]; then 
-    echo -e "${RED}Error: Must run as root (use sudo)${NC}" | tee -a "$LOG_FILE"
+    echo "Error: Must run as root (use sudo)"
     exit 1
 fi
+
+# If running as root user directly (not via sudo), try to detect actual user
+if [ "$ACTUAL_USER" = "root" ]; then
+    # Try to find the user who owns the project directory
+    ACTUAL_USER=$(stat -c '%U' "$SCRIPT_DIR" 2>/dev/null || echo "root")
+    if [ "$ACTUAL_USER" = "root" ]; then
+        echo "Warning: Running as root, file ownership may need manual correction"
+    fi
+    # Update HOME to actual user's home
+    HOME=$(eval echo "~$ACTUAL_USER")
+    BACKUP_DIR="$HOME/posexpress-backups"
+fi
+
+echo "Running as: $ACTUAL_USER"
+echo "Project dir: $SCRIPT_DIR"
+echo "Backup dir: $BACKUP_DIR"
 
 cd "$SCRIPT_DIR"
 
 # Get current version
 CURRENT_VERSION=$(cat VERSION 2>/dev/null || echo "unknown")
-echo "Current version: v$CURRENT_VERSION" | tee -a "$LOG_FILE"
+echo "Current version: v$CURRENT_VERSION"
 
 # Fetch latest release
-echo "Checking for updates..." | tee -a "$LOG_FILE"
+echo "Checking for updates..."
 LATEST_RELEASE=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
 
 if [ -z "$LATEST_RELEASE" ] || echo "$LATEST_RELEASE" | grep -q "Not Found"; then
-    echo -e "${RED}Error: Could not fetch release from GitHub${NC}" | tee -a "$LOG_FILE"
+    echo "Error: Could not fetch release from GitHub"
+    echo "Repository: https://github.com/$GITHUB_REPO"
     exit 1
 fi
 
 # Parse version using sed (compatible with all Linux systems)
 LATEST_VERSION=$(echo "$LATEST_RELEASE" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | sed 's/v//')
-echo "Latest version: v$LATEST_VERSION" | tee -a "$LOG_FILE"
+
+if [ -z "$LATEST_VERSION" ]; then
+    echo "Error: Could not parse version from GitHub release"
+    exit 1
+fi
+
+echo "Latest version: v$LATEST_VERSION"
 
 if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
-    echo "Already up to date!" | tee -a "$LOG_FILE"
+    echo "Already up to date!"
     exit 0
 fi
+
+echo "Update available: v$CURRENT_VERSION -> v$LATEST_VERSION"
 
 # Create backup
 echo "Creating backup..." | tee -a "$LOG_FILE"

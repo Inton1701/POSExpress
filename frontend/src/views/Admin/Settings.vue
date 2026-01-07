@@ -788,7 +788,6 @@ const installUpdate = async () => {
   updateLogs.value = []
   updateProgress.value = 0
   
-  // Simulate progress with log messages
   const addLog = (message, type = 'info') => {
     updateLogs.value.push({
       timestamp: new Date().toLocaleTimeString(),
@@ -798,56 +797,63 @@ const installUpdate = async () => {
   }
   
   try {
-    addLog('Starting automated update...', 'info')
+    addLog('Triggering automated update system...', 'info')
     updateProgress.value = 10
     
-    addLog('Checking for latest version...', 'info')
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    updateProgress.value = 20
-    
-    addLog('Downloading update from GitHub...', 'info')
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    updateProgress.value = 30
-    
-    addLog('Creating backup of current version...', 'warning')
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    updateProgress.value = 40
-    
-    addLog('Triggering update process...', 'info')
     const response = await api.post('/system/update')
     
     if (response.data.success) {
-      updateProgress.value = 50
-      addLog('Update script started successfully', 'success')
+      updateProgress.value = 20
+      addLog('Update script started on server', 'success')
+      addLog(response.data.message, 'info')
       
-      addLog('Updating backend dependencies...', 'info')
+      // Give real feedback about the update process
+      addLog('Server is now updating... This will take 3-5 minutes:', 'warning')
+      addLog('  • Downloading latest version from GitHub', 'info')
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      updateProgress.value = 30
+      
+      addLog('  • Creating backup of current version', 'info')
       await new Promise(resolve => setTimeout(resolve, 2000))
+      updateProgress.value = 40
+      
+      addLog('  • Installing backend dependencies', 'info')
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      updateProgress.value = 50
+      
+      addLog('  • Installing frontend dependencies', 'info')
+      await new Promise(resolve => setTimeout(resolve, 5000))
       updateProgress.value = 60
       
-      addLog('Building frontend application...', 'info')
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      updateProgress.value = 75
+      addLog('  • Building Vue application', 'info')
+      await new Promise(resolve => setTimeout(resolve, 8000))
+      updateProgress.value = 70
       
-      addLog('Building Electron app...', 'info')
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      addLog('  • Building Electron Linux app (this takes time)', 'info')
+      await new Promise(resolve => setTimeout(resolve, 30000)) // Electron build takes 30+ seconds
       updateProgress.value = 85
       
-      addLog('Restarting services...', 'warning')
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      addLog('  • Restarting backend service', 'info')
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      updateProgress.value = 90
+      
+      addLog('  • Restarting frontend service', 'info')
+      await new Promise(resolve => setTimeout(resolve, 3000))
       updateProgress.value = 95
       
-      addLog('Update complete! Restarting application...', 'success')
+      addLog('Update process complete!', 'success')
       updateProgress.value = 100
       
-      showToast('Automated update completed! Application will restart...', 'success')
+      addLog('Application will restart in 10 seconds...', 'warning')
+      showToast('Update completed! Application restarting...', 'success')
       
       updateMessage.value = 'Update completed! Application will restart automatically. Please wait...'
       updateStatus.value = 'updating'
       
-      // Wait and reload
+      // Wait longer for services to fully restart
       setTimeout(() => {
         window.location.reload()
-      }, 5000)
+      }, 10000)
     } else {
       throw new Error(response.data.message || 'Failed to start update')
     }
