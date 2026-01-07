@@ -309,20 +309,13 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         const printWindow = new BrowserWindow({
           width: 220,
           height: 400,
-          show: true,
+          show: false, // Start hidden to prevent preview from showing
           skipTaskbar: true,
-          x: -9999, // Position off-screen instead of minimizing (allows capture on Linux)
-          y: -9999,
           webPreferences: {
             nodeIntegration: false,
             contextIsolation: true
           }
         })
-        
-        // Don't minimize on Linux - it breaks capturePage()
-        if (process.platform === 'win32') {
-          printWindow.minimize()
-        }
         
         const testHTML = `
         <!DOCTYPE html>
@@ -330,6 +323,14 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         <head>
           <meta charset="UTF-8">
           <style>
+            html, body {
+              overflow: hidden;
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            html::-webkit-scrollbar, body::-webkit-scrollbar {
+              display: none;
+            }
             body {
               font-family: Arial, sans-serif;
               font-size: 24px;
@@ -352,7 +353,24 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           setTimeout(async () => {
             if (process.platform === 'linux') {
               try {
-                const image = await printWindow.webContents.capturePage()
+                // Get content dimensions
+                const contentHeight = await printWindow.webContents.executeJavaScript('document.body.scrollHeight')
+                const contentWidth = 220
+                
+                // Resize to fit content (full height)
+                printWindow.setSize(contentWidth, contentHeight + 20)
+                
+                // Wait for resize
+                await new Promise(resolve => setTimeout(resolve, 300))
+                
+                // Capture with specific rect to avoid scrollbars
+                const captureRect = {
+                  x: 0,
+                  y: 0,
+                  width: contentWidth,
+                  height: contentHeight // Capture full height
+                }
+                const image = await printWindow.webContents.capturePage(captureRect)
                 const pngBuffer = image.toPNG()
                 printWindow.close()
                 
@@ -415,20 +433,13 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
       const printWindow = new BrowserWindow({
         width: 220, // 58mm ≈ 220px at 96 DPI
         height: 1200,
-        show: true, // Must be visible to render content properly
+        show: false, // Start hidden to prevent preview from showing
         skipTaskbar: true,
-        x: -9999, // Position off-screen instead of minimizing (allows capture on Linux)
-        y: -9999,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true
         }
       })
-      
-      // Only minimize on Windows - on Linux minimizing breaks capturePage()
-      if (process.platform === 'win32') {
-        printWindow.minimize()
-      }
       
       // Generate HTML receipt based on type
       let receiptHTML = ''
@@ -465,6 +476,14 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               margin: 0;
               padding: 0;
               box-sizing: border-box;
+            }
+            html, body {
+              overflow: hidden;
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            html::-webkit-scrollbar, body::-webkit-scrollbar {
+              display: none;
             }
             body {
               font-family: Arial, sans-serif;
@@ -621,6 +640,14 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               margin: 0;
               padding: 0;
               box-sizing: border-box;
+            }
+            html, body {
+              overflow: hidden;
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            html::-webkit-scrollbar, body::-webkit-scrollbar {
+              display: none;
             }
             body {
               font-family: Arial, sans-serif;
@@ -800,6 +827,14 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               padding: 0;
               box-sizing: border-box;
             }
+            html, body {
+              overflow: hidden;
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            html::-webkit-scrollbar, body::-webkit-scrollbar {
+              display: none;
+            }
             body {
               font-family: Arial, sans-serif;
               font-size: 11px;
@@ -955,6 +990,14 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               padding: 0;
               box-sizing: border-box;
             }
+            html, body {
+              overflow: hidden;
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            html::-webkit-scrollbar, body::-webkit-scrollbar {
+              display: none;
+            }
             body {
               font-family: Arial, sans-serif;
               font-size: 11px;
@@ -1023,22 +1066,31 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           
           // PNG-based printing for Linux only
           if (process.platform === 'linux') {
+            // Get the actual content height to avoid capturing scrollbars
+            const contentHeight = await printWindow.webContents.executeJavaScript('document.body.scrollHeight')
+            const contentWidth = 220 // 58mm at 96 DPI
+            
+            console.log(`Content dimensions: ${contentWidth}x${contentHeight}px`)
+            
+            // Resize window to exact content size to prevent scrollbars (no height limit)
+            printWindow.setSize(contentWidth, contentHeight + 20)
             try {
               console.log('Linux detected - using PNG printing workflow')
               
-              // Step 1: Ensure window is visible and focused for capture
-              console.log('Ensuring window is visible for capture...')
-              printWindow.setPosition(100, 100) // Move on-screen temporarily
-              printWindow.show()
-              printWindow.focus()
-              
-              // Step 2: Wait for content to fully render
-              console.log('Waiting for content to render...')
+              // Step 1: Wait for content to render while hidden
+              console.log('Waiting for content to render (hidden)...')
               await new Promise(resolve => setTimeout(resolve, 1500))
               
-              // Step 2: Capture screenshot as PNG
+              // Step 2: Capture screenshot as PNG (window can stay hidden)
               console.log('Capturing receipt as PNG...')
-              const image = await printWindow.webContents.capturePage()
+              // Specify exact capture rect to avoid any scrollbars
+              const captureRect = {
+                x: 0,
+                y: 0,
+                width: contentWidth,
+                height: contentHeight // Capture full content height
+              }
+              const image = await printWindow.webContents.capturePage(captureRect)
               const pngBuffer = image.toPNG()
               console.log('PNG captured, size:', pngBuffer.length, 'bytes')
               
