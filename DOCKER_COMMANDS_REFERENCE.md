@@ -139,7 +139,7 @@ docker compose build
 # Rebuild without cache
 docker compose build --no-cache
 
-# Full rebuild and restart
+# Full rebuild and restarts
 docker compose down
 docker compose up --build -d
 ```
