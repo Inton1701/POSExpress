@@ -176,16 +176,8 @@ if [ ! -f ".env" ] && [ -f "$BACKUP_PATH/backend/.env" ]; then
     echo "Restored backend .env from backup" | tee -a "$LOG_FILE"
 fi
 
-# Restart backend service
-if systemctl list-unit-files | grep -q "posexpress-backend.service"; then
-    systemctl start posexpress-backend
-    sleep 2
-    if systemctl is-active --quiet posexpress-backend; then
-        echo "Backend service restarted successfully" | tee -a "$LOG_FILE"
-    else
-        echo -e "${RED}Warning: Backend service failed to start${NC}" | tee -a "$LOG_FILE"
-    fi
-fi
+# NOTE: Don't restart backend yet - wait until all builds are complete
+echo "Backend updated (not restarting yet, waiting for frontend build)" | tee -a "$LOG_FILE"
 
 # ========================================
 # Update Frontend
@@ -226,21 +218,36 @@ fi
 # ========================================
 echo "" | tee -a "$LOG_FILE"
 echo "Building Electron application..." | tee -a "$LOG_FILE"
+echo "This may take 5-10 minutes..." | tee -a "$LOG_FILE"
 
 # Clean old builds
 sudo -u "$ACTUAL_USER" rm -rf dist-electron
 
-# Build Electron app
-sudo -u "$ACTUAL_USER" npm run electron:build 2>&1 | tee -a "$LOG_FILE"
+# Build Electron app with error checking
+cd "$SCRIPT_DIR/frontend"
+if ! sudo -u "$ACTUAL_USER" npm run electron:build 2>&1 | tee -a "$LOG_FILE"; then
+    echo "Error: Electron build failed" | tee -a "$LOG_FILE"
+    echo "Check the log above for details" | tee -a "$LOG_FILE"
+    exit 1
+fi
 
 # Find new AppImage
 APPIMAGE=$(find "$SCRIPT_DIR/frontend/dist-electron" -name "*.AppImage" -type f | head -n 1)
 
 if [ -z "$APPIMAGE" ]; then
-    echo -e "${YELLOW}Warning: AppImage not found${NC}" | tee -a "$LOG_FILE"
+    echo "Warning: AppImage not found, checking for deb file..." | tee -a "$LOG_FILE"
+    # Try to find deb file as alternative
+    APPIMAGE=$(find "$SCRIPT_DIR/frontend/dist-electron" -name "*.deb" -type f | head -n 1)
+    if [ -z "$APPIMAGE" ]; then
+        echo "Warning: No Electron build output found" | tee -a "$LOG_FILE"
+        APPIMAGE=""
+    fi
 else
     echo "AppImage built: $(basename "$APPIMAGE")" | tee -a "$LOG_FILE"
     chmod +x "$APPIMAGE"
+fi
+
+if [ -n "$APPIMAGE" ]; then
     
     # Update systemd service
     SERVICE_NAME="posexpress-frontend"
@@ -297,16 +304,18 @@ EOF
 fi
 
 # ========================================
-# Start Services
+# Start/Restart All Services (After all builds complete)
 # ========================================
 echo "" | tee -a "$LOG_FILE"
-echo "Starting services..." | tee -a "$LOG_FILE"
+echo "Restarting all services after update..." | tee -a "$LOG_FILE"
 
-systemctl start posexpress-backend 2>/dev/null || true
-sleep 2
+# Restart backend
+systemctl restart posexpress-backend 2>/dev/null || systemctl start posexpress-backend 2>/dev/null || true
+sleep 3
 
+# Restart frontend if AppImage was built
 if [ -n "$APPIMAGE" ]; then
-    systemctl start posexpress-frontend 2>/dev/null || true
+    systemctl restart posexpress-frontend 2>/dev/null || systemctl start posexpress-frontend 2>/dev/null || true
     sleep 2
 fi
 

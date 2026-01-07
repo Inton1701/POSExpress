@@ -156,10 +156,19 @@ const triggerUpdate = async (req, res) => {
                     console.log('chmod skipped:', chmodErr.message);
                 }
                 
+                // Get the user who owns the project directory
+                let projectUser = 'pos-express'; // default
+                try {
+                    const { stdout } = await execPromise(`stat -c '%U' "${scriptPath}"`);
+                    projectUser = stdout.trim();
+                } catch (err) {
+                    console.log('Could not detect project user, using default: pos-express');
+                }
+                
                 // Run automated update script with sudo
-                // Note: User must have passwordless sudo configured (see deploy-frontend.sh)
-                console.log('Starting automated update...');
-                const updateProcess = exec(`sudo /bin/bash "${scriptPath}" 2>&1`, {
+                // Pass SUDO_USER explicitly so script detects correct user
+                console.log(`Starting automated update as user: ${projectUser}`);
+                const updateProcess = exec(`sudo SUDO_USER=${projectUser} /bin/bash "${scriptPath}" 2>&1`, {
                     timeout: 600000, // 10 minute timeout
                     maxBuffer: 1024 * 1024 * 10 // 10MB buffer
                 }, (error, stdout, stderr) => {
