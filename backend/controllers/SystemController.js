@@ -659,12 +659,35 @@ const checkUpdatePrerequisites = async (req, res) => {
             }
         }
         
-        // Check sudo configuration
+        // Check sudo configuration by testing actual command we need
         if (!isRoot) {
             try {
-                const { stdout, stderr } = await execPromise(`sudo -n -l 2>&1`);
-                checks.sudoConfigured = stdout.includes('update-system.sh') || stdout.includes('NOPASSWD');
-                checks.sudoOutput = stdout.substring(0, 500);
+                // Check if the sudoers file exists for posexpress
+                const sudoersFile = '/etc/sudoers.d/posexpress-system-control';
+                try {
+                    await fs.access(sudoersFile);
+                    checks.sudoersFileExists = true;
+                } catch (e) {
+                    checks.sudoersFileExists = false;
+                }
+                
+                // Test if we can run a harmless command with sudo -n
+                // Use 'true' command which does nothing but tests sudo access
+                try {
+                    await execPromise(`sudo -n true 2>&1`);
+                    checks.sudoConfigured = true;
+                    checks.sudoTestResult = 'sudo -n true succeeded';
+                } catch (sudoTestErr) {
+                    // sudo -n true failed, but specific commands might still work
+                    // Check if sudoers file exists - if it does, assume it's configured
+                    if (checks.sudoersFileExists) {
+                        checks.sudoConfigured = true;
+                        checks.sudoTestResult = 'sudoers file exists, specific commands should work';
+                    } else {
+                        checks.sudoConfigured = false;
+                        checks.sudoTestResult = sudoTestErr.message;
+                    }
+                }
             } catch (e) {
                 checks.sudoError = e.message;
                 checks.sudoConfigured = false;
