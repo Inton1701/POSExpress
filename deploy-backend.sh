@@ -155,7 +155,7 @@ StandardError=journal
 SyslogIdentifier=$SERVICE_NAME
 
 # Security settings
-NoNewPrivileges=true
+# NoNewPrivileges disabled to allow system updates and shutdowns via sudo
 PrivateTmp=true
 
 [Install]

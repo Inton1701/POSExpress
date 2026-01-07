@@ -473,12 +473,37 @@ const rebootSystem = async (req, res) => {
                 }
             });
         } else if (platform === 'linux' || platform === 'darwin') {
-            // Linux/macOS reboot command - uses passwordless sudo configured in deploy script
-            exec('sudo /usr/sbin/reboot', (error) => {
-                if (error) {
-                    console.error('Reboot command error:', error);
+            // Linux/macOS reboot command - use systemd-run to bypass NoNewPrivileges
+            // Try multiple methods in order of preference
+            const methods = [
+                'systemd-run --scope sudo /usr/sbin/reboot',
+                'systemd-run --scope sudo /sbin/reboot',
+                'pkexec /usr/sbin/reboot',
+                'sudo /usr/sbin/reboot'
+            ];
+            
+            let attempted = 0;
+            const tryReboot = () => {
+                if (attempted >= methods.length) {
+                    console.error('All reboot methods failed');
+                    return;
                 }
-            });
+                
+                const method = methods[attempted];
+                console.log(`Trying reboot method ${attempted + 1}: ${method}`);
+                
+                exec(method, (error) => {
+                    if (error) {
+                        console.error(`Reboot method ${attempted + 1} failed:`, error.message);
+                        attempted++;
+                        tryReboot();
+                    } else {
+                        console.log(`Reboot initiated via method ${attempted + 1}`);
+                    }
+                });
+            };
+            
+            tryReboot();
         }
         
         res.json({
@@ -512,12 +537,37 @@ const shutdownSystem = async (req, res) => {
                 }
             });
         } else if (platform === 'linux' || platform === 'darwin') {
-            // Linux/macOS shutdown command - uses passwordless sudo configured in deploy script
-            exec('sudo /usr/sbin/poweroff', (error) => {
-                if (error) {
-                    console.error('Shutdown command error:', error);
+            // Linux/macOS shutdown command - use systemd-run to bypass NoNewPrivileges
+            // Try multiple methods in order of preference
+            const methods = [
+                'systemd-run --scope sudo /usr/sbin/poweroff',
+                'systemd-run --scope sudo /sbin/poweroff',
+                'pkexec /usr/sbin/poweroff',
+                'sudo /usr/sbin/poweroff'
+            ];
+            
+            let attempted = 0;
+            const tryShutdown = () => {
+                if (attempted >= methods.length) {
+                    console.error('All shutdown methods failed');
+                    return;
                 }
-            });
+                
+                const method = methods[attempted];
+                console.log(`Trying shutdown method ${attempted + 1}: ${method}`);
+                
+                exec(method, (error) => {
+                    if (error) {
+                        console.error(`Shutdown method ${attempted + 1} failed:`, error.message);
+                        attempted++;
+                        tryShutdown();
+                    } else {
+                        console.log(`Shutdown initiated via method ${attempted + 1}`);
+                    }
+                });
+            };
+            
+            tryShutdown();
         }
         
         res.json({
