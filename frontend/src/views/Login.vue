@@ -293,8 +293,30 @@ const handleLogin = async () => {
       await router.replace(redirectPath)
     }
   } catch (error) {
-    console.error('Login error:', error)
-    errorMessage.value = error.response?.data?.message || 'Invalid username or password. Please try again.'
+    // Better error handling to prevent white screen crashes
+    
+    // Extract proper error message
+    let message = 'An error occurred. Please try again.'
+    
+    if (error.response) {
+      // Server responded with error
+      message = error.response.data?.message || 'Invalid credentials. Please try again.'
+      console.error('Login error (server):', message)
+    } else if (error.request) {
+      // Request made but no response
+      message = 'Cannot connect to server. Please check your connection.'
+      console.error('Login error (network):', message)
+    } else {
+      // Something else happened
+      message = error.message || 'An unexpected error occurred.'
+      console.error('Login error (unexpected):', message)
+    }
+    
+    errorMessage.value = message
+    
+    // Clear password on error to allow retry
+    form.value.password = ''
+    form.value.rfid = ''
   } finally {
     isLoading.value = false
   }

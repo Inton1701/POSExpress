@@ -25,10 +25,26 @@ const customer = {
                 return res.status(400).json({ success: false, message: "RFID, username, password, full name, and birthday are required" });
             }
 
-            // Check if RFID already exists
+            // GLOBAL USERNAME CHECK: Check if username exists in Customers OR Users
+            const existingCustomerWithUsername = await Customer.findOne({ username });
+            if (existingCustomerWithUsername) {
+                return res.status(400).json({ success: false, message: "Username already exists (used by another customer)" });
+            }
+            
+            const existingUserWithUsername = await User.findOne({ username });
+            if (existingUserWithUsername) {
+                return res.status(400).json({ success: false, message: "Username already exists (used by a user)" });
+            }
+
+            // GLOBAL RFID CHECK: Check if RFID exists in Customers OR Users
             const existingCustomer = await Customer.findOne({ rfid });
             if (existingCustomer) {
-                return res.status(400).json({ success: false, message: "RFID already exists" });
+                return res.status(400).json({ success: false, message: "RFID already exists (used by another customer)" });
+            }
+            
+            const existingUser = await User.findOne({ rfid });
+            if (existingUser) {
+                return res.status(400).json({ success: false, message: "RFID already exists (used by a user)" });
             }
 
             // Hash password
@@ -89,11 +105,29 @@ const customer = {
                 return res.status(404).json({ success: false, message: 'Customer not found' });
             }
 
-            // If updating RFID, check if new RFID already exists
+            // GLOBAL USERNAME CHECK: If updating username, check if new username exists in Customers OR Users
+            if (req.body.username && req.body.username !== customer.username) {
+                const existingCustomerWithUsername = await Customer.findOne({ username: req.body.username });
+                if (existingCustomerWithUsername) {
+                    return res.status(400).json({ success: false, message: "Username already exists (used by another customer)" });
+                }
+                
+                const existingUserWithUsername = await User.findOne({ username: req.body.username });
+                if (existingUserWithUsername) {
+                    return res.status(400).json({ success: false, message: "Username already exists (used by a user)" });
+                }
+            }
+
+            // GLOBAL RFID CHECK: If updating RFID, check if new RFID exists in Customers OR Users
             if (req.body.rfid && req.body.rfid !== customer.rfid) {
                 const existingCustomer = await Customer.findOne({ rfid: req.body.rfid });
                 if (existingCustomer) {
-                    return res.status(400).json({ success: false, message: "RFID already exists" });
+                    return res.status(400).json({ success: false, message: "RFID already exists (used by another customer)" });
+                }
+                
+                const existingUser = await User.findOne({ rfid: req.body.rfid });
+                if (existingUser) {
+                    return res.status(400).json({ success: false, message: "RFID already exists (used by a user)" });
                 }
             }
 

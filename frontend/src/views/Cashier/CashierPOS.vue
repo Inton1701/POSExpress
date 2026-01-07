@@ -1489,7 +1489,10 @@ const checkSessionStatus = async () => {
     }
     return false
   } catch (error) {
-    console.error('Error checking session status:', error)
+    // Silent error handling - only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error checking session status:', error)
+    }
     return false
   }
 }

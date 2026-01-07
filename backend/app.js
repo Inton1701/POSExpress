@@ -9,11 +9,15 @@ const routes = require("./routes/routes");
 // Connect to database
 connectDB();
 
+// CORS Configuration - Allow all origins for development and production
+app.use(cors({
+    origin: '*', // Allow all origins
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
+
 // Middleware
-// app.use(cors({
-//     origin: ['http://localhost:5173', 'http://192.168.1.29:5173']
-// }));
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
