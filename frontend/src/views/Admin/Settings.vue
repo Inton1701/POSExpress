@@ -840,49 +840,69 @@ const installUpdate = async () => {
       addLog('Update process started in background (nohup)', 'success')
       addLog('Server will update automatically now...', 'info')
       
-      // Monitor the actual update log file for real progress
-      addLog('Monitoring update progress (refreshing every 5 seconds)...', 'info')
-      updateProgress.value = 15
+      // Poll the actual update log file for real progress
+      addLog('Fetching real-time update logs...', 'info')
+      updateProgress.value = 10
       
-      let lastLogSize = 0
-      let isUpdating = true
       let checkCount = 0
       const maxChecks = 120 // 10 minutes max (120 * 5 seconds)
+      let lastLogContent = ''
       
       const monitorUpdate = setInterval(async () => {
         checkCount++
         
         try {
-          // Check backend health
-          const healthResponse = await api.get('/health')
-          if (!healthResponse.data.success) {
-            // Backend is likely down for restart, update is still running
-            updateProgress.value = Math.min(updateProgress.value + 2, 90)
+          // Fetch actual update log
+          const logResponse = await api.get('/system/update-log')
+          if (logResponse.data.success && logResponse.data.log) {
+            const logContent = logResponse.data.log
+            
+            // Only add new lines
+            if (logContent !== lastLogContent) {
+              const newLines = logContent.split('\n').slice(lastLogContent.split('\n').length - 1)
+              newLines.forEach(line => {
+                if (line.trim()) {
+                  // Determine log type based on content
+                  let type = 'info'
+                  if (line.includes('Error') || line.includes('error') || line.includes('failed')) {
+                    type = 'error'
+                  } else if (line.includes('Warning') || line.includes('warning')) {
+                    type = 'warning'
+                  } else if (line.includes('✓') || line.includes('successfully') || line.includes('complete')) {
+                    type = 'success'
+                  }
+                  
+                  addLog(line, type)
+                }
+              })
+              lastLogContent = logContent
+              
+              // Update progress based on log content
+              if (logContent.includes('Downloading latest version')) {
+                updateProgress.value = 20
+              }
+              if (logContent.includes('Updating backend')) {
+                updateProgress.value = 35
+              }
+              if (logContent.includes('Building Vue application')) {
+                updateProgress.value = 50
+              }
+              if (logContent.includes('Building Electron application')) {
+                updateProgress.value = 60
+              }
+              if (logContent.includes('Restarting all services')) {
+                updateProgress.value = 90
+              }
+              if (logContent.includes('Update Complete')) {
+                updateProgress.value = 100
+              }
+            }
           }
         } catch (err) {
-          // Backend is down, update is in progress - this is normal
-          updateProgress.value = Math.min(updateProgress.value + 3, 90)
+          // Log fetch failed, backend might be restarting
         }
         
-        // Give more realistic progress feedback
-        if (checkCount < 10) {
-          addLog('Downloading and backing up current version...', 'info')
-          updateProgress.value = 20
-        } else if (checkCount < 20) {
-          addLog('Installing backend dependencies...', 'info')
-          updateProgress.value = 35
-        } else if (checkCount < 35) {
-          addLog('Building Vue application...', 'info')
-          updateProgress.value = 50
-        } else if (checkCount < 80) {
-          addLog('Building Electron application (this takes time)...', 'info')
-          updateProgress.value = Math.min(updateProgress.value + 1, 85)
-        } else if (checkCount < 100) {
-          addLog('Restarting services...', 'info')
-          updateProgress.value = 90
-        }
-        
-        // Check if update is complete by seeing if backend is back up
+        // Check if backend is back up
         if (checkCount > 20) {
           try {
             const response = await api.get('/health')
@@ -890,10 +910,9 @@ const installUpdate = async () => {
               // Backend is back! Update must be complete
               addLog('Backend is back online - update complete!', 'success')
               clearInterval(monitorUpdate)
-              isUpdating = false
               
               updateProgress.value = 100
-              addLog('Reloading application in 5 seconds...', 'warning')
+              addLog('Reloading application in 3 seconds...', 'warning')
               showToast('Update completed! Application restarting...', 'success')
               
               updateMessage.value = 'Update completed! Reloading application...'
@@ -901,7 +920,7 @@ const installUpdate = async () => {
               
               setTimeout(() => {
                 window.location.reload()
-              }, 5000)
+              }, 3000)
             }
           } catch (err) {
             // Backend still down, keep monitoring
@@ -911,25 +930,10 @@ const installUpdate = async () => {
         // Timeout after 10 minutes
         if (checkCount >= maxChecks) {
           clearInterval(monitorUpdate)
-          addLog('Update timeout - backend may still be updating', 'warning')
-          addLog('Try refreshing in a moment...', 'info')
+          addLog('Update timeout - check server logs for details', 'warning')
           updateProgress.value = 100
         }
       }, 5000) // Check every 5 seconds
-      
-      // Also try reloading immediately if backend comes back sooner
-      const quickReload = setInterval(async () => {
-        try {
-          const response = await api.get('/health')
-          if (response.data.success) {
-            clearInterval(quickReload)
-            clearInterval(monitorUpdate)
-            window.location.reload()
-          }
-        } catch (err) {
-          // Still down
-        }
-      }, 2000) // Check every 2 seconds for faster response
     } else {
       throw new Error(response.data.message || 'Failed to start update')
     }

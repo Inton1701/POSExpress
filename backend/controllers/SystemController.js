@@ -462,10 +462,53 @@ const shutdownSystem = async (req, res) => {
     }
 };
 
+/**
+ * Get update log contents
+ */
+const getUpdateLog = async (req, res) => {
+    try {
+        const logPath = '/var/log/posexpress-update.log';
+        
+        // Check if log exists
+        try {
+            await fs.access(logPath);
+        } catch (err) {
+            return res.json({
+                success: true,
+                log: '',
+                message: 'No update log found'
+            });
+        }
+        
+        // Read last 1000 lines of log
+        try {
+            const { stdout } = await execPromise(`tail -1000 "${logPath}"`);
+            res.json({
+                success: true,
+                log: stdout
+            });
+        } catch (err) {
+            res.json({
+                success: true,
+                log: '',
+                message: 'Could not read log file'
+            });
+        }
+    } catch (error) {
+        console.error('Error reading update log:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to read update log',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getCurrentVersion,
     checkForUpdates,
     triggerUpdate,
+    getUpdateLog,
     listBackups,
     revertUpdate,
     rebootSystem,
