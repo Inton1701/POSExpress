@@ -165,19 +165,42 @@ ipcMain.handle('execute-command', async (event, command) => {
 })
 
 // Helper function to print via CUPS on Linux (using lp command)
-async function printViaCUPS(printerName, imagePath) {
+async function printViaCUPS(printerName, imagePath, imageWidth, imageHeight) {
   return new Promise((resolve, reject) => {
-    // CUPS print command for thermal printer - PNG format
-    // Use simple options that work reliably
-    const printCommand = `lp -d "${printerName}" -o fit-to-page -o orientation-requested=3 "${imagePath}"`
+    // Calculate dimensions in points (1 inch = 72 points, 1mm = 2.835 points)
+    // For thermal printers, we want to print at actual pixel size
+    // Thermal printers typically use 203 DPI, so convert pixels to mm
+    const dpi = 203 // Standard thermal printer DPI
+    const widthInMm = Math.round((imageWidth / dpi) * 25.4) || 58 // Default to 58mm
+    const heightInMm = Math.round((imageHeight / dpi) * 25.4) || 200 // Default height
+    
+    // Use custom media size matching the image dimensions
+    // -o media=Custom.WIDTHxHEIGHTmm sets exact paper size
+    // -o scaling=100 prints at 100% scale (no fit-to-page distortion)
+    // -o position=top-left positions image at top-left corner
+    const printCommand = `lp -d "${printerName}" -o media=Custom.${widthInMm}x${heightInMm}mm -o scaling=100 -o position=top-left "${imagePath}"`
     
     console.log('Executing CUPS command:', printCommand)
+    console.log(`Image dimensions: ${imageWidth}x${imageHeight}px -> ${widthInMm}x${heightInMm}mm`)
     
     exec(printCommand, (error, stdout, stderr) => {
       if (error) {
         console.error('CUPS print error:', error)
         console.error('stderr:', stderr)
-        reject(error)
+        
+        // Fallback: Try simpler command without custom media if first attempt fails
+        console.log('Trying fallback CUPS command...')
+        const fallbackCommand = `lp -d "${printerName}" -o scaling=100 "${imagePath}"`
+        
+        exec(fallbackCommand, (err2, stdout2, stderr2) => {
+          if (err2) {
+            console.error('Fallback CUPS print error:', err2)
+            reject(error) // Reject with original error
+          } else {
+            console.log('Fallback CUPS output:', stdout2)
+            resolve({ success: true, fallback: true })
+          }
+        })
       } else {
         console.log('CUPS output:', stdout)
         if (stderr) console.log('CUPS stderr:', stderr)
@@ -352,59 +375,32 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         
         printWindow.webContents.on('did-finish-load', () => {
           setTimeout(async () => {
-            if (process.platform === 'linux') {
-              try {
-                // Get content dimensions
-                const contentHeight = await printWindow.webContents.executeJavaScript('document.body.scrollHeight')
-                const contentWidth = 220
-                
-                // Resize to fit content (full height)
-                printWindow.setSize(contentWidth, contentHeight + 20)
-                
-                // Wait for resize
-                await new Promise(resolve => setTimeout(resolve, 300))
-                
-                // Capture with specific rect to avoid scrollbars
-                const captureRect = {
-                  x: 0,
-                  y: 0,
-                  width: contentWidth,
-                  height: contentHeight // Capture full height
-                }
-                const image = await printWindow.webContents.capturePage(captureRect)
-                const pngBuffer = image.toPNG()
-                printWindow.close()
-                
-                const tempImageFile = path.join(os.tmpdir(), `test-print-${Date.now()}.png`)
-                fs.writeFileSync(tempImageFile, pngBuffer)
-                
-                await printViaCUPS(targetPrinter.name, tempImageFile)
-                
-                setTimeout(() => {
-                  try { fs.unlinkSync(tempImageFile) } catch(e) {}
-                }, 10000)
-                
-                resolve({ success: true, printer: targetPrinter.name })
-              } catch (error) {
-                if (printWindow && !printWindow.isDestroyed()) printWindow.close()
-                reject(error)
-              }
-            } else {
-              const printOptions = {
-                silent: true,
-                deviceName: targetPrinter.name,
-                pageSize: { width: 58000, height: 100000 }
-              }
-              
-              printWindow.webContents.print(printOptions, (success, errorType) => {
-                printWindow.close()
-                if (success) {
-                  resolve({ success: true, printer: targetPrinter.name })
-                } else {
-                  reject(new Error(errorType || 'Print failed'))
-                }
-              })
+            // Use native Electron printing for all platforms
+            const printOptions = {
+              silent: true,
+              printBackground: true,
+              color: false,
+              deviceName: targetPrinter.name,
+              copies: 1,
+              landscape: false,
+              margins: { 
+                marginType: 'none'
+              },
+              pageSize: { 
+                width: 58000,  // 58mm in microns
+                height: 100000 // 100mm for test print
+              },
+              scaleFactor: 100
             }
+            
+            printWindow.webContents.print(printOptions, (success, errorType) => {
+              printWindow.close()
+              if (success) {
+                resolve({ success: true, printer: targetPrinter.name })
+              } else {
+                reject(new Error(errorType || 'Print failed'))
+              }
+            })
           }, 1000)
         })
         
@@ -1061,90 +1057,10 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
       printWindow.webContents.on('did-finish-load', () => {
         console.log('Print window loaded, preparing to print...')
         
-        // Longer delay to ensure content is rendered, especially on Windows
+        // Delay to ensure content is rendered
         setTimeout(async () => {
           console.log('Attempting to print...')
-          
-          // PNG-based printing for Linux only
-          if (process.platform === 'linux') {
-            // Get the actual content height to avoid capturing scrollbars
-            const contentHeight = await printWindow.webContents.executeJavaScript('document.body.scrollHeight')
-            const contentWidth = 220 // 58mm at 96 DPI
-            
-            console.log(`Content dimensions: ${contentWidth}x${contentHeight}px`)
-            
-            // Resize window to exact content size to prevent scrollbars (no height limit)
-            printWindow.setSize(contentWidth, contentHeight + 20)
-            try {
-              console.log('Linux detected - using PNG printing workflow')
-              
-              // Step 1: Wait for content to render while hidden
-              console.log('Waiting for content to render (hidden)...')
-              await new Promise(resolve => setTimeout(resolve, 1500))
-              
-              // Step 2: Capture screenshot as PNG (window can stay hidden)
-              console.log('Capturing receipt as PNG...')
-              // Specify exact capture rect to avoid any scrollbars
-              const captureRect = {
-                x: 0,
-                y: 0,
-                width: contentWidth,
-                height: contentHeight // Capture full content height
-              }
-              const image = await printWindow.webContents.capturePage(captureRect)
-              const pngBuffer = image.toPNG()
-              console.log('PNG captured, size:', pngBuffer.length, 'bytes')
-              
-              printWindow.close()
-              
-              // Step 3: Save to disk
-              const tempImageFile = path.join(os.tmpdir(), `receipt-${Date.now()}.png`)
-              fs.writeFileSync(tempImageFile, pngBuffer)
-              console.log('PNG saved to:', tempImageFile)
-              
-              // Step 4: Print via CUPS
-              console.log('Printing to:', targetPrinter.name)
-              await printViaCUPS(targetPrinter.name, tempImageFile)
-              
-              // Step 5: Keep temp file for debugging (delete after 10 seconds)
-              setTimeout(() => {
-                try { 
-                  fs.unlinkSync(tempImageFile)
-                  console.log('Temp file cleaned up')
-                } catch(e) {
-                  console.warn('Could not delete temp file:', e.message)
-                }
-              }, 10000)
-              
-              console.log('✓ Printed successfully via PNG printing')
-              resolve({ success: true, printer: targetPrinter.name, mode: 'png', platform: process.platform })
-              
-            } catch (error) {
-              if (printWindow && !printWindow.isDestroyed()) {
-                printWindow.close()
-              }
-              console.error('PNG printing failed:', error)
-              reject(new Error('PNG printing failed: ' + error.message))
-            }
-            return
-          }
-          
-          // Windows/Mac: Use standard Electron silent print API
-          console.log(`${process.platform} detected - using Electron silent printing`)
-          
-          // Try to generate PDF first to ensure content is rendered
-          try {
-            const pdfData = await printWindow.webContents.printToPDF({
-              pageSize: 'A4',
-              printBackground: true,
-              margins: {
-                marginType: 'none'
-              }
-            })
-            console.log('PDF generated successfully, size:', pdfData.length, 'bytes')
-          } catch (pdfError) {
-            console.warn('PDF test failed:', pdfError.message)
-          }
+          console.log(`Platform: ${process.platform} - using Electron native silent printing`)
           
           const printOptions = {
             silent: true,
@@ -1158,7 +1074,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
             },
             pageSize: {
               width: 58000, // 58mm in microns
-              height: 297000 // A4 height
+              height: 297000 // A4 height - will auto-cut on thermal printers
             },
             scaleFactor: 100
           }
@@ -1177,7 +1093,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               reject(new Error(errorType || 'Print failed'))
             }
           })
-        }, 2000) // Increased from 1000ms to 2000ms
+        }, 1500)
       })
       
       printWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
