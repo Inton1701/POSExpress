@@ -167,6 +167,12 @@ fi
 echo -e "${GREEN}✓ Version updated to v$LATEST_VERSION${NC}"
 echo ""
 
+# Fix ownership of all files
+echo -e "${YELLOW}Fixing file ownership...${NC}"
+chown -R "$ACTUAL_USER:$ACTUAL_USER" "$SCRIPT_DIR"
+echo -e "${GREEN}✓ Ownership corrected${NC}"
+echo ""
+
 # Detect deployment type
 DEPLOY_TYPE="native"
 if command -v docker &> /dev/null && docker ps &> /dev/null; then

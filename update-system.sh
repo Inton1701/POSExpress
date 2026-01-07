@@ -130,6 +130,11 @@ fi
 echo "$LATEST_VERSION" > VERSION
 echo "Code updated successfully" | tee -a "$LOG_FILE"
 
+# Fix ownership of all files
+echo "Fixing file ownership..." | tee -a "$LOG_FILE"
+chown -R "$ACTUAL_USER:$ACTUAL_USER" "$SCRIPT_DIR"
+echo "Ownership corrected" | tee -a "$LOG_FILE"
+
 # ========================================
 # Update Backend
 # ========================================

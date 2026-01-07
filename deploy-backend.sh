@@ -48,6 +48,12 @@ rm -rf node_modules/.cache
 echo -e "${GREEN}✓ Cleaned cache${NC}"
 echo ""
 
+# Step 1.5: Fix ownership
+echo -e "${YELLOW}[1.5/6] Fixing file ownership...${NC}"
+chown -R "$ACTUAL_USER:$ACTUAL_USER" "$BACKEND_DIR"
+echo -e "${GREEN}✓ Ownership fixed${NC}"
+echo ""
+
 # Step 2: Install/Update dependencies
 echo -e "${YELLOW}[2/6] Installing dependencies...${NC}"
 sudo -u "$ACTUAL_USER" npm install

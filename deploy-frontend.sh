@@ -48,6 +48,12 @@ sudo -u "$ACTUAL_USER" bash -c "cd '$FRONTEND_DIR' && rm -rf dist dist-electron 
 echo -e "${GREEN}✓ Cleaned dist, dist-electron, and vite cache${NC}"
 echo ""
 
+# Step 1.5: Fix ownership
+echo -e "${YELLOW}[1.5/7] Fixing file ownership...${NC}"
+chown -R "$ACTUAL_USER:$ACTUAL_USER" "$FRONTEND_DIR"
+echo -e "${GREEN}✓ Ownership fixed${NC}"
+echo ""
+
 # Step 2: Install/Update dependencies
 echo -e "${YELLOW}[2/7] Installing dependencies...${NC}"
 sudo -u "$ACTUAL_USER" bash -c "cd '$FRONTEND_DIR' && npm install --ignore-scripts" || \
