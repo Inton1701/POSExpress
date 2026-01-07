@@ -1490,7 +1490,15 @@ const checkSessionStatus = async () => {
     }
     return false
   } catch (error) {
-    // Silent error handling - only log in development
+    // Handle authentication errors by redirecting to login
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      // Clear auth data and redirect to login
+      auth.logout()
+      router.push('/')
+      return false
+    }
+    
+    // Silent error handling for other errors - only log in development
     if (process.env.NODE_ENV === 'development') {
       console.error('Error checking session status:', error)
     }

@@ -189,12 +189,18 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue'
+import { ref, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/utils/api'
 import { auth } from '@/utils/auth'
 
 const router = useRouter()
+
+// Clear any stale auth data when login page loads
+// This prevents router guard redirect loops with expired tokens
+onMounted(() => {
+  auth.logout()
+})
 const serverStatus = inject('serverStatus')
 
 const form = ref({

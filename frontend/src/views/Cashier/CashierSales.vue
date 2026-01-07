@@ -406,6 +406,12 @@ const checkSessionStatus = async () => {
     }
     return false
   } catch (error) {
+    // Handle authentication errors by redirecting to login
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      auth.logout()
+      router.push('/')
+      return false
+    }
     console.error('Error checking session status:', error)
     return false
   }
