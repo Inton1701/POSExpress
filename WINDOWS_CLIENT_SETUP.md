@@ -15,7 +15,7 @@ Bonjour is Apple's mDNS implementation for Windows - the same technology Raspber
 **Download & Install:**
 1. Download: https://support.apple.com/kb/DL999
 2. Run `BonjourPSSetup.exe`
-3. Click "Next" → "Install" → "Finish"
+3. Click "Next" → "Install" → "Finishs"
 4. **Done!** No restart needed.
 
 **Test:**
