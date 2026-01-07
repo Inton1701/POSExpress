@@ -168,11 +168,8 @@ ipcMain.handle('execute-command', async (event, command) => {
 async function printViaCUPS(printerName, imagePath) {
   return new Promise((resolve, reject) => {
     // CUPS print command for thermal printer - PNG format
-    // -o fit-to-page: Scale to fit paper width
-    // -o media=Custom.58x297mm: Paper size
-    // -o page-left=0 page-right=0 page-top=0 page-bottom=0: No margins
-    // -o orientation-requested=3: Portrait (3=portrait, 4=landscape)
-    const printCommand = `lp -d "${printerName}" -o fit-to-page -o media=Custom.58x297mm -o page-left=0 -o page-right=0 -o page-top=0 -o page-bottom=0 -o orientation-requested=3 "${imagePath}"`
+    // Use simple options that work reliably
+    const printCommand = `lp -d "${printerName}" -o fit-to-page -o orientation-requested=3 "${imagePath}"`
     
     console.log('Executing CUPS command:', printCommand)
     
