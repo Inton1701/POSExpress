@@ -168,12 +168,7 @@ ipcMain.handle('execute-command', async (event, command) => {
 async function printViaCUPS(printerName, imagePath) {
   return new Promise((resolve, reject) => {
     // CUPS print command for thermal printer - PNG format
-    // Key options:
-    // -o fit-to-page: Scale image to fit paper width (maintains aspect ratio)
-    // -o media=Custom.58x3000mm: 58mm width, very long height for receipts
-    // -o page-left=0 page-right=0 page-top=0 page-bottom=0: No margins
-    // -o orientation-requested=3: Portrait orientation (3=portrait, 4=landscape)
-    const printCommand = `lp -d "${printerName}" -o fit-to-page -o media=Custom.58x3000mm -o page-left=0 -o page-right=0 -o page-top=0 -o page-bottom=0 -o orientation-requested=3 "${imagePath}"`
+    const printCommand = `lp -d "${printerName}" -o fit-to-page -o media=Custom.58x297mm "${imagePath}"`
     
     console.log('Executing CUPS command:', printCommand)
     
@@ -312,7 +307,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
       // Handle test print - minimal output
       if (receiptData.isTestPrint) {
         const printWindow = new BrowserWindow({
-          width: 465, // 58mm at 203 DPI
+          width: 220,
           height: 400,
           show: false, // Start hidden to prevent preview from showing
           skipTaskbar: true,
@@ -342,7 +337,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               font-weight: bold;
               text-align: center;
               padding: 20px;
-              width: 58mm;
+              width: 48mm;
             }
           </style>
         </head>
@@ -360,7 +355,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               try {
                 // Get content dimensions
                 const contentHeight = await printWindow.webContents.executeJavaScript('document.body.scrollHeight')
-                const contentWidth = 465 // 58mm at 203 DPI
+                const contentWidth = 220
                 
                 // Resize to fit content (full height)
                 printWindow.setSize(contentWidth, contentHeight + 20)
@@ -436,7 +431,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
       
       // Create print window
       const printWindow = new BrowserWindow({
-        width: 465, // 58mm at 203 DPI (thermal printer resolution: 8 dots/mm * 58mm = 464px)
+        width: 220, // 58mm ≈ 220px at 96 DPI
         height: 1200,
         show: false, // Start hidden to prevent preview from showing
         skipTaskbar: true,
@@ -496,7 +491,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               line-height: 1.4;
               padding: 5px;
               padding-bottom: 40px;
-              width: 58mm;
+              width: 48mm;
             }
             .center {
               text-align: center;
@@ -657,7 +652,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
             body {
               font-family: Arial, sans-serif;
               font-size: 11px;
-              width: 58mm;
+              width: 48mm;
               padding: 5mm;
               line-height: 1.4;
             }
@@ -846,7 +841,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               line-height: 1.4;
               padding: 5px;
               padding-bottom: 40px;
-              width: 58mm;
+              width: 48mm;
             }
             .center {
               text-align: center;
@@ -1009,7 +1004,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               line-height: 1.4;
               padding: 5px;
               padding-bottom: 40px;
-              width: 58mm;
+              width: 48mm;
             }
             .center {
               text-align: center;
@@ -1073,7 +1068,7 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           if (process.platform === 'linux') {
             // Get the actual content height to avoid capturing scrollbars
             const contentHeight = await printWindow.webContents.executeJavaScript('document.body.scrollHeight')
-            const contentWidth = 465 // 58mm at 203 DPI (thermal printer resolution)
+            const contentWidth = 220 // 58mm at 96 DPI
             
             console.log(`Content dimensions: ${contentWidth}x${contentHeight}px`)
             

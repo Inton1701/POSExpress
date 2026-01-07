@@ -58,16 +58,52 @@ echo ""
 # Step 3: Configure .env
 echo -e "${YELLOW}[3/7] Configuring .env file...${NC}"
 
-# Prompt for API URL (with default)
-read -p "Enter API URL [http://posexpress.local/api]: " API_URL
-API_URL=${API_URL:-http://posexpress.local/api}
-
-# Create .env file
-cat > .env << EOF
+# Check if .env already exists
+if [ -f ".env" ]; then
+    echo -e "${BLUE}.env file already exists${NC}"
+    
+    # Read existing API_URL
+    EXISTING_API_URL=$(grep "^VITE_API_URL=" .env 2>/dev/null | cut -d '=' -f2)
+    
+    if [ -n "$EXISTING_API_URL" ]; then
+        echo "Current API URL: $EXISTING_API_URL"
+        read -p "Reuse existing configuration? (y/n) [y]: " REUSE_ENV
+        REUSE_ENV=${REUSE_ENV:-y}
+        
+        if [[ "$REUSE_ENV" =~ ^[Yy]$ ]]; then
+            API_URL="$EXISTING_API_URL"
+            echo -e "${GREEN}✓ Reusing existing .env configuration${NC}"
+        else
+            read -p "Enter new API URL [http://posexpress.local/api]: " API_URL
+            API_URL=${API_URL:-http://posexpress.local/api}
+            
+            # Create new .env file
+            cat > .env << EOF
 VITE_API_URL=$API_URL
 EOF
-
-echo -e "${GREEN}✓ .env file created with API_URL=$API_URL${NC}"
+            echo -e "${GREEN}✓ .env file updated with API_URL=$API_URL${NC}"
+        fi
+    else
+        # Existing .env but no API_URL found
+        read -p "Enter API URL [http://posexpress.local/api]: " API_URL
+        API_URL=${API_URL:-http://posexpress.local/api}
+        
+        cat > .env << EOF
+VITE_API_URL=$API_URL
+EOF
+        echo -e "${GREEN}✓ .env file created with API_URL=$API_URL${NC}"
+    fi
+else
+    # No .env file exists
+    read -p "Enter API URL [http://posexpress.local/api]: " API_URL
+    API_URL=${API_URL:-http://posexpress.local/api}
+    
+    # Create .env file
+    cat > .env << EOF
+VITE_API_URL=$API_URL
+EOF
+    echo -e "${GREEN}✓ .env file created with API_URL=$API_URL${NC}"
+fi
 echo ""
 
 # Step 4: Build Vue app
@@ -156,67 +192,58 @@ echo ""
 
 # Step 6: Build Electron Linux app
 echo -e "${YELLOW}[6/7] Building Electron Linux application...${NC}"
-read -p "Do you want to build the Electron app? (y/n) [y]: " BUILD_ELECTRON
-BUILD_ELECTRON=${BUILD_ELECTRON:-y}
 
-if [[ "$BUILD_ELECTRON" =~ ^[Yy]$ ]]; then
-    echo "Performing clean install of Electron app..."
-    
-    # Stop the running service if it exists
-    if systemctl is-active --quiet posexpress-frontend 2>/dev/null; then
-        echo "Stopping running posexpress-frontend service..."
-        systemctl stop posexpress-frontend
-        sleep 2
-    fi
-    
-    # Remove old AppImage and other dist-electron files
-    echo "Cleaning old build files..."
-    sudo -u "$ACTUAL_USER" bash -c "cd '$FRONTEND_DIR' && rm -rf dist-electron"
-    
-    echo "Building Electron app... This may take several minutes."
-    sudo -u "$ACTUAL_USER" bash -c "cd '$FRONTEND_DIR' && npm run electron:build"
-    echo -e "${GREEN}✓ Electron app built successfully${NC}"
-    echo -e "${GREEN}  Output: $FRONTEND_DIR/dist-electron/${NC}"
-    
-    # List generated files
-    echo ""
-    echo "Generated files:"
-    ls -lh "$FRONTEND_DIR/dist-electron/"*.AppImage 2>/dev/null || true
-    ls -lh "$FRONTEND_DIR/dist-electron/"*.deb 2>/dev/null || true
-else
-    echo -e "${YELLOW}Skipped Electron build${NC}"
+echo "Performing clean install of Electron app..."
+
+# Stop the running service if it exists
+if systemctl is-active --quiet posexpress-frontend 2>/dev/null; then
+    echo "Stopping running posexpress-frontend service..."
+    systemctl stop posexpress-frontend
+    sleep 2
 fi
+
+# Remove old AppImage and other dist-electron files
+echo "Cleaning old build files..."
+sudo -u "$ACTUAL_USER" bash -c "cd '$FRONTEND_DIR' && rm -rf dist-electron"
+
+echo "Building Electron app... This may take several minutes."
+sudo -u "$ACTUAL_USER" bash -c "cd '$FRONTEND_DIR' && npm run electron:build"
+echo -e "${GREEN}✓ Electron app built successfully${NC}"
+echo -e "${GREEN}  Output: $FRONTEND_DIR/dist-electron/${NC}"
+
+# List generated files
+echo ""
+echo "Generated files:"
+ls -lh "$FRONTEND_DIR/dist-electron/"*.AppImage 2>/dev/null || true
+ls -lh "$FRONTEND_DIR/dist-electron/"*.deb 2>/dev/null || true
 echo ""
 
 # Step 7: Setup auto-start with systemd
 echo -e "${YELLOW}[7/7] Setting up Electron auto-start...${NC}"
-read -p "Do you want to enable auto-start on boot? (y/n) [y]: " ENABLE_AUTOSTART
-ENABLE_AUTOSTART=${ENABLE_AUTOSTART:-y}
 
-if [[ "$ENABLE_AUTOSTART" =~ ^[Yy]$ ]]; then
-    # Find the built AppImage
-    APPIMAGE=$(find "$FRONTEND_DIR/dist-electron" -name "*.AppImage" -type f | head -n 1)
+# Find the built AppImage
+APPIMAGE=$(find "$FRONTEND_DIR/dist-electron" -name "*.AppImage" -type f | head -n 1)
+
+if [ -z "$APPIMAGE" ]; then
+    echo -e "${YELLOW}⚠ AppImage not found. Skipping auto-start setup.${NC}"
+else
+    echo "Found: $(basename "$APPIMAGE")"
     
-    if [ -z "$APPIMAGE" ]; then
-        echo -e "${YELLOW}⚠ AppImage not found. Please build the Electron app first.${NC}"
-    else
-        echo "Found: $(basename "$APPIMAGE")"
-        
-        # Make it executable
-        chmod +x "$APPIMAGE"
-        
-        # Check and install FUSE if needed
-        if ! command -v fusermount &> /dev/null; then
-            echo -e "${YELLOW}FUSE not found. Installing libfuse2...${NC}"
-            apt install -y libfuse2 || echo -e "${YELLOW}Could not install libfuse2 automatically${NC}"
-        fi
-        
-        SERVICE_NAME="posexpress-frontend"
-        SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-        USER_HOME=$(eval echo "~$ACTUAL_USER")
-        
-        # Create systemd service file with --appimage-extract-and-run (no FUSE required)
-        cat > "$SERVICE_FILE" << EOF
+    # Make it executable
+    chmod +x "$APPIMAGE"
+    
+    # Check and install FUSE if needed
+    if ! command -v fusermount &> /dev/null; then
+        echo -e "${YELLOW}FUSE not found. Installing libfuse2...${NC}"
+        apt install -y libfuse2 || echo -e "${YELLOW}Could not install libfuse2 automatically${NC}"
+    fi
+    
+    SERVICE_NAME="posexpress-frontend"
+    SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+    USER_HOME=$(eval echo "~$ACTUAL_USER")
+    
+    # Create systemd service file with --appimage-extract-and-run (no FUSE required)
+    cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=RFID POS Express Frontend (Electron)
 After=graphical.target posexpress-backend.service
@@ -238,21 +265,21 @@ SyslogIdentifier=$SERVICE_NAME
 [Install]
 WantedBy=graphical.target
 EOF
-        
-        echo -e "${GREEN}✓ Systemd service file created${NC}"
-        
-        # Reload systemd
-        systemctl daemon-reload
-        
-        # Enable service to start on boot
-        systemctl enable "$SERVICE_NAME"
-        echo -e "${GREEN}✓ Service enabled for auto-start on boot${NC}"
-        
-        # Create desktop entry
-        DESKTOP_FILE="${USER_HOME}/.local/share/applications/posexpress.desktop"
-        mkdir -p "${USER_HOME}/.local/share/applications"
-        
-        cat > "$DESKTOP_FILE" << EOF
+    
+    echo -e "${GREEN}✓ Systemd service file created${NC}"
+    
+    # Reload systemd
+    systemctl daemon-reload
+    
+    # Enable service to start on boot
+    systemctl enable "$SERVICE_NAME"
+    echo -e "${GREEN}✓ Service enabled for auto-start on boot${NC}"
+    
+    # Create desktop entry
+    DESKTOP_FILE="${USER_HOME}/.local/share/applications/posexpress.desktop"
+    mkdir -p "${USER_HOME}/.local/share/applications"
+    
+    cat > "$DESKTOP_FILE" << EOF
 [Desktop Entry]
 Name=RFID POS Express
 Comment=Point of Sale System
@@ -262,33 +289,26 @@ Terminal=false
 Type=Application
 Categories=Office;Finance;
 EOF
-        
-        chown "$ACTUAL_USER:$ACTUAL_USER" "$DESKTOP_FILE"
-        chmod +x "$DESKTOP_FILE"
-        echo -e "${GREEN}✓ Desktop entry created${NC}"
-        
-        # Ask if user wants to start now
-        read -p "Start the application now? (y/n) [n]: " START_NOW
-        START_NOW=${START_NOW:-n}
-        
-        if [[ "$START_NOW" =~ ^[Yy]$ ]]; then
-            if systemctl is-active --quiet "$SERVICE_NAME"; then
-                systemctl stop "$SERVICE_NAME"
-            fi
-            systemctl start "$SERVICE_NAME"
-            sleep 2
-            if systemctl is-active --quiet "$SERVICE_NAME"; then
-                echo -e "${GREEN}✓ Application started${NC}"
-            else
-                echo -e "${YELLOW}⚠ Application may not have started. Check logs.${NC}"
-            fi
-        fi
+    
+    chown "$ACTUAL_USER:$ACTUAL_USER" "$DESKTOP_FILE"
+    chmod +x "$DESKTOP_FILE"
+    echo -e "${GREEN}✓ Desktop entry created${NC}"
+    
+    # Start the application now
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        systemctl stop "$SERVICE_NAME"
     fi
-else
-    echo -e "${YELLOW}Skipped auto-start setup${NC}"
+    systemctl start "$SERVICE_NAME"
+    sleep 2
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        echo -e "${GREEN}✓ Application started${NC}"
+    else
+        echo -e "${YELLOW}⚠ Application may not have started. Check logs with: sudo journalctl -u posexpress-frontend -f${NC}"
+    fi
 fi
 
 echo ""
+
 echo -e "${YELLOW}[7/7] Configuring passwordless sudo for system operations...${NC}"
 # Create sudoers file for POS system operations (shutdown, reboot, updates)
 SUDOERS_FILE="/etc/sudoers.d/posexpress-system-control"
@@ -308,61 +328,54 @@ echo -e "${GREEN}✓ Configured passwordless sudo for system operations${NC}"
 echo ""
 
 # Configure auto-login
-read -p "Enable auto-login for $ACTUAL_USER (no password required at boot)? (y/n) [y]: " ENABLE_AUTOLOGIN
-ENABLE_AUTOLOGIN=${ENABLE_AUTOLOGIN:-y}
+echo -e "${YELLOW}Configuring auto-login for $ACTUAL_USER...${NC}"
 
-if [[ "$ENABLE_AUTOLOGIN" =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Configuring auto-login...${NC}"
+# Detect display manager and configure
+if [ -f /etc/gdm3/custom.conf ]; then
+    # GDM3 (GNOME Display Manager)
+    echo -e "${BLUE}Detected GDM3 display manager${NC}"
+    sed -i 's/^#.*AutomaticLoginEnable.*=.*false/AutomaticLoginEnable = true/' /etc/gdm3/custom.conf
+    sed -i 's/^#.*AutomaticLogin.*=.*/AutomaticLogin = '"$ACTUAL_USER"'/' /etc/gdm3/custom.conf
     
-    # Detect display manager and configure
-    if [ -f /etc/gdm3/custom.conf ]; then
-        # GDM3 (GNOME Display Manager)
-        echo -e "${BLUE}Detected GDM3 display manager${NC}"
-        sed -i 's/^#.*AutomaticLoginEnable.*=.*false/AutomaticLoginEnable = true/' /etc/gdm3/custom.conf
-        sed -i 's/^#.*AutomaticLogin.*=.*/AutomaticLogin = '"$ACTUAL_USER"'/' /etc/gdm3/custom.conf
-        
-        # If lines don't exist, add them
-        if ! grep -q "AutomaticLoginEnable" /etc/gdm3/custom.conf; then
-            sed -i '/\[daemon\]/a AutomaticLoginEnable = true' /etc/gdm3/custom.conf
-            sed -i '/AutomaticLoginEnable/a AutomaticLogin = '"$ACTUAL_USER" /etc/gdm3/custom.conf
-        fi
-        echo -e "${GREEN}✓ GDM3 auto-login configured${NC}"
-        
-    elif [ -f /etc/lightdm/lightdm.conf ]; then
-        # LightDM
-        echo -e "${BLUE}Detected LightDM display manager${NC}"
-        sed -i 's/^#.*autologin-user=.*/autologin-user='"$ACTUAL_USER"'/' /etc/lightdm/lightdm.conf
-        sed -i 's/^#.*autologin-user-timeout=.*/autologin-user-timeout=0/' /etc/lightdm/lightdm.conf
-        
-        # If lines don't exist, add them under [Seat:*]
-        if ! grep -q "autologin-user" /etc/lightdm/lightdm.conf; then
-            sed -i '/\[Seat:\*\]/a autologin-user='"$ACTUAL_USER" /etc/lightdm/lightdm.conf
-            sed -i '/autologin-user=/a autologin-user-timeout=0' /etc/lightdm/lightdm.conf
-        fi
-        echo -e "${GREEN}✓ LightDM auto-login configured${NC}"
-        
-    elif [ -f /etc/sddm.conf ] || [ -d /etc/sddm.conf.d ]; then
-        # SDDM (KDE)
-        echo -e "${BLUE}Detected SDDM display manager${NC}"
-        SDDM_CONF="/etc/sddm.conf.d/autologin.conf"
-        mkdir -p /etc/sddm.conf.d
-        cat > "$SDDM_CONF" << EOF
+    # If lines don't exist, add them
+    if ! grep -q "AutomaticLoginEnable" /etc/gdm3/custom.conf; then
+        sed -i '/\[daemon\]/a AutomaticLoginEnable = true' /etc/gdm3/custom.conf
+        sed -i '/AutomaticLoginEnable/a AutomaticLogin = '"$ACTUAL_USER" /etc/gdm3/custom.conf
+    fi
+    echo -e "${GREEN}✓ GDM3 auto-login configured${NC}"
+    
+elif [ -f /etc/lightdm/lightdm.conf ]; then
+    # LightDM
+    echo -e "${BLUE}Detected LightDM display manager${NC}"
+    sed -i 's/^#.*autologin-user=.*/autologin-user='"$ACTUAL_USER"'/' /etc/lightdm/lightdm.conf
+    sed -i 's/^#.*autologin-user-timeout=.*/autologin-user-timeout=0/' /etc/lightdm/lightdm.conf
+    
+    # If lines don't exist, add them under [Seat:*]
+    if ! grep -q "autologin-user" /etc/lightdm/lightdm.conf; then
+        sed -i '/\[Seat:\*\]/a autologin-user='"$ACTUAL_USER" /etc/lightdm/lightdm.conf
+        sed -i '/autologin-user=/a autologin-user-timeout=0' /etc/lightdm/lightdm.conf
+    fi
+    echo -e "${GREEN}✓ LightDM auto-login configured${NC}"
+    
+elif [ -f /etc/sddm.conf ] || [ -d /etc/sddm.conf.d ]; then
+    # SDDM (KDE)
+    echo -e "${BLUE}Detected SDDM display manager${NC}"
+    SDDM_CONF="/etc/sddm.conf.d/autologin.conf"
+    mkdir -p /etc/sddm.conf.d
+    cat > "$SDDM_CONF" << EOF
 [Autologin]
 User=$ACTUAL_USER
 Session=plasma
 EOF
-        echo -e "${GREEN}✓ SDDM auto-login configured${NC}"
-        
-    else
-        echo -e "${YELLOW}⚠ Could not detect display manager. Manual configuration may be required.${NC}"
-        echo -e "${YELLOW}Common display managers: GDM3, LightDM, SDDM${NC}"
-    fi
+    echo -e "${GREEN}✓ SDDM auto-login configured${NC}"
     
-    echo -e "${GREEN}✓ Auto-login enabled for $ACTUAL_USER${NC}"
-    echo -e "${YELLOW}Note: Changes will take effect after reboot${NC}"
 else
-    echo -e "${YELLOW}Skipped auto-login configuration${NC}"
+    echo -e "${YELLOW}⚠ Could not detect display manager. Manual configuration may be required.${NC}"
+    echo -e "${YELLOW}Common display managers: GDM3, LightDM, SDDM${NC}"
 fi
+
+echo -e "${GREEN}✓ Auto-login enabled for $ACTUAL_USER${NC}"
+echo -e "${YELLOW}Note: Changes will take effect after reboot${NC}"
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
@@ -372,7 +385,7 @@ echo ""
 echo "Access your application:"
 echo "  ${BLUE}Web: http://posexpress.local${NC}"
 echo "  ${BLUE}or http://localhost${NC} (on server)"
-if [[ "$ENABLE_AUTOSTART" =~ ^[Yy]$ ]] && [ -n "$APPIMAGE" ]; then
+if [ -n "$APPIMAGE" ]; then
     echo "  ${BLUE}Desktop: Launch from Applications menu${NC}"
     echo "  ${BLUE}or run: $APPIMAGE${NC}"
     echo ""
