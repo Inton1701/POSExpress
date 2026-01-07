@@ -234,8 +234,7 @@ else
         rm -rf node_modules/.cache
         
         echo "Installing dependencies..."
-        sudo -u "$ACTUAL_USER" npm install --silent 2>/dev/null || \
-        sudo -u "$ACTUAL_USER" npm install --silent --legacy-peer-deps
+        sudo -u "$ACTUAL_USER" npm install --production 2>&1 | grep -E "(added|removed|changed|audited|up to date)" || true
         
         echo -e "${GREEN}✓ Backend dependencies updated${NC}"
         
@@ -277,8 +276,7 @@ else
         
         # Install dependencies
         echo "Installing dependencies..."
-        sudo -u "$ACTUAL_USER" bash -c "cd '$SCRIPT_DIR/frontend' && npm install --ignore-scripts --silent" 2>/dev/null || \
-        sudo -u "$ACTUAL_USER" bash -c "cd '$SCRIPT_DIR/frontend' && npm install --legacy-peer-deps --ignore-scripts --silent"
+        sudo -u "$ACTUAL_USER" bash -c "cd '$SCRIPT_DIR/frontend' && npm install --ignore-scripts" 2>&1 | grep -E "(added|removed|changed|audited|up to date)" || true
         
         # Build Vue app
         echo "Building Vue application..."

@@ -138,8 +138,7 @@ echo "Updating backend..." | tee -a "$LOG_FILE"
 cd "$SCRIPT_DIR/backend"
 
 # Install dependencies
-sudo -u "$ACTUAL_USER" npm install --silent 2>/dev/null || \
-sudo -u "$ACTUAL_USER" npm install --silent --legacy-peer-deps
+sudo -u "$ACTUAL_USER" npm install --production 2>&1 | grep -E "(added|removed|changed|audited|up to date)" || true
 
 # Ensure .env exists (restore from backup if missing)
 if [ ! -f ".env" ] && [ -f "$BACKUP_PATH/backend/.env" ]; then
@@ -169,8 +168,7 @@ cd "$SCRIPT_DIR/frontend"
 sudo -u "$ACTUAL_USER" rm -rf dist dist-electron node_modules/.vite
 
 # Install dependencies
-sudo -u "$ACTUAL_USER" npm install --silent --ignore-scripts 2>/dev/null || \
-sudo -u "$ACTUAL_USER" npm install --silent --legacy-peer-deps --ignore-scripts
+sudo -u "$ACTUAL_USER" npm install --ignore-scripts 2>&1 | grep -E "(added|removed|changed|audited|up to date)" || true
 
 # Ensure .env exists (restore from backup if missing)
 if [ ! -f ".env" ] && [ -f "$BACKUP_PATH/frontend/.env" ]; then
