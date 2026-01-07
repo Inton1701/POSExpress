@@ -624,6 +624,7 @@ const transaction = {
           // Log customer transaction
           const CustomerTransaction = require('../models/CustomerTransactions');
           await CustomerTransaction.create({
+            transactionId: refundTransactionId, // Add transaction ID for refund
             rfid: customer.rfid,
             username: customer.username,
             amount: refundAmount,
