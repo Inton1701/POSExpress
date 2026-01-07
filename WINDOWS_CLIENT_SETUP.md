@@ -10,7 +10,7 @@ Your Ubuntu server with mDNS (Avahi) is working correctly! Windows just needs a 
 
 Bonjour is Apple's mDNS implementation for Windows - the same technology Raspberry Pi uses (just called "Avahi" on Linux).
 
-### Option 1: Bonjour Print Services (Lightweight)
+### Option 1: Bonjour Print Services (Lightweigh)
 
 **Download & Install:**
 1. Download: https://support.apple.com/kb/DL999
