@@ -1360,7 +1360,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '../../components/Modal.vue'
 import Toast from '../../components/Toast.vue'
@@ -1445,6 +1445,7 @@ const isRefreshingPrinters = ref(false)
 const printMode = ref('manual')
 const toastRef = ref(null)
 const sessionActive = ref(false)
+const sessionCheckInterval = ref(null)
 
 // Alert modal state
 const isAlertModalOpen = ref(false)
@@ -3588,8 +3589,16 @@ onMounted(async () => {
   loadCartFromLocalStorage()
   
   // Check session status every 30 seconds
-  setInterval(checkSessionStatus, 30000)
+  sessionCheckInterval.value = setInterval(checkSessionStatus, 30000)
   
   // Focus barcode input for automatic scanning
   refocusBarcodeInput()
+})
+
+onUnmounted(() => {
+  // Clear session check interval to prevent memory leaks and errors
+  if (sessionCheckInterval.value) {
+    clearInterval(sessionCheckInterval.value)
+    sessionCheckInterval.value = null
+  }
 })</script>

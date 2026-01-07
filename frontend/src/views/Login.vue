@@ -264,6 +264,9 @@ const handleLogin = async () => {
   errorMessage.value = ''
 
   try {
+    // Clear any stale auth data before attempting login
+    auth.logout()
+    
     // Send either username+password OR rfid
     const loginData = form.value.rfid 
       ? { rfid: form.value.rfid }
