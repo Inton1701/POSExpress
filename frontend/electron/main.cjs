@@ -164,47 +164,487 @@ ipcMain.handle('execute-command', async (event, command) => {
   })
 })
 
-// Helper function to print via CUPS on Linux (using lp command)
-async function printViaCUPS(printerName, imagePath, imageWidth, imageHeight) {
+// ESC/POS Commands for thermal printers
+const ESC = 0x1B
+const GS = 0x1D
+const LF = 0x0A
+
+const ESCPOS = {
+  // Initialize printer
+  INIT: Buffer.from([ESC, 0x40]),
+  // Text alignment
+  ALIGN_LEFT: Buffer.from([ESC, 0x61, 0x00]),
+  ALIGN_CENTER: Buffer.from([ESC, 0x61, 0x01]),
+  ALIGN_RIGHT: Buffer.from([ESC, 0x61, 0x02]),
+  // Text formatting
+  BOLD_ON: Buffer.from([ESC, 0x45, 0x01]),
+  BOLD_OFF: Buffer.from([ESC, 0x45, 0x00]),
+  DOUBLE_HEIGHT_ON: Buffer.from([GS, 0x21, 0x01]),
+  DOUBLE_WIDTH_ON: Buffer.from([GS, 0x21, 0x10]),
+  DOUBLE_SIZE_ON: Buffer.from([GS, 0x21, 0x11]),
+  NORMAL_SIZE: Buffer.from([GS, 0x21, 0x00]),
+  // Line feed and cut
+  LINE_FEED: Buffer.from([LF]),
+  FEED_AND_CUT: Buffer.from([GS, 0x56, 0x41, 0x03]), // Feed 3 lines and partial cut
+  // Character set
+  CHARSET_PC858: Buffer.from([ESC, 0x74, 0x13]) // Western European with Euro
+}
+
+// Helper function to create ESC/POS text buffer
+function escposText(text) {
+  return Buffer.from(text, 'utf8')
+}
+
+// Helper function to create a line of dashes
+function escposDivider(char = '-', width = 32) {
+  return Buffer.from(char.repeat(width))
+}
+
+// Helper function to format a line with left and right text
+function escposLine(left, right, width = 32) {
+  const spaces = width - left.length - right.length
+  if (spaces < 1) {
+    return Buffer.from(left.substring(0, width - right.length - 1) + ' ' + right)
+  }
+  return Buffer.from(left + ' '.repeat(spaces) + right)
+}
+
+// Generate ESC/POS commands for a receipt
+function generateEscPosReceipt(receiptData) {
+  const buffers = []
+  const width = 32 // Characters per line for 58mm printer
+  
+  // Initialize printer
+  buffers.push(ESCPOS.INIT)
+  buffers.push(ESCPOS.CHARSET_PC858)
+  
+  // Header
+  buffers.push(ESCPOS.ALIGN_CENTER)
+  buffers.push(ESCPOS.BOLD_ON)
+  buffers.push(ESCPOS.DOUBLE_SIZE_ON)
+  buffers.push(escposText('POSXPRESS'))
+  buffers.push(ESCPOS.LINE_FEED)
+  buffers.push(ESCPOS.NORMAL_SIZE)
+  
+  if (receiptData.storeName) {
+    buffers.push(escposText(receiptData.storeName))
+    buffers.push(ESCPOS.LINE_FEED)
+  }
+  buffers.push(ESCPOS.BOLD_OFF)
+  
+  if (receiptData.address) {
+    buffers.push(escposText(receiptData.address))
+    buffers.push(ESCPOS.LINE_FEED)
+  }
+  if (receiptData.contact) {
+    buffers.push(escposText('Tel: ' + receiptData.contact))
+    buffers.push(ESCPOS.LINE_FEED)
+  }
+  if (receiptData.tin) {
+    buffers.push(escposText('TIN: ' + receiptData.tin))
+    buffers.push(ESCPOS.LINE_FEED)
+  }
+  
+  // Receipt type header
+  buffers.push(ESCPOS.LINE_FEED)
+  buffers.push(escposDivider('=', width))
+  buffers.push(ESCPOS.LINE_FEED)
+  
+  // Determine receipt type
+  if (receiptData.transactionType === 'Sales Report') {
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposText('SALES REPORT'))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(ESCPOS.ALIGN_LEFT)
+    buffers.push(escposText('Date: ' + new Date(receiptData.date).toLocaleString()))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    if (receiptData.sessionStartedAt) {
+      buffers.push(escposText('Session Start: ' + new Date(receiptData.sessionStartedAt).toLocaleString()))
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposLine('Total Sales:', 'P' + receiptData.summary.todaySales.toFixed(2), width))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposLine('Total Profit:', 'P' + receiptData.summary.totalProfit.toFixed(2), width))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposLine('Products Sold:', String(receiptData.summary.totalProductsSold), width))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(ESCPOS.BOLD_OFF)
+    
+    if (receiptData.products && receiptData.products.length > 0) {
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(escposDivider('-', width))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(ESCPOS.ALIGN_CENTER)
+      buffers.push(escposText('PRODUCT BREAKDOWN'))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(escposDivider('-', width))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(ESCPOS.ALIGN_LEFT)
+      
+      for (const product of receiptData.products) {
+        buffers.push(escposText(product.name.substring(0, width)))
+        buffers.push(ESCPOS.LINE_FEED)
+        const unitPrice = product.quantitySold > 0 ? product.totalSales / product.quantitySold : 0
+        buffers.push(escposLine('  x' + product.quantitySold + ' @ P' + unitPrice.toFixed(2), 'P' + product.totalSales.toFixed(2), width))
+        buffers.push(ESCPOS.LINE_FEED)
+      }
+    }
+    
+  } else if (receiptData.type === 'refund') {
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposText('REFUND RECEIPT'))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(ESCPOS.ALIGN_CENTER)
+    buffers.push(escposText('Refund ID'))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposText(String(receiptData.transactionId)))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(ESCPOS.ALIGN_LEFT)
+    buffers.push(escposText('Date: ' + new Date(receiptData.date).toLocaleString()))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposText('Original TXN: ' + receiptData.originalTransactionId))
+    buffers.push(ESCPOS.LINE_FEED)
+    if (receiptData.customer) {
+      buffers.push(escposText('Customer: ' + receiptData.customer.fullName))
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    buffers.push(escposText('Cashier: ' + (receiptData.cashier || 'N/A')))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(escposDivider('-', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposText('REFUNDED ITEMS:'))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    for (const item of receiptData.items) {
+      buffers.push(escposText(item.name.substring(0, width)))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(escposLine('  x' + item.quantity + ' @ P' + item.price.toFixed(2), 'P' + (item.price * item.quantity).toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposLine('REFUND AMOUNT:', 'P' + receiptData.refundAmount.toFixed(2), width))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposText('Payment: ' + receiptData.paymentMethod))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+  } else if (receiptData.cart && receiptData.cart.length > 0) {
+    // Sales Receipt
+    buffers.push(escposText('Sales Receipt'))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(escposText('Transaction ID'))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposText(String(receiptData.transactionId)))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(ESCPOS.ALIGN_LEFT)
+    buffers.push(escposText('Date: ' + new Date(receiptData.date).toLocaleString()))
+    buffers.push(ESCPOS.LINE_FEED)
+    if (receiptData.customerName) {
+      buffers.push(escposText('Customer: ' + receiptData.customerName))
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    buffers.push(escposText('Cashier: ' + (receiptData.employee || 'N/A')))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(escposDivider('-', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposText('ITEMS:'))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    let vatableSales = 0
+    let vatAmount = 0
+    let vatExemptSales = 0
+    
+    for (const item of receiptData.cart) {
+      const itemTotal = item.price * item.quantity
+      
+      buffers.push(escposText(item.name.substring(0, width) + (item.isVattable ? ' (V)' : '')))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(escposLine('  x' + item.quantity + ' @ P' + item.price.toFixed(2), 'P' + itemTotal.toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+      
+      if (item.isVattable) {
+        vatableSales += itemTotal
+        if (receiptData.vatConfig) {
+          if (receiptData.vatConfig.type === 'percent') {
+            vatAmount += itemTotal * (receiptData.vatConfig.value / 100)
+          } else if (receiptData.vatConfig.type === 'fixed') {
+            vatAmount += receiptData.vatConfig.value * item.quantity
+          }
+        }
+      } else {
+        vatExemptSales += itemTotal
+      }
+      
+      // Add addons
+      if (item.addons && item.addons.length > 0) {
+        for (const addon of item.addons) {
+          const addonTotal = addon.price * addon.quantity
+          vatExemptSales += addonTotal
+          buffers.push(escposLine('    + ' + addon.name, 'P' + addonTotal.toFixed(2), width))
+          buffers.push(ESCPOS.LINE_FEED)
+        }
+      }
+    }
+    
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    // VAT breakdown
+    if (vatableSales > 0 || vatExemptSales > 0) {
+      buffers.push(escposLine('VATABLE SALES', 'P' + vatableSales.toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+      if (vatAmount > 0) {
+        const vatLabel = receiptData.vatConfig?.type === 'percent' ? 'VAT (' + receiptData.vatConfig.value + '%)' : 'VAT'
+        buffers.push(escposLine(vatLabel, 'P' + vatAmount.toFixed(2), width))
+        buffers.push(ESCPOS.LINE_FEED)
+      }
+      buffers.push(escposLine('VAT-EXEMPT', 'P' + vatExemptSales.toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(escposDivider('-', width))
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    
+    // Total
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(ESCPOS.DOUBLE_SIZE_ON)
+    buffers.push(escposLine('TOTAL:', 'P' + receiptData.totalAmount.toFixed(2), width / 2))
+    buffers.push(ESCPOS.NORMAL_SIZE)
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(escposText('Payment: ' + receiptData.paymentMethod))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    if (receiptData.cash > 0) {
+      buffers.push(escposLine('Cash:', 'P' + receiptData.cash.toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(escposLine('Change:', 'P' + receiptData.change.toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    
+    if (receiptData.paymentMethod === 'E-wallet/RFID' && receiptData.previousBalance !== undefined) {
+      buffers.push(escposDivider('-', width))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(escposLine('Prev Balance:', 'P' + receiptData.previousBalance.toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(escposLine('Amount Paid:', 'P' + receiptData.totalAmount.toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+      buffers.push(ESCPOS.BOLD_ON)
+      buffers.push(escposLine('Remaining:', 'P' + receiptData.remainingBalance.toFixed(2), width))
+      buffers.push(ESCPOS.BOLD_OFF)
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    
+  } else {
+    // Customer Transaction Receipt
+    buffers.push(escposText('Customer Transaction'))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposText((receiptData.transactionType || 'TRANSACTION').toUpperCase()))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposDivider('=', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(ESCPOS.ALIGN_LEFT)
+    if (receiptData.transactionId) {
+      buffers.push(escposText('Ref No: ' + receiptData.transactionId))
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    buffers.push(escposText('Date: ' + new Date(receiptData.date).toLocaleString()))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposText('Customer: ' + (receiptData.customerName || 'N/A')))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    buffers.push(escposDivider('-', width))
+    buffers.push(ESCPOS.LINE_FEED)
+    buffers.push(escposLine('Previous Balance:', 'P' + (receiptData.previousBalance || 0).toFixed(2), width))
+    buffers.push(ESCPOS.LINE_FEED)
+    
+    if ((receiptData.amount || 0) > 0) {
+      const amountLabel = receiptData.transactionType && receiptData.transactionType.includes('CASH-IN') ? 'Amount Added:' : 'Amount:'
+      buffers.push(escposLine(amountLabel, 'P' + (receiptData.amount || 0).toFixed(2), width))
+      buffers.push(ESCPOS.LINE_FEED)
+    }
+    
+    buffers.push(ESCPOS.BOLD_ON)
+    buffers.push(escposLine('New Balance:', 'P' + (receiptData.currentBalance || 0).toFixed(2), width))
+    buffers.push(ESCPOS.BOLD_OFF)
+    buffers.push(ESCPOS.LINE_FEED)
+  }
+  
+  // Footer
+  buffers.push(escposDivider('=', width))
+  buffers.push(ESCPOS.LINE_FEED)
+  buffers.push(ESCPOS.ALIGN_CENTER)
+  buffers.push(ESCPOS.BOLD_ON)
+  buffers.push(escposText('Thank you!'))
+  buffers.push(ESCPOS.BOLD_OFF)
+  buffers.push(ESCPOS.LINE_FEED)
+  buffers.push(escposText('Please come again'))
+  buffers.push(ESCPOS.LINE_FEED)
+  buffers.push(ESCPOS.LINE_FEED)
+  buffers.push(ESCPOS.LINE_FEED)
+  
+  // Cut paper
+  buffers.push(ESCPOS.FEED_AND_CUT)
+  
+  return Buffer.concat(buffers)
+}
+
+// Helper function to print via ESC/POS on Linux
+async function printViaEscPos(printerName, escposData) {
   return new Promise((resolve, reject) => {
-    // Calculate dimensions in points (1 inch = 72 points, 1mm = 2.835 points)
-    // For thermal printers, we want to print at actual pixel size
-    // Thermal printers typically use 203 DPI, so convert pixels to mm
-    const dpi = 203 // Standard thermal printer DPI
-    const widthInMm = Math.round((imageWidth / dpi) * 25.4) || 58 // Default to 58mm
-    const heightInMm = Math.round((imageHeight / dpi) * 25.4) || 200 // Default height
+    // Save ESC/POS data to temp file
+    const tempFile = path.join(os.tmpdir(), `escpos-${Date.now()}.bin`)
+    fs.writeFileSync(tempFile, escposData)
     
-    // Use custom media size matching the image dimensions
-    // -o media=Custom.WIDTHxHEIGHTmm sets exact paper size
-    // -o scaling=100 prints at 100% scale (no fit-to-page distortion)
-    // -o position=top-left positions image at top-left corner
-    const printCommand = `lp -d "${printerName}" -o media=Custom.${widthInMm}x${heightInMm}mm -o scaling=100 -o position=top-left "${imagePath}"`
+    console.log('ESC/POS data saved to:', tempFile, 'size:', escposData.length, 'bytes')
     
-    console.log('Executing CUPS command:', printCommand)
-    console.log(`Image dimensions: ${imageWidth}x${imageHeight}px -> ${widthInMm}x${heightInMm}mm`)
+    // Send raw data to printer - try multiple methods
+    // Method 1: lpr with raw option
+    const printCommand = `lpr -P "${printerName}" -o raw "${tempFile}"`
+    
+    console.log('Executing ESC/POS print command:', printCommand)
     
     exec(printCommand, (error, stdout, stderr) => {
       if (error) {
-        console.error('CUPS print error:', error)
-        console.error('stderr:', stderr)
+        console.log('lpr failed, trying lp with raw option...')
         
-        // Fallback: Try simpler command without custom media if first attempt fails
-        console.log('Trying fallback CUPS command...')
-        const fallbackCommand = `lp -d "${printerName}" -o scaling=100 "${imagePath}"`
+        // Method 2: lp with raw option
+        const lpCommand = `lp -d "${printerName}" -o raw "${tempFile}"`
         
-        exec(fallbackCommand, (err2, stdout2, stderr2) => {
+        exec(lpCommand, (err2, stdout2, stderr2) => {
           if (err2) {
-            console.error('Fallback CUPS print error:', err2)
-            reject(error) // Reject with original error
+            console.log('lp raw failed, trying direct device write...')
+            
+            // Method 3: Try to find and write directly to USB device
+            exec(`lpstat -v "${printerName}"`, (err3, stdout3, stderr3) => {
+              if (!err3 && stdout3) {
+                // Extract device path from lpstat output
+                const deviceMatch = stdout3.match(/device for .+: (.+)/)
+                if (deviceMatch && deviceMatch[1]) {
+                  const devicePath = deviceMatch[1].replace('usb://', '/dev/usb/lp0') // Approximate USB path
+                  console.log('Trying direct write to device...')
+                  
+                  exec(`cat "${tempFile}" > /dev/usb/lp0 2>/dev/null || cat "${tempFile}" | lp -d "${printerName}" -`, (err4) => {
+                    // Cleanup
+                    setTimeout(() => { try { fs.unlinkSync(tempFile) } catch(e) {} }, 5000)
+                    
+                    if (err4) {
+                      reject(new Error('All ESC/POS print methods failed'))
+                    } else {
+                      resolve({ success: true, method: 'direct' })
+                    }
+                  })
+                } else {
+                  // Cleanup and reject
+                  setTimeout(() => { try { fs.unlinkSync(tempFile) } catch(e) {} }, 5000)
+                  reject(new Error('ESC/POS print failed: ' + err2.message))
+                }
+              } else {
+                // Cleanup and reject
+                setTimeout(() => { try { fs.unlinkSync(tempFile) } catch(e) {} }, 5000)
+                reject(new Error('ESC/POS print failed: ' + err2.message))
+              }
+            })
           } else {
-            console.log('Fallback CUPS output:', stdout2)
-            resolve({ success: true, fallback: true })
+            console.log('lp output:', stdout2)
+            setTimeout(() => { try { fs.unlinkSync(tempFile) } catch(e) {} }, 5000)
+            resolve({ success: true, method: 'lp-raw' })
           }
         })
       } else {
-        console.log('CUPS output:', stdout)
-        if (stderr) console.log('CUPS stderr:', stderr)
-        resolve({ success: true })
+        console.log('lpr output:', stdout)
+        setTimeout(() => { try { fs.unlinkSync(tempFile) } catch(e) {} }, 5000)
+        resolve({ success: true, method: 'lpr-raw' })
+      }
+    })
+  })
+}
+
+// Helper function to print via CUPS on Linux (using lp command) - fallback for PNG
+async function printViaCUPS(printerName, imagePath) {
+  return new Promise((resolve, reject) => {
+    // Use raw printing mode to bypass CUPS filters that may crash
+    // The -o raw option sends the file directly to the printer without filtering
+    // For thermal printers, we use simple options that don't trigger rastertoz filter crashes
+    
+    // First try: Use lpr with simple options (often more compatible with thermal printers)
+    const printCommand = `lpr -P "${printerName}" -o raw "${imagePath}"`
+    
+    console.log('Executing print command:', printCommand)
+    
+    exec(printCommand, (error, stdout, stderr) => {
+      if (error) {
+        console.log('lpr raw failed, trying lp with minimal options...')
+        
+        // Second try: Use lp with no special options
+        const fallbackCommand = `lp -d "${printerName}" "${imagePath}"`
+        
+        exec(fallbackCommand, (err2, stdout2, stderr2) => {
+          if (err2) {
+            console.log('lp failed, trying direct file copy to printer...')
+            
+            // Third try: Direct copy to printer device (most raw approach)
+            // This requires the printer to be set up as a raw queue in CUPS
+            const directCommand = `cat "${imagePath}" | lp -d "${printerName}" -o raw -`
+            
+            exec(directCommand, (err3, stdout3, stderr3) => {
+              if (err3) {
+                console.error('All print methods failed')
+                console.error('Last error:', err3)
+                reject(new Error('Print failed: ' + err3.message))
+              } else {
+                console.log('Direct print output:', stdout3)
+                resolve({ success: true, method: 'direct' })
+              }
+            })
+          } else {
+            console.log('lp output:', stdout2)
+            resolve({ success: true, method: 'lp' })
+          }
+        })
+      } else {
+        console.log('lpr output:', stdout)
+        if (stderr) console.log('lpr stderr:', stderr)
+        resolve({ success: true, method: 'lpr-raw' })
       }
     })
   })
@@ -375,7 +815,42 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         
         printWindow.webContents.on('did-finish-load', () => {
           setTimeout(async () => {
-            // Use native Electron printing for all platforms
+            // Linux: Use ESC/POS direct printing
+            if (process.platform === 'linux') {
+              try {
+                printWindow.close()
+                
+                // Generate simple ESC/POS test print
+                const buffers = []
+                buffers.push(ESCPOS.INIT)
+                buffers.push(ESCPOS.ALIGN_CENTER)
+                buffers.push(ESCPOS.BOLD_ON)
+                buffers.push(ESCPOS.DOUBLE_SIZE_ON)
+                buffers.push(escposText('TEST PRINT'))
+                buffers.push(ESCPOS.NORMAL_SIZE)
+                buffers.push(ESCPOS.BOLD_OFF)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(escposText('Printer is working!'))
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(escposText(new Date().toLocaleString()))
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.FEED_AND_CUT)
+                
+                const escposData = Buffer.concat(buffers)
+                await printViaEscPos(targetPrinter.name, escposData)
+                
+                resolve({ success: true, printer: targetPrinter.name, mode: 'escpos' })
+              } catch (error) {
+                console.error('ESC/POS test print failed:', error)
+                reject(error)
+              }
+              return
+            }
+            
+            // Windows/Mac: Use native Electron printing
             const printOptions = {
               silent: true,
               printBackground: true,
@@ -1060,7 +1535,35 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
         // Delay to ensure content is rendered
         setTimeout(async () => {
           console.log('Attempting to print...')
-          console.log(`Platform: ${process.platform} - using Electron native silent printing`)
+          console.log(`Platform: ${process.platform}`)
+          
+          // Linux: Use ESC/POS direct printing for best thermal printer compatibility
+          if (process.platform === 'linux') {
+            try {
+              console.log('Linux detected - using ESC/POS direct printing')
+              
+              printWindow.close()
+              
+              // Generate ESC/POS receipt data
+              const escposData = generateEscPosReceipt(receiptData)
+              console.log('ESC/POS receipt generated, size:', escposData.length, 'bytes')
+              
+              // Send to printer
+              await printViaEscPos(targetPrinter.name, escposData)
+              
+              console.log('✓ Printed successfully via ESC/POS')
+              resolve({ success: true, printer: targetPrinter.name, mode: 'escpos', platform: process.platform })
+              
+            } catch (error) {
+              if (printWindow && !printWindow.isDestroyed()) printWindow.close()
+              console.error('ESC/POS printing failed:', error)
+              reject(new Error('ESC/POS printing failed: ' + error.message))
+            }
+            return
+          }
+          
+          // Windows/Mac: Use native Electron silent print
+          console.log('Using Electron native silent printing')
           
           const printOptions = {
             silent: true,
