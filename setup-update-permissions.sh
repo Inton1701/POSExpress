@@ -92,6 +92,10 @@ $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/touch /var/log/posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/touch /var/log/posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/chmod * /var/log/posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/chmod * /var/log/posexpress-*
+
+# Allow systemd-run for executing update without NoNewPrivileges restriction
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemd-run *
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/systemd-run *
 EOF
 
 chmod 0440 "$SUDOERS_FILE"

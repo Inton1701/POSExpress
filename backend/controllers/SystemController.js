@@ -185,107 +185,71 @@ const triggerUpdate = async (req, res) => {
         });
 
         // Execute update script after response is sent
-        // Using spawn with detached: true for proper process detachment
+        // Use systemd-run to bypass "no new privileges" restriction
         setTimeout(() => {
             try {
                 console.log('[Update] Starting update process...');
                 
-                // Prepare the command based on whether we need sudo
-                let updateProcess;
+                // Method 1: Try systemd-run (best for services with NoNewPrivileges)
+                // This creates a new systemd scope that doesn't inherit the restriction
+                console.log('[Update] Attempting systemd-run method...');
                 
-                if (isRoot) {
-                    // Running as root, execute directly
-                    console.log('[Update] Executing as root');
-                    updateProcess = spawn('/bin/bash', [scriptPath], {
-                        detached: true,
-                        stdio: ['ignore', 'pipe', 'pipe'],
-                        cwd: path.dirname(scriptPath)
-                    });
-                } else {
-                    // Need sudo - try multiple methods
-                    console.log('[Update] Executing with sudo');
-                    
-                    // Method 1: Try passwordless sudo with spawn
-                    updateProcess = spawn('sudo', ['-n', '/bin/bash', scriptPath], {
-                        detached: true,
-                        stdio: ['ignore', 'pipe', 'pipe'],
-                        cwd: path.dirname(scriptPath)
-                    });
-                }
-
-                // Log stdout to file and console
-                if (updateProcess.stdout) {
-                    updateProcess.stdout.on('data', (data) => {
-                        const output = data.toString();
-                        console.log('[Update stdout]', output);
-                        // Append to log file
-                        fs.appendFile(logPath, output).catch(() => {});
-                    });
-                }
-
-                // Log stderr to file and console
-                if (updateProcess.stderr) {
-                    updateProcess.stderr.on('data', (data) => {
-                        const output = data.toString();
-                        console.error('[Update stderr]', output);
-                        // Append to log file
-                        fs.appendFile(logPath, `[ERROR] ${output}`).catch(() => {});
-                    });
-                }
-
-                // Handle process errors
-                updateProcess.on('error', async (err) => {
-                    const errorMsg = `[${new Date().toISOString()}] Failed to start update process: ${err.message}\n`;
-                    console.error('[Update]', errorMsg);
-                    await fs.appendFile(logPath, errorMsg).catch(() => {});
-                    
-                    // If passwordless sudo failed, try alternative method with exec
-                    if (err.message.includes('ENOENT') || err.message.includes('spawn')) {
-                        console.log('[Update] Trying alternative execution method...');
+                const systemdCmd = `systemd-run --unit=posexpress-update-${Date.now()} --scope sudo /bin/bash "${scriptPath}" >> "${logPath}" 2>&1`;
+                
+                exec(systemdCmd, { 
+                    timeout: 600000, // 10 minutes
+                    cwd: path.dirname(scriptPath)
+                }, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error('[Update] systemd-run failed:', error.message);
                         
-                        // Fallback: use exec with shell
-                        const fallbackCmd = isRoot 
-                            ? `/bin/bash "${scriptPath}" >> "${logPath}" 2>&1`
-                            : `sudo /bin/bash "${scriptPath}" >> "${logPath}" 2>&1`;
-                        
-                        exec(fallbackCmd, { 
-                            cwd: path.dirname(scriptPath),
-                            timeout: 600000 // 10 minute timeout
-                        }, (execErr, stdout, stderr) => {
-                            if (execErr) {
-                                console.error('[Update fallback] Execution failed:', execErr);
-                                fs.appendFile(logPath, `\n[FALLBACK ERROR] ${execErr.message}\n`).catch(() => {});
+                        // Method 2 Fallback: Try pkexec (PolicyKit - doesn't require NoNewPrivileges)
+                        console.log('[Update] Trying pkexec fallback...');
+                        const pkexecCmd = `pkexec /bin/bash "${scriptPath}" >> "${logPath}" 2>&1 &`;
+                        exec(pkexecCmd, (pkexecErr) => {
+                            if (pkexecErr) {
+                                console.error('[Update] pkexec also failed:', pkexecErr.message);
+                                
+                                // Method 3 Final Fallback: Write a temporary systemd service
+                                console.log('[Update] Creating temporary systemd service...');
+                                const tempServiceContent = `[Unit]
+Description=POSExpress Update Temporary Service
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash ${scriptPath}
+StandardOutput=append:${logPath}
+StandardError=append:${logPath}
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target`;
+                                
+                                const tempServicePath = `/tmp/posexpress-update-temp-${Date.now()}.service`;
+                                fs.writeFile(tempServicePath, tempServiceContent).then(() => {
+                                    exec(`sudo systemctl start "${tempServicePath}"`, (svcErr) => {
+                                        if (svcErr) {
+                                            console.error('[Update] All methods failed');
+                                            fs.appendFile(logPath, `\n[ERROR] All update methods failed. Please run manually: sudo ./update-system.sh\n`).catch(() => {});
+                                        } else {
+                                            console.log('[Update] Started via temporary service');
+                                        }
+                                    });
+                                });
+                            } else {
+                                console.log('[Update] Started via pkexec');
                             }
                         });
+                    } else {
+                        console.log('[Update] Started via systemd-run');
+                        if (stdout) console.log('[Update stdout]', stdout);
                     }
                 });
-
-                // Handle process exit
-                updateProcess.on('exit', (code, signal) => {
-                    const exitMsg = `[${new Date().toISOString()}] Update process exited with code ${code}, signal ${signal}\n`;
-                    console.log('[Update]', exitMsg);
-                    fs.appendFile(logPath, exitMsg).catch(() => {});
-                });
-
-                // Unref the process so it can continue after Node exits
-                updateProcess.unref();
-                
-                console.log('[Update] Update process spawned with PID:', updateProcess.pid);
-                fs.appendFile(logPath, `[${new Date().toISOString()}] Update process started with PID: ${updateProcess.pid}\n`).catch(() => {});
 
             } catch (spawnErr) {
                 console.error('[Update] Spawn error:', spawnErr);
                 fs.appendFile(logPath, `[SPAWN ERROR] ${spawnErr.message}\n`).catch(() => {});
-                
-                // Last resort: use shell exec
-                console.log('[Update] Using shell exec as last resort...');
-                const shellCmd = `cd "${path.dirname(scriptPath)}" && sudo /bin/bash "${scriptPath}" >> "${logPath}" 2>&1 &`;
-                exec(shellCmd, (err) => {
-                    if (err) {
-                        console.error('[Update shell exec] Failed:', err);
-                        fs.appendFile(logPath, `[SHELL EXEC ERROR] ${err.message}\n`).catch(() => {});
-                    }
-                });
             }
         }, 500);
 
