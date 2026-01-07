@@ -8,9 +8,17 @@
         </button>
         <h1 class="text-2xl font-bold">Transactions</h1>
       </div>
-      <div class="text-sm text-gray-600">
-        <span v-if="sessionActive" class="text-green-600 font-semibold">● Session Active</span>
-        <span v-else class="text-gray-500">Viewing Last Session</span>
+      <div class="flex items-center gap-3">
+        <div class="text-sm text-gray-600">
+          <span v-if="sessionActive" class="text-green-600 font-semibold">● Session Active</span>
+          <span v-else class="text-gray-500">Viewing Last Session</span>
+        </div>
+        <button @click="toggleKeyboardModal" class="bg-gray-200 hover:bg-gray-300 p-3 rounded-lg transition active:scale-95" title="On-Screen Keyboard">
+          <font-awesome-icon icon="keyboard" class="text-gray-600 text-xl" />
+        </button>
+        <button @click="toggleFullScreen" class="bg-gray-200 hover:bg-gray-300 p-3 rounded-lg transition active:scale-95" title="Toggle Fullscreen">
+          <font-awesome-icon icon="expand" class="text-gray-600 text-xl" />
+        </button>
       </div>
     </header>
 
@@ -278,6 +286,79 @@
       </div>
     </Modal>
 
+    <!-- On-Screen Keyboard Modal -->
+    <div v-if="isKeyboardModalOpen" class="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center">
+      <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-4xl mx-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-2xl font-bold text-gray-900">On-Screen Keyboard</h3>
+          <button @click="toggleKeyboardModal" class="text-gray-500 hover:text-gray-700 text-3xl">&times;</button>
+        </div>
+        
+        <!-- Preview -->
+        <div class="mb-4 p-4 bg-gray-100 rounded-xl text-center text-2xl font-mono min-h-[60px] flex items-center justify-center">
+          <span v-if="keyboardValue" class="break-all">{{ keyboardValue }}</span>
+          <span v-else class="text-gray-400">Type here...</span>
+        </div>
+        
+        <!-- Number Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2">
+          <button v-for="num in ['1','2','3','4','5','6','7','8','9','0']" :key="num" 
+            @click="keyboardValue += num" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">
+            {{ num }}
+          </button>
+        </div>
+        
+        <!-- QWERTY Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2">
+          <button v-for="key in ['Q','W','E','R','T','Y','U','I','O','P']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">
+            {{ key }}
+          </button>
+        </div>
+        
+        <!-- ASDF Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2 px-4">
+          <button v-for="key in ['A','S','D','F','G','H','J','K','L']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">
+            {{ key }}
+          </button>
+          <button @click="keyboardValue = keyboardValue.slice(0, -1)" class="bg-red-400 hover:bg-red-500 text-white font-bold py-4 text-lg rounded-lg">
+            <font-awesome-icon icon="backspace" />
+          </button>
+        </div>
+        
+        <!-- ZXCV Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2 px-8">
+          <button v-for="key in ['Z','X','C','V','B','N','M','-']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">
+            {{ key }}
+          </button>
+          <button @click="keyboardValue = ''" class="bg-orange-400 hover:bg-orange-500 text-white font-bold py-4 text-sm rounded-lg col-span-2">
+            Clear
+          </button>
+        </div>
+        
+        <!-- Space bar -->
+        <div class="grid grid-cols-10 gap-2 mb-4 px-12">
+          <button @click="keyboardValue += '@'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">@</button>
+          <button @click="keyboardValue += '.'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">.</button>
+          <button @click="keyboardValue += ' '" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-4 text-lg rounded-lg col-span-6">Space</button>
+          <button @click="keyboardValue += '_'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">_</button>
+          <button @click="keyboardValue += '#'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">#</button>
+        </div>
+        
+        <!-- Action buttons -->
+        <div class="flex gap-4">
+          <button @click="toggleKeyboardModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">Cancel</button>
+          <button @click="applyKeyboardValue" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-4 text-xl rounded-xl">Apply</button>
+        </div>
+      </div>
+    </div>
+
     <Toast ref="toastRef" />
   </div>
 </template>
@@ -304,6 +385,8 @@ const isViewModalOpen = ref(false)
 const selectedTransaction = ref(null)
 const isPrintConfirmModalOpen = ref(false)
 const pendingPrintData = ref(null)
+const isKeyboardModalOpen = ref(false)
+const keyboardValue = ref('')
 
 // Filter and pagination
 const searchQuery = ref('')
@@ -384,6 +467,38 @@ const showToast = (message, type = 'info') => {
 
 const goBack = () => {
   router.push('/pos')
+}
+
+const toggleKeyboardModal = () => {
+  isKeyboardModalOpen.value = !isKeyboardModalOpen.value
+  if (isKeyboardModalOpen.value) {
+    keyboardValue.value = searchQuery.value
+  } else {
+    keyboardValue.value = ''
+  }
+}
+
+const applyKeyboardValue = () => {
+  searchQuery.value = keyboardValue.value
+  toggleKeyboardModal()
+}
+
+const toggleFullScreen = async () => {
+  try {
+    if (window.electronAPI?.toggleFullscreen) {
+      await window.electronAPI.toggleFullscreen()
+    } else {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle fullscreen:', err)
+  }
 }
 
 const formatDate = (date) => {

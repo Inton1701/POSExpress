@@ -168,10 +168,16 @@ ipcMain.handle('execute-command', async (event, command) => {
 const ESC = 0x1B
 const GS = 0x1D
 const LF = 0x0A
+const DLE = 0x10
+const DC4 = 0x14
 
 const ESCPOS = {
-  // Initialize printer
+  // Initialize printer - clears buffer and resets settings
   INIT: Buffer.from([ESC, 0x40]),
+  // Cancel any pending data in buffer
+  CANCEL: Buffer.from([0x18]), // CAN - Cancel
+  // Clear print buffer
+  CLEAR_BUFFER: Buffer.from([DLE, DC4, 0x08, 0x01, 0x03, 0x14, 0x01, 0x06, 0x02, 0x08]), // Real-time request - some printers
   // Text alignment
   ALIGN_LEFT: Buffer.from([ESC, 0x61, 0x00]),
   ALIGN_CENTER: Buffer.from([ESC, 0x61, 0x01]),
@@ -179,10 +185,13 @@ const ESCPOS = {
   // Text formatting
   BOLD_ON: Buffer.from([ESC, 0x45, 0x01]),
   BOLD_OFF: Buffer.from([ESC, 0x45, 0x00]),
+  UNDERLINE_OFF: Buffer.from([ESC, 0x2D, 0x00]),
   DOUBLE_HEIGHT_ON: Buffer.from([GS, 0x21, 0x01]),
   DOUBLE_WIDTH_ON: Buffer.from([GS, 0x21, 0x10]),
   DOUBLE_SIZE_ON: Buffer.from([GS, 0x21, 0x11]),
   NORMAL_SIZE: Buffer.from([GS, 0x21, 0x00]),
+  // Reset line spacing
+  DEFAULT_LINE_SPACING: Buffer.from([ESC, 0x32]), // ESC 2 - default line spacing
   // Line feed and cut
   LINE_FEED: Buffer.from([LF]),
   FEED_AND_CUT: Buffer.from([GS, 0x56, 0x41, 0x03]), // Feed 3 lines and partial cut
@@ -214,9 +223,23 @@ function generateEscPosReceipt(receiptData) {
   const buffers = []
   const width = 32 // Characters per line for 58mm printer
   
-  // Initialize printer
+  // === ROBUST INITIALIZATION SEQUENCE ===
+  // 1. Cancel any pending data
+  buffers.push(ESCPOS.CANCEL)
+  // 2. Initialize printer (clears buffer, resets all settings)
   buffers.push(ESCPOS.INIT)
+  // 3. Wait a tiny bit (add some line feeds that will be eaten if buffer was dirty)
+  buffers.push(ESCPOS.LINE_FEED)
+  // 4. Initialize again to be sure
+  buffers.push(ESCPOS.INIT)
+  // 5. Set character set
   buffers.push(ESCPOS.CHARSET_PC858)
+  // 6. Reset text formatting
+  buffers.push(ESCPOS.NORMAL_SIZE)
+  buffers.push(ESCPOS.BOLD_OFF)
+  buffers.push(ESCPOS.UNDERLINE_OFF)
+  buffers.push(ESCPOS.DEFAULT_LINE_SPACING)
+  buffers.push(ESCPOS.ALIGN_LEFT)
   
   // Header
   buffers.push(ESCPOS.ALIGN_CENTER)
@@ -599,6 +622,146 @@ async function printViaEscPos(printerName, escposData) {
   })
 }
 
+// Helper function to print via ESC/POS on Windows
+async function printViaEscPosWindows(printerName, escposData) {
+  return new Promise((resolve, reject) => {
+    // Save ESC/POS data to temp file
+    const tempFile = path.join(os.tmpdir(), `escpos-${Date.now()}.bin`)
+    fs.writeFileSync(tempFile, escposData)
+    
+    console.log('ESC/POS data saved to:', tempFile, 'size:', escposData.length, 'bytes')
+    
+    // Escape the printer name and file path for PowerShell
+    const escapedPrinterName = printerName.replace(/'/g, "''")
+    const escapedTempFile = tempFile.replace(/\\/g, '\\\\').replace(/'/g, "''")
+    
+    // PowerShell script to send raw data to printer
+    // Uses .NET to send raw bytes directly to the printer
+    const psScript = `
+      $printerName = '${escapedPrinterName}'
+      $filePath = '${escapedTempFile}'
+      
+      # Read the binary file
+      $bytes = [System.IO.File]::ReadAllBytes($filePath)
+      
+      # Try method 1: Use RawPrinterHelper via P/Invoke
+      $signature = @'
+      [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+      public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+      
+      [DllImport("winspool.drv", SetLastError = true)]
+      public static extern bool ClosePrinter(IntPtr hPrinter);
+      
+      [DllImport("winspool.drv", SetLastError = true)]
+      public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOA pDocInfo);
+      
+      [DllImport("winspool.drv", SetLastError = true)]
+      public static extern bool EndDocPrinter(IntPtr hPrinter);
+      
+      [DllImport("winspool.drv", SetLastError = true)]
+      public static extern bool StartPagePrinter(IntPtr hPrinter);
+      
+      [DllImport("winspool.drv", SetLastError = true)]
+      public static extern bool EndPagePrinter(IntPtr hPrinter);
+      
+      [DllImport("winspool.drv", SetLastError = true)]
+      public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+      
+      [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+      public struct DOCINFOA {
+          [MarshalAs(UnmanagedType.LPStr)] public string pDocName;
+          [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
+          [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
+      }
+'@
+      
+      try {
+          Add-Type -MemberDefinition $signature -Name RawPrinter -Namespace Win32 -PassThru | Out-Null
+      } catch {
+          # Type already exists, continue
+      }
+      
+      $printerHandle = [IntPtr]::Zero
+      $result = [Win32.RawPrinter]::OpenPrinter($printerName, [ref]$printerHandle, [IntPtr]::Zero)
+      
+      if (-not $result) {
+          Write-Error "Failed to open printer: $printerName"
+          exit 1
+      }
+      
+      try {
+          $docInfo = New-Object Win32.RawPrinter+DOCINFOA
+          $docInfo.pDocName = "ESC/POS Receipt"
+          $docInfo.pDataType = "RAW"
+          
+          $result = [Win32.RawPrinter]::StartDocPrinter($printerHandle, 1, [ref]$docInfo)
+          if (-not $result) {
+              Write-Error "StartDocPrinter failed"
+              exit 1
+          }
+          
+          try {
+              $result = [Win32.RawPrinter]::StartPagePrinter($printerHandle)
+              if (-not $result) {
+                  Write-Error "StartPagePrinter failed"
+                  exit 1
+              }
+              
+              try {
+                  $unmanagedBytes = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
+                  try {
+                      [System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $unmanagedBytes, $bytes.Length)
+                      $written = 0
+                      $result = [Win32.RawPrinter]::WritePrinter($printerHandle, $unmanagedBytes, $bytes.Length, [ref]$written)
+                      if (-not $result) {
+                          Write-Error "WritePrinter failed"
+                          exit 1
+                      }
+                      Write-Output "Successfully sent $written bytes to printer"
+                  } finally {
+                      [System.Runtime.InteropServices.Marshal]::FreeHGlobal($unmanagedBytes)
+                  }
+              } finally {
+                  [Win32.RawPrinter]::EndPagePrinter($printerHandle) | Out-Null
+              }
+          } finally {
+              [Win32.RawPrinter]::EndDocPrinter($printerHandle) | Out-Null
+          }
+      } finally {
+          [Win32.RawPrinter]::ClosePrinter($printerHandle) | Out-Null
+      }
+    `
+    
+    // Save script to temp file
+    const scriptPath = path.join(os.tmpdir(), `escpos-print-${Date.now()}.ps1`)
+    fs.writeFileSync(scriptPath, psScript, 'utf8')
+    
+    console.log('Executing PowerShell ESC/POS print script')
+    
+    // Execute PowerShell script
+    const psCommand = `powershell -ExecutionPolicy Bypass -File "${scriptPath}"`
+    
+    exec(psCommand, (error, stdout, stderr) => {
+      // Clean up temp files
+      setTimeout(() => {
+        try { fs.unlinkSync(tempFile) } catch (e) {}
+        try { fs.unlinkSync(scriptPath) } catch (e) {}
+      }, 5000)
+      
+      if (error) {
+        console.error('PowerShell ESC/POS print error:', error)
+        console.error('stderr:', stderr)
+        console.error('stdout:', stdout)
+        reject(new Error(`ESC/POS print failed: ${stderr || error.message}`))
+      } else {
+        console.log('PowerShell ESC/POS output:', stdout)
+        if (stderr) console.log('PowerShell stderr:', stderr)
+        resolve({ success: true, method: 'powershell-raw' })
+      }
+    })
+  })
+}
+
 // Helper function to print via CUPS on Linux (using lp command) - fallback for PNG
 async function printViaCUPS(printerName, imagePath) {
   return new Promise((resolve, reject) => {
@@ -820,9 +983,15 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               try {
                 printWindow.close()
                 
-                // Generate simple ESC/POS test print
+                // Generate simple ESC/POS test print with robust init
                 const buffers = []
+                // Robust initialization sequence
+                buffers.push(ESCPOS.CANCEL)
                 buffers.push(ESCPOS.INIT)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.INIT)
+                buffers.push(ESCPOS.NORMAL_SIZE)
+                buffers.push(ESCPOS.BOLD_OFF)
                 buffers.push(ESCPOS.ALIGN_CENTER)
                 buffers.push(ESCPOS.BOLD_ON)
                 buffers.push(ESCPOS.DOUBLE_SIZE_ON)
@@ -850,7 +1019,48 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
               return
             }
             
-            // Windows/Mac: Use native Electron printing
+            // Windows: Use ESC/POS direct printing
+            if (process.platform === 'win32') {
+              try {
+                printWindow.close()
+                
+                // Generate simple ESC/POS test print with robust init
+                const buffers = []
+                // Robust initialization sequence
+                buffers.push(ESCPOS.CANCEL)
+                buffers.push(ESCPOS.INIT)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.INIT)
+                buffers.push(ESCPOS.NORMAL_SIZE)
+                buffers.push(ESCPOS.BOLD_OFF)
+                buffers.push(ESCPOS.ALIGN_CENTER)
+                buffers.push(ESCPOS.BOLD_ON)
+                buffers.push(ESCPOS.DOUBLE_SIZE_ON)
+                buffers.push(escposText('TEST PRINT'))
+                buffers.push(ESCPOS.NORMAL_SIZE)
+                buffers.push(ESCPOS.BOLD_OFF)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(escposText('Printer is working!'))
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(escposText(new Date().toLocaleString()))
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.LINE_FEED)
+                buffers.push(ESCPOS.FEED_AND_CUT)
+                
+                const escposData = Buffer.concat(buffers)
+                await printViaEscPosWindows(targetPrinter.name, escposData)
+                
+                resolve({ success: true, printer: targetPrinter.name, mode: 'escpos' })
+              } catch (error) {
+                console.error('ESC/POS test print failed:', error)
+                reject(error)
+              }
+              return
+            }
+            
+            // Mac: Use native Electron printing (fallback)
             const printOptions = {
               silent: true,
               printBackground: true,
@@ -1562,7 +1772,32 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
             return
           }
           
-          // Windows/Mac: Use native Electron silent print
+          // Windows: Use ESC/POS direct printing
+          if (process.platform === 'win32') {
+            try {
+              console.log('Windows detected - using ESC/POS direct printing')
+              
+              printWindow.close()
+              
+              // Generate ESC/POS receipt data
+              const escposData = generateEscPosReceipt(receiptData)
+              console.log('ESC/POS receipt generated, size:', escposData.length, 'bytes')
+              
+              // Send to printer via Windows raw printing
+              await printViaEscPosWindows(targetPrinter.name, escposData)
+              
+              console.log('✓ Printed successfully via ESC/POS')
+              resolve({ success: true, printer: targetPrinter.name, mode: 'escpos', platform: process.platform })
+              
+            } catch (error) {
+              if (printWindow && !printWindow.isDestroyed()) printWindow.close()
+              console.error('ESC/POS printing failed:', error)
+              reject(new Error('ESC/POS printing failed: ' + error.message))
+            }
+            return
+          }
+          
+          // Mac: Use native Electron silent print (fallback)
           console.log('Using Electron native silent printing')
           
           const printOptions = {

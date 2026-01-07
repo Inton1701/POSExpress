@@ -23,8 +23,14 @@
         <div class="flex-1 flex justify-center">
           <img src="/posxpress-logo.png" alt="PosXpress" class="h-12" />
         </div>
-        <div class="flex-1 flex justify-end relative">
-          <button @click="toggleMenu" class=" text-gray font-bold py-2 px-4 border shadow">
+        <div class="flex-1 flex justify-end items-center gap-3 relative">
+          <button @click="openKeyboardModal('general')" class="bg-gray-200 hover:bg-gray-300 p-3 rounded-lg transition active:scale-95" title="On-Screen Keyboard">
+            <font-awesome-icon icon="keyboard" class="text-gray-600 text-xl" />
+          </button>
+          <button @click="toggleFullScreen" class="bg-gray-200 hover:bg-gray-300 p-3 rounded-lg transition active:scale-95" title="Toggle Fullscreen">
+            <font-awesome-icon icon="expand" class="text-gray-600 text-xl" />
+          </button>
+          <button @click="toggleMenu" class="text-gray font-bold py-2 px-4 border shadow">
             <font-awesome-icon :icon="isMenuOpen ? 'times' : 'bars'" class="text-xl" />
           </button>
           <!-- Popover Menu -->
@@ -600,43 +606,66 @@
     <!-- Cash In RFID Verification Modal -->
     <Modal :is-open="isCashInVerificationModalOpen" title="Verify Cash-In Transaction" size="full" @close="closeCashInVerificationModal">
       <div class="grid grid-cols-2 gap-8" style="min-height: 70vh;">
-        <!-- Left Column: Verification Instructions -->
-        <div class="flex flex-col justify-center items-center space-y-6">
-          <div class="text-center">
-            <p class="text-3xl font-bold text-purple-600 mb-4">Verify with RFID</p>
-            <p class="text-xl text-gray-600 mb-6">Please tap the same RFID card again to confirm</p>
+        <!-- Left Column: Transaction Summary + RFID Input -->
+        <div class="flex flex-col justify-center space-y-6">
+          <!-- Transaction Summary Card -->
+          <div class="bg-gray-50 p-6 rounded-xl space-y-4">
+            <h3 class="text-xl font-bold text-gray-800 border-b-2 pb-2">Transaction Summary</h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-sm text-gray-600">Customer</p>
+                <p class="text-xl font-bold text-blue-600">{{ cashInCustomer.fullName }}</p>
+              </div>
+              
+              <div>
+                <p class="text-sm text-gray-600">RFID</p>
+                <p class="text-lg font-mono text-gray-800">{{ cashInCustomer.rfid }}</p>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4 border-t pt-4">
+              <div>
+                <p class="text-sm text-gray-600">Current Balance</p>
+                <p class="text-2xl font-bold text-green-600">₱{{ cashInCustomer.balance.toFixed(2) }}</p>
+              </div>
+              
+              <div>
+                <p class="text-sm text-gray-600">Amount to Add</p>
+                <p class="text-2xl font-bold text-purple-600">+₱{{ cashInAmount }}</p>
+              </div>
+              
+              <div>
+                <p class="text-sm text-gray-600">New Balance</p>
+                <p class="text-2xl font-bold text-green-700">₱{{ (cashInCustomer.balance + parseFloat(cashInAmount || 0)).toFixed(2) }}</p>
+              </div>
+            </div>
           </div>
           
-          <div class="flex justify-center">
-            <font-awesome-icon icon="credit-card" class="text-9xl text-purple-500 animate-pulse" />
+          <!-- RFID Verification Section -->
+          <div class="bg-purple-50 p-6 rounded-xl space-y-4">
+            <div class="text-center">
+              <p class="text-2xl font-bold text-purple-600 mb-2">Verify with RFID</p>
+              <p class="text-lg text-gray-600">Tap the same RFID card again to confirm</p>
+            </div>
+            
+            <div class="flex justify-center">
+              <font-awesome-icon icon="credit-card" class="text-7xl text-purple-500 animate-pulse" />
+            </div>
+            
+            <input 
+              ref="cashInVerificationRfidInput" 
+              v-model="cashInVerificationRfid" 
+              @keyup.enter="verifyCashInRfid" 
+              type="text" 
+              class="w-full p-4 border-2 border-purple-300 rounded-xl text-center text-xl"
+              placeholder="Tap RFID to verify"
+            />
+            
+            <p v-if="cashInVerificationError" class="text-red-600 text-center text-lg font-semibold">{{ cashInVerificationError }}</p>
           </div>
           
-          <input 
-            ref="cashInVerificationRfidInput" 
-            v-model="cashInVerificationRfid" 
-            @keyup.enter="verifyCashInRfid" 
-            type="text" 
-            class="w-full p-4 border-2 border-purple-300 rounded-xl text-center text-xl"
-            placeholder="Tap RFID to verify"
-          />
-          
-          <p v-if="cashInVerificationError" class="text-red-600 text-center text-xl font-semibold">{{ cashInVerificationError }}</p>
-          
-          <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 w-full">
-            <p class="text-center text-yellow-800">
-              <font-awesome-icon icon="exclamation-triangle" class="mr-2" />
-              Security verification required
-            </p>
-          </div>
-          
-          <button 
-            @click="verifyCashInRfid"
-            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 text-lg transition-colors"
-          >
-            <font-awesome-icon icon="credit-card" class="text-xl" />
-            Confirm
-          </button>
-          
+          <!-- Back Button -->
           <button 
             @click="closeCashInVerificationModal" 
             class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-xl">
@@ -644,35 +673,38 @@
           </button>
         </div>
         
-        <!-- Right Column: Transaction Summary -->
-        <div class="flex flex-col justify-center space-y-6 bg-gray-50 p-6 rounded-xl">
-          <h3 class="text-2xl font-bold text-gray-800 border-b-2 pb-3">Transaction Summary</h3>
+        <!-- Right Column: Number Pad -->
+        <div class="flex flex-col justify-center">
+          <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 mb-6">
+            <p class="text-center text-yellow-800 text-lg">
+              <font-awesome-icon icon="exclamation-triangle" class="mr-2" />
+              Security verification required - Enter RFID manually or tap card
+            </p>
+          </div>
           
-          <div class="space-y-4">
-            <div>
-              <p class="text-gray-600">Customer</p>
-              <p class="text-2xl font-bold text-blue-600">{{ cashInCustomer.fullName }}</p>
-            </div>
-            
-            <div>
-              <p class="text-gray-600">RFID</p>
-              <p class="text-xl font-mono text-gray-800">{{ cashInCustomer.rfid }}</p>
-            </div>
-            
-            <div class="border-t-2 pt-4">
-              <p class="text-gray-600">Current Balance</p>
-              <p class="text-3xl font-bold text-green-600">₱{{ cashInCustomer.balance.toFixed(2) }}</p>
-            </div>
-            
-            <div>
-              <p class="text-gray-600">Amount to Add</p>
-              <p class="text-3xl font-bold text-purple-600">+₱{{ cashInAmount }}</p>
-            </div>
-            
-            <div class="border-t-2 pt-4">
-              <p class="text-gray-600">New Balance</p>
-              <p class="text-4xl font-bold text-green-700">₱{{ (cashInCustomer.balance + parseFloat(cashInAmount || 0)).toFixed(2) }}</p>
-            </div>
+          <!-- Number Pad -->
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <button v-for="num in [1,2,3,4,5,6,7,8,9]" :key="num" 
+              @click="cashInVerificationRfid += num" 
+              class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-8 text-4xl rounded-xl">
+              {{ num }}
+            </button>
+            <button @click="cashInVerificationRfid += '.'" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-8 text-4xl rounded-xl">.</button>
+            <button @click="cashInVerificationRfid += '0'" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-8 text-4xl rounded-xl">0</button>
+            <button @click="cashInVerificationRfid = cashInVerificationRfid.slice(0, -1)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-8 text-3xl rounded-xl" title="Delete">
+              <font-awesome-icon icon="backspace" />
+            </button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-4">
+            <button 
+              @click="verifyCashInRfid"
+              class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-6 px-6 rounded-xl flex items-center justify-center gap-3 text-2xl transition-colors"
+            >
+              <font-awesome-icon icon="check-circle" class="text-3xl" />
+              Confirm Cash-In
+            </button>
           </div>
         </div>
       </div>
@@ -688,19 +720,34 @@
     </Modal>
 
     <!-- Manual Barcode Modal -->
-    <Modal :is-open="isBarcodeModalOpen" title="Manual Barcode Entry" @close="isBarcodeModalOpen = false">
-      <p class="mb-4">Enter product barcode/SKU:</p>
-      <input 
-        ref="manualBarcodeInput"
-        v-model="manualBarcode" 
-        @keyup.enter="processManualBarcode"
-        type="text" 
-        placeholder="Enter barcode" 
-        class="w-full p-3 rounded-xl border border-gray-300 mb-4" 
-      />
-      <div class="flex gap-4">
-        <button @click="isBarcodeModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
-        <button @click="processManualBarcode" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-2xl">Add Item</button>
+    <Modal :is-open="isBarcodeModalOpen" title="Manual Barcode Entry" size="lg" @close="isBarcodeModalOpen = false">
+      <div class="space-y-4">
+        <p class="text-gray-600">Enter product barcode/SKU:</p>
+        <div class="flex gap-2">
+          <input 
+            ref="manualBarcodeInput"
+            v-model="manualBarcode" 
+            @keyup.enter="processManualBarcode"
+            type="text" 
+            placeholder="Enter barcode" 
+            class="flex-1 p-3 rounded-xl border-2 border-purple-300 text-xl text-center font-mono focus:border-purple-500 focus:outline-none" 
+          />
+          <button @click="openKeyboardModal('manualBarcode')" class="bg-gray-200 hover:bg-gray-300 p-3 rounded-lg transition active:scale-95" title="Open Keyboard">
+            <font-awesome-icon icon="keyboard" class="text-gray-600 text-xl" />
+          </button>
+        </div>
+        <div v-if="barcodeError" class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-xl text-center">
+          {{ barcodeError }}
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button @click="isBarcodeModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-xl">
+          Cancel
+        </button>
+        <button @click="processManualBarcode" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 rounded-xl">
+          <font-awesome-icon icon="plus" class="mr-2" />
+          Add Item
+        </button>
       </div>
     </Modal>
 
@@ -715,6 +762,15 @@
 
     <!-- Lockscreen Overlay -->
     <div v-if="isPOSLocked" class="fixed inset-0 bg-gray-900 bg-opacity-95 z-[9999] flex items-center justify-center">
+      <!-- Top-right buttons on lockscreen -->
+      <div class="absolute top-4 right-4 flex gap-2">
+        <button @click="openKeyboardModal('lockscreen')" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-bold py-3 px-4 rounded-lg transition" title="On-Screen Keyboard">
+          <font-awesome-icon icon="keyboard" class="text-xl" />
+        </button>
+        <button @click="toggleFullScreen" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-bold py-3 px-4 rounded-lg transition" title="Toggle Fullscreen">
+          <font-awesome-icon icon="expand" class="text-xl" />
+        </button>
+      </div>
       <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
         <div class="text-center mb-6">
           <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-orange-100 mb-4">
@@ -747,15 +803,20 @@
         <div v-if="unlockMethod === 'password'" class="space-y-4">
           <div>
             <label class="block text-sm font-bold mb-2 text-gray-700">Password</label>
-            <input 
-              v-model="unlockPassword" 
-              type="password" 
-              ref="unlockPasswordInput"
-              @keyup.enter="attemptUnlock"
-              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your password"
-              autofocus
-            />
+            <div class="flex gap-2">
+              <input 
+                v-model="unlockPassword" 
+                type="password" 
+                ref="unlockPasswordInput"
+                @keyup.enter="attemptUnlock"
+                class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your password"
+                autofocus
+              />
+              <button @click="openKeyboardModal('unlockPassword')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-4 rounded-lg" title="Keyboard">
+                <font-awesome-icon icon="keyboard" />
+              </button>
+            </div>
           </div>
           <button 
             @click="attemptUnlock" 
@@ -770,15 +831,20 @@
         <div v-if="unlockMethod === 'rfid'" class="space-y-4">
           <div>
             <label class="block text-sm font-bold mb-2 text-gray-700">RFID</label>
-            <input 
-              v-model="unlockRFID" 
-              type="text" 
-              ref="unlockRFIDInput"
-              @keyup.enter="attemptUnlock"
-              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Scan your RFID card"
-              autofocus
-            />
+            <div class="flex gap-2">
+              <input 
+                v-model="unlockRFID" 
+                type="text" 
+                ref="unlockRFIDInput"
+                @keyup.enter="attemptUnlock"
+                class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Scan your RFID card"
+                autofocus
+              />
+              <button @click="openKeyboardModal('unlockRFID')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-4 rounded-lg" title="Keyboard">
+                <font-awesome-icon icon="keyboard" />
+              </button>
+            </div>
           </div>
           <button 
             @click="attemptUnlock" 
@@ -1215,6 +1281,79 @@
       </div>
     </Modal>
 
+    <!-- On-Screen Keyboard Modal - High z-index to appear above lockscreen -->
+    <div v-if="isKeyboardModalOpen" class="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center">
+      <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-4xl mx-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-2xl font-bold text-gray-900">On-Screen Keyboard</h3>
+          <button @click="closeKeyboardModal" class="text-gray-500 hover:text-gray-700 text-3xl">&times;</button>
+        </div>
+        
+        <!-- Preview of typed text -->
+        <div class="mb-4 p-4 bg-gray-100 rounded-xl text-center text-2xl font-mono min-h-[60px] flex items-center justify-center">
+          <span v-if="keyboardValue" class="break-all">{{ keyboardTarget === 'unlockPassword' ? '•'.repeat(keyboardValue.length) : keyboardValue }}</span>
+          <span v-else class="text-gray-400">Type here...</span>
+        </div>
+        
+        <!-- Number Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2">
+          <button v-for="num in ['1','2','3','4','5','6','7','8','9','0']" :key="num" 
+            @click="keyboardValue += num" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">
+            {{ num }}
+          </button>
+        </div>
+        
+        <!-- QWERTY Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2">
+          <button v-for="key in ['Q','W','E','R','T','Y','U','I','O','P']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">
+            {{ key }}
+          </button>
+        </div>
+        
+        <!-- ASDF Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2 px-4">
+          <button v-for="key in ['A','S','D','F','G','H','J','K','L']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">
+            {{ key }}
+          </button>
+          <button @click="keyboardValue = keyboardValue.slice(0, -1)" class="bg-red-400 hover:bg-red-500 text-white font-bold py-4 text-lg rounded-lg">
+            <font-awesome-icon icon="backspace" />
+          </button>
+        </div>
+        
+        <!-- ZXCV Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2 px-8">
+          <button v-for="key in ['Z','X','C','V','B','N','M','-']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">
+            {{ key }}
+          </button>
+          <button @click="keyboardValue = ''" class="bg-orange-400 hover:bg-orange-500 text-white font-bold py-4 text-sm rounded-lg col-span-2">
+            Clear
+          </button>
+        </div>
+        
+        <!-- Space bar and special chars -->
+        <div class="grid grid-cols-10 gap-2 mb-4 px-12">
+          <button @click="keyboardValue += '@'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">@</button>
+          <button @click="keyboardValue += '.'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">.</button>
+          <button @click="keyboardValue += ' '" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-4 text-lg rounded-lg col-span-6">Space</button>
+          <button @click="keyboardValue += '_'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">_</button>
+          <button @click="keyboardValue += '#'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 text-xl rounded-lg">#</button>
+        </div>
+        
+        <!-- Action buttons -->
+        <div class="flex gap-4">
+          <button @click="closeKeyboardModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl">Cancel</button>
+          <button @click="applyKeyboardValue" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-4 text-xl rounded-xl">Apply</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notification Component -->
     <Toast ref="toastRef" />
   </div>
@@ -1297,6 +1436,9 @@ const isMenuOpen = ref(false)
 const isSettingsModalOpen = ref(false)
 const isPrintConfirmModalOpen = ref(false)
 const pendingPrintData = ref(null)
+const isKeyboardModalOpen = ref(false)
+const keyboardTarget = ref('')
+const keyboardValue = ref('')
 const availablePrinters = ref([])
 const selectedPrinter = ref(null)
 const isRefreshingPrinters = ref(false)
@@ -3053,6 +3195,62 @@ const logout = () => {
 const openSettingsModal = () => {
   isMenuOpen.value = false
   isSettingsModalOpen.value = true
+}
+
+const openKeyboardModal = (target) => {
+  keyboardTarget.value = target
+  // Pre-fill with current value if editing a specific field
+  if (target === 'unlockPassword') {
+    keyboardValue.value = unlockPassword.value
+  } else if (target === 'unlockRFID') {
+    keyboardValue.value = unlockRFID.value
+  } else if (target === 'searchQuery') {
+    keyboardValue.value = searchQuery.value
+  } else if (target === 'manualBarcode') {
+    keyboardValue.value = manualBarcode.value
+  } else {
+    // For general keyboard, try to get the currently focused input value
+    const activeEl = document.activeElement
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+      keyboardValue.value = activeEl.value || ''
+    } else {
+      keyboardValue.value = ''
+    }
+  }
+  isKeyboardModalOpen.value = true
+}
+
+const closeKeyboardModal = () => {
+  isKeyboardModalOpen.value = false
+  keyboardTarget.value = ''
+  keyboardValue.value = ''
+}
+
+const applyKeyboardValue = () => {
+  if (keyboardTarget.value === 'unlockPassword') {
+    unlockPassword.value = keyboardValue.value
+  } else if (keyboardTarget.value === 'unlockRFID') {
+    unlockRFID.value = keyboardValue.value
+  } else if (keyboardTarget.value === 'searchQuery') {
+    searchQuery.value = keyboardValue.value
+  } else if (keyboardTarget.value === 'manualBarcode') {
+    manualBarcode.value = keyboardValue.value
+  } else if (keyboardTarget.value === 'general' || keyboardTarget.value === 'lockscreen') {
+    // For general/lockscreen keyboard, find the visible input and update it
+    // This handles the case when user clicks keyboard button in navbar
+    if (isPOSLocked.value) {
+      // When locked, apply to unlock fields
+      if (unlockMethod.value === 'password') {
+        unlockPassword.value = keyboardValue.value
+      } else {
+        unlockRFID.value = keyboardValue.value
+      }
+    } else {
+      // When not locked, apply to search query
+      searchQuery.value = keyboardValue.value
+    }
+  }
+  closeKeyboardModal()
 }
 
 const toggleFullScreen = async () => {

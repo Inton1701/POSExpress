@@ -22,6 +22,28 @@
       </div>
     </div>
 
+    <!-- Top Right Buttons: Keyboard and Fullscreen -->
+    <div class="fixed top-4 right-4 z-50 flex gap-2">
+      <button 
+        @click="toggleKeyboardModal" 
+        class="bg-white hover:bg-gray-100 text-gray-700 p-3 rounded-lg shadow-lg transition"
+        title="On-Screen Keyboard"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 011 1v8a1 1 0 01-1 1H4a1 1 0 01-1-1V5zm1 1v6h12V6H4zm2 2a1 1 0 011-1h1a1 1 0 110 2H7a1 1 0 01-1-1zm4 0a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zm4 0a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM5 11a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+        </svg>
+      </button>
+      <button 
+        @click="toggleFullScreen" 
+        class="bg-white hover:bg-gray-100 text-gray-700 p-3 rounded-lg shadow-lg transition"
+        title="Toggle Fullscreen"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H5v3a1 1 0 01-2 0V4zm12 0a1 1 0 011 1v3a1 1 0 11-2 0V5h-3a1 1 0 110-2h4zm-12 12a1 1 0 011-1h3a1 1 0 110 2H4a1 1 0 01-1-1v-4a1 1 0 112 0v3zm12 0a1 1 0 01-1 1h-3a1 1 0 110-2h3v-3a1 1 0 112 0v4z" clip-rule="evenodd" />
+        </svg>
+      </button>
+    </div>
+
     <div class="bg-white rounded-2xl p-8 shadow-lg w-full max-w-md">
       <div class="flex justify-center mb-6">
         <img src="/logo.png" alt="PosXpress" class="h-16 w-auto" />
@@ -77,6 +99,92 @@
         </button>
       </form>
     </div>
+
+    <!-- On-Screen Keyboard Modal -->
+    <div v-if="isKeyboardModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl mx-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold text-gray-900">On-Screen Keyboard</h3>
+          <button @click="toggleKeyboardModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+        </div>
+        
+        <!-- Preview -->
+        <div class="mb-4 p-4 bg-gray-100 rounded-xl text-center text-2xl font-mono min-h-[60px] flex items-center justify-center">
+          <span v-if="keyboardValue" class="break-all">{{ keyboardTarget === 'password' ? '•'.repeat(keyboardValue.length) : keyboardValue }}</span>
+          <span v-else class="text-gray-400">Type here...</span>
+        </div>
+
+        <!-- Target selector -->
+        <div class="flex gap-2 mb-4">
+          <button @click="keyboardTarget = 'username'" 
+            :class="keyboardTarget === 'username' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'"
+            class="flex-1 py-2 rounded-lg font-semibold transition">Username</button>
+          <button @click="keyboardTarget = 'password'" 
+            :class="keyboardTarget === 'password' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'"
+            class="flex-1 py-2 rounded-lg font-semibold transition">Password</button>
+          <button @click="keyboardTarget = 'rfid'" 
+            :class="keyboardTarget === 'rfid' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'"
+            class="flex-1 py-2 rounded-lg font-semibold transition">RFID</button>
+        </div>
+        
+        <!-- Number Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2">
+          <button v-for="num in ['1','2','3','4','5','6','7','8','9','0']" :key="num" 
+            @click="keyboardValue += num" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 text-lg rounded-lg">
+            {{ num }}
+          </button>
+        </div>
+        
+        <!-- QWERTY Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2">
+          <button v-for="key in ['Q','W','E','R','T','Y','U','I','O','P']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 text-lg rounded-lg">
+            {{ key }}
+          </button>
+        </div>
+        
+        <!-- ASDF Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2 px-3">
+          <button v-for="key in ['A','S','D','F','G','H','J','K','L']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 text-lg rounded-lg">
+            {{ key }}
+          </button>
+          <button @click="keyboardValue = keyboardValue.slice(0, -1)" class="bg-red-400 hover:bg-red-500 text-white font-bold py-3 text-sm rounded-lg">
+            ⌫
+          </button>
+        </div>
+        
+        <!-- ZXCV Row -->
+        <div class="grid grid-cols-10 gap-2 mb-2 px-6">
+          <button v-for="key in ['Z','X','C','V','B','N','M','-']" :key="key" 
+            @click="keyboardValue += key" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 text-lg rounded-lg">
+            {{ key }}
+          </button>
+          <button @click="keyboardValue = ''" class="bg-orange-400 hover:bg-orange-500 text-white font-bold py-3 text-sm rounded-lg col-span-2">
+            Clear
+          </button>
+        </div>
+        
+        <!-- Space bar -->
+        <div class="grid grid-cols-10 gap-2 mb-4 px-10">
+          <button @click="keyboardValue += '@'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 text-lg rounded-lg">@</button>
+          <button @click="keyboardValue += '.'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 text-lg rounded-lg">.</button>
+          <button @click="keyboardValue += ' '" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 text-lg rounded-lg col-span-6">Space</button>
+          <button @click="keyboardValue += '_'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 text-lg rounded-lg">_</button>
+          <button @click="keyboardValue += '#'" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 text-lg rounded-lg">#</button>
+        </div>
+        
+        <!-- Action buttons -->
+        <div class="flex gap-4">
+          <button @click="toggleKeyboardModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 text-lg rounded-xl">Cancel</button>
+          <button @click="applyKeyboardValue" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 text-lg rounded-xl">Apply</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -98,6 +206,58 @@ const form = ref({
 const isLoading = ref(false)
 const errorMessage = ref('')
 const showPassword = ref(false)
+const isKeyboardModalOpen = ref(false)
+const keyboardValue = ref('')
+const keyboardTarget = ref('username')
+
+const toggleKeyboardModal = () => {
+  isKeyboardModalOpen.value = !isKeyboardModalOpen.value
+  if (isKeyboardModalOpen.value) {
+    // Load current value based on target
+    if (keyboardTarget.value === 'username') {
+      keyboardValue.value = form.value.username
+    } else if (keyboardTarget.value === 'password') {
+      keyboardValue.value = form.value.password
+    } else if (keyboardTarget.value === 'rfid') {
+      keyboardValue.value = form.value.rfid
+    }
+  } else {
+    keyboardValue.value = ''
+  }
+}
+
+const applyKeyboardValue = () => {
+  if (keyboardTarget.value === 'username') {
+    form.value.username = keyboardValue.value
+    form.value.rfid = '' // Clear RFID when entering username
+  } else if (keyboardTarget.value === 'password') {
+    form.value.password = keyboardValue.value
+    form.value.rfid = '' // Clear RFID when entering password
+  } else if (keyboardTarget.value === 'rfid') {
+    form.value.rfid = keyboardValue.value
+    form.value.username = '' // Clear username when entering RFID
+    form.value.password = '' // Clear password when entering RFID
+  }
+  toggleKeyboardModal()
+}
+
+const toggleFullScreen = async () => {
+  try {
+    if (window.electronAPI?.toggleFullscreen) {
+      await window.electronAPI.toggleFullscreen()
+    } else {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle fullscreen:', err)
+  }
+}
 
 const handleLogin = async () => {
   isLoading.value = true
