@@ -473,13 +473,13 @@ const rebootSystem = async (req, res) => {
                 }
             });
         } else if (platform === 'linux' || platform === 'darwin') {
-            // Linux/macOS reboot command - use systemd-run to bypass NoNewPrivileges
+            // Linux/macOS reboot command
             // Try multiple methods in order of preference
             const methods = [
-                'systemd-run --scope sudo /usr/sbin/reboot',
-                'systemd-run --scope sudo /sbin/reboot',
-                'pkexec /usr/sbin/reboot',
-                'sudo /usr/sbin/reboot'
+                'sudo systemctl reboot',
+                'sudo /usr/sbin/reboot',
+                'sudo /sbin/reboot',
+                'systemctl reboot'
             ];
             
             let attempted = 0;
@@ -492,13 +492,15 @@ const rebootSystem = async (req, res) => {
                 const method = methods[attempted];
                 console.log(`Trying reboot method ${attempted + 1}: ${method}`);
                 
-                exec(method, (error) => {
+                exec(method, (error, stdout, stderr) => {
                     if (error) {
                         console.error(`Reboot method ${attempted + 1} failed:`, error.message);
+                        if (stderr) console.error('stderr:', stderr);
                         attempted++;
-                        tryReboot();
+                        setTimeout(tryReboot, 100);
                     } else {
                         console.log(`Reboot initiated via method ${attempted + 1}`);
+                        if (stdout) console.log('stdout:', stdout);
                     }
                 });
             };
@@ -508,13 +510,14 @@ const rebootSystem = async (req, res) => {
         
         res.json({
             success: true,
-            message: 'System reboot initiated - system will restart in 5 seconds'
+            message: 'System reboot initiated - system will restart in a moment'
         });
     } catch (error) {
         console.error('Reboot error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to initiate system reboot'
+            message: 'Failed to initiate system reboot',
+            error: error.message
         });
     }
 };
@@ -537,13 +540,13 @@ const shutdownSystem = async (req, res) => {
                 }
             });
         } else if (platform === 'linux' || platform === 'darwin') {
-            // Linux/macOS shutdown command - use systemd-run to bypass NoNewPrivileges
+            // Linux/macOS shutdown command
             // Try multiple methods in order of preference
             const methods = [
-                'systemd-run --scope sudo /usr/sbin/poweroff',
-                'systemd-run --scope sudo /sbin/poweroff',
-                'pkexec /usr/sbin/poweroff',
-                'sudo /usr/sbin/poweroff'
+                'sudo systemctl poweroff',
+                'sudo /usr/sbin/poweroff',
+                'sudo /sbin/poweroff',
+                'systemctl poweroff'
             ];
             
             let attempted = 0;
@@ -556,13 +559,15 @@ const shutdownSystem = async (req, res) => {
                 const method = methods[attempted];
                 console.log(`Trying shutdown method ${attempted + 1}: ${method}`);
                 
-                exec(method, (error) => {
+                exec(method, (error, stdout, stderr) => {
                     if (error) {
                         console.error(`Shutdown method ${attempted + 1} failed:`, error.message);
+                        if (stderr) console.error('stderr:', stderr);
                         attempted++;
-                        tryShutdown();
+                        setTimeout(tryShutdown, 100);
                     } else {
                         console.log(`Shutdown initiated via method ${attempted + 1}`);
+                        if (stdout) console.log('stdout:', stdout);
                     }
                 });
             };
@@ -572,13 +577,14 @@ const shutdownSystem = async (req, res) => {
         
         res.json({
             success: true,
-            message: 'System shutdown initiated - system will power off in 5 seconds'
+            message: 'System shutdown initiated - system will power off in a moment'
         });
     } catch (error) {
         console.error('Shutdown error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to initiate system shutdown'
+            message: 'Failed to initiate system shutdown',
+            error: error.message
         });
     }
 };

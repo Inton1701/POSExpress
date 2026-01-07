@@ -81,11 +81,15 @@ $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl stop posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl daemon-reload
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload nginx
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl reboot
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl poweroff
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl daemon-reload
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reboot
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff
 
 # Allow touch and chmod for log file creation
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/touch /var/log/posexpress-*

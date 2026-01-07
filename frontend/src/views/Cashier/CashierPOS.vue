@@ -3302,6 +3302,11 @@ const reloadApp = async () => {
 const rebootSystem = async () => {
   if (!isElectron.value) return
   
+  // Confirm action
+  if (!confirm('⚠️ WARNING: The system will reboot immediately.\n\nAll unsaved data will be lost.\n\nDo you want to continue?')) {
+    return
+  }
+  
   // Require admin verification
   adminVerificationMessage.value = 'System reboot requires administrator privileges. Please verify your credentials.'
   adminVerificationAction.value = 'reboot'
@@ -3317,6 +3322,11 @@ const rebootSystem = async () => {
 
 const shutdownSystem = async () => {
   if (!isElectron.value) return
+  
+  // Confirm action
+  if (!confirm('⚠️ WARNING: The system will shut down immediately.\n\nAll unsaved data will be lost.\n\nDo you want to continue?')) {
+    return
+  }
   
   // Require admin verification
   adminVerificationMessage.value = 'System shutdown requires administrator privileges. Please verify your credentials.'
@@ -3370,11 +3380,25 @@ const executeReboot = async () => {
   try {
     const response = await api.post('/system/reboot')
     if (response.data.success) {
-      showToast('System will reboot in 5 seconds...', 'info')
+      showToast('✓ System reboot initiated successfully', 'success')
+      showToast(response.data.message || 'System will reboot in a moment...', 'info')
+    } else {
+      showToast('Reboot failed: ' + (response.data.message || 'Unknown error'), 'error')
     }
   } catch (error) {
-    showToast('Reboot failed. Please ensure admin privileges and permissions are configured.', 'error')
     console.error('Reboot error:', error)
+    let errorMsg = 'Reboot failed. '
+    
+    if (error.response) {
+      errorMsg += error.response.data?.message || error.response.statusText || 'Server error'
+    } else if (error.request) {
+      errorMsg += 'Cannot connect to server'
+    } else {
+      errorMsg += error.message || 'Unknown error'
+    }
+    
+    showToast(errorMsg, 'error')
+    showToast('Please ensure admin privileges and permissions are configured.', 'warning')
   }
 }
 
@@ -3382,11 +3406,25 @@ const executeShutdown = async () => {
   try {
     const response = await api.post('/system/shutdown')
     if (response.data.success) {
-      showToast('System will shutdown in 5 seconds...', 'info')
+      showToast('✓ System shutdown initiated successfully', 'success')
+      showToast(response.data.message || 'System will power off in a moment...', 'info')
+    } else {
+      showToast('Shutdown failed: ' + (response.data.message || 'Unknown error'), 'error')
     }
   } catch (error) {
-    showToast('Shutdown failed. Please ensure admin privileges and permissions are configured.', 'error')
     console.error('Shutdown error:', error)
+    let errorMsg = 'Shutdown failed. '
+    
+    if (error.response) {
+      errorMsg += error.response.data?.message || error.response.statusText || 'Server error'
+    } else if (error.request) {
+      errorMsg += 'Cannot connect to server'
+    } else {
+      errorMsg += error.message || 'Unknown error'
+    }
+    
+    showToast(errorMsg, 'error')
+    showToast('Please ensure admin privileges and permissions are configured.', 'warning')
   }
 }
 
