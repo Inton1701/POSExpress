@@ -218,6 +218,39 @@ function escposLine(left, right, width = 32) {
   return Buffer.from(left + ' '.repeat(spaces) + right)
 }
 
+// Generate ESC/POS barcode command
+function generateEscPosBarcodeCommand(barcodeValue, width = 32) {
+  // ESC/POS Code128 barcode commands
+  // GS h - Set barcode height
+  // GS w - Set barcode width
+  // GS k - Print barcode
+  
+  // Code128 barcode (GS k m 73 73)
+  const barcodeData = String(barcodeValue)
+  const barcodeLength = Buffer.byteLength(barcodeData, 'utf8')
+  
+  const buffers = []
+  
+  // Set barcode height (ESC i height)
+  buffers.push(Buffer.from([GS, 0x68, 0x50])) // GS h 80 - height 80 dots
+  
+  // Set barcode width (ESC w width)
+  buffers.push(Buffer.from([GS, 0x77, 0x02])) // GS w 2 - width 2 (medium width)
+  
+  // Print Code128 barcode (ESC k 73 [length] [data])
+  // 73 = Code128 barcode type
+  const barcodeCmd = Buffer.concat([
+    Buffer.from([GS, 0x6B, 0x49, barcodeLength]), // GS k I [length]
+    Buffer.from(barcodeData, 'utf8')
+  ])
+  buffers.push(barcodeCmd)
+  
+  // Add line feed after barcode
+  buffers.push(Buffer.from([LF]))
+  
+  return Buffer.concat(buffers)
+}
+
 // Generate ESC/POS commands for a receipt
 function generateEscPosReceipt(receiptData) {
   const buffers = []
@@ -336,6 +369,12 @@ function generateEscPosReceipt(receiptData) {
     buffers.push(escposText(String(receiptData.transactionId)))
     buffers.push(ESCPOS.BOLD_OFF)
     buffers.push(ESCPOS.LINE_FEED)
+    
+    // Add barcode for refund receipt
+    if (receiptData.transactionId) {
+      buffers.push(generateEscPosBarcodeCommand(String(receiptData.transactionId), width))
+    }
+    
     buffers.push(escposDivider('=', width))
     buffers.push(ESCPOS.LINE_FEED)
     
@@ -387,6 +426,14 @@ function generateEscPosReceipt(receiptData) {
     buffers.push(escposText(String(receiptData.transactionId)))
     buffers.push(ESCPOS.BOLD_OFF)
     buffers.push(ESCPOS.LINE_FEED)
+    
+    // Add barcode if transaction ID exists
+    if (receiptData.transactionId) {
+      buffers.push(ESCPOS.ALIGN_CENTER)
+      buffers.push(generateEscPosBarcodeCommand(String(receiptData.transactionId), width))
+      buffers.push(ESCPOS.ALIGN_LEFT)
+    }
+    
     buffers.push(escposDivider('=', width))
     buffers.push(ESCPOS.LINE_FEED)
     
@@ -1099,9 +1146,10 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
           const png = await bwipjs.toBuffer({
             bcid: 'code128',
             text: String(receiptData.transactionId),
-            scale: 3,
-            height: 10,
-            includetext: false
+            scale: 4, // Increased from 3 for better visibility on thermal printer
+            height: 15, // Increased from 10 for better visibility
+            includetext: true // Include text below barcode for reference
+          })
           })
           barcodeBase64 = `data:image/png;base64,${png.toString('base64')}`
           console.log('Barcode generated successfully')
