@@ -325,7 +325,7 @@ jobs:
 - **How do I know what version I'm running?**
   - Check `VERSION` file
   - Admin Settings → System Updates
-  - `cat VERSION` in terminal
+  - `cat VERSION` in terminals
 
 - **Can I skip versions?**
   - Not recommended, but possible with custom version
