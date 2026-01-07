@@ -56,13 +56,24 @@ cat > "$SUDOERS_FILE" << EOF
 # Allow user to reboot and shutdown without password
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/sbin/reboot, /usr/sbin/poweroff, /sbin/reboot, /sbin/poweroff
 
-# Allow update and revert scripts without password (all paths)
+# Allow update and revert scripts without password (all paths and methods)
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/bash $SCRIPT_DIR/update-system.sh
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/bash $SCRIPT_DIR/update-system.sh *
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/bash $SCRIPT_DIR/revert-update.sh
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/bash $SCRIPT_DIR/revert-update.sh *
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $SCRIPT_DIR/update-system.sh
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $SCRIPT_DIR/update-system.sh *
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $SCRIPT_DIR/revert-update.sh
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $SCRIPT_DIR/revert-update.sh *
+
+# Allow direct script execution (for spawn without bash prefix)
+$ACTUAL_USER ALL=(ALL) NOPASSWD: $SCRIPT_DIR/update-system.sh
+$ACTUAL_USER ALL=(ALL) NOPASSWD: $SCRIPT_DIR/update-system.sh *
+$ACTUAL_USER ALL=(ALL) NOPASSWD: $SCRIPT_DIR/revert-update.sh
+$ACTUAL_USER ALL=(ALL) NOPASSWD: $SCRIPT_DIR/revert-update.sh *
+
+# Allow -n (non-interactive) sudo for all above commands
+# This is essential for programmatic execution from Node.js
 
 # Allow systemctl for POS service management
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl start posexpress-*
@@ -75,6 +86,12 @@ $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart posexpress-*
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl daemon-reload
 $ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx
+
+# Allow touch and chmod for log file creation
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/touch /var/log/posexpress-*
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/touch /var/log/posexpress-*
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /usr/bin/chmod * /var/log/posexpress-*
+$ACTUAL_USER ALL=(ALL) NOPASSWD: /bin/chmod * /var/log/posexpress-*
 EOF
 
 chmod 0440 "$SUDOERS_FILE"

@@ -302,23 +302,45 @@ const handleLogin = async () => {
       await router.replace(redirectPath)
     }
   } catch (error) {
-    // Better error handling to prevent white screen crashes
+    // Robust error handling to prevent white screen crashes in Electron production
+    console.error('Login catch block triggered:', error)
     
-    // Extract proper error message
+    // Extract proper error message with safe property access
     let message = 'An error occurred. Please try again.'
     
-    if (error.response) {
-      // Server responded with error
-      message = error.response.data?.message || 'Invalid credentials. Please try again.'
-      console.error('Login error (server):', message)
-    } else if (error.request) {
-      // Request made but no response
-      message = 'Cannot connect to server. Please check your connection.'
-      console.error('Login error (network):', message)
-    } else {
-      // Something else happened
-      message = error.message || 'An unexpected error occurred.'
-      console.error('Login error (unexpected):', message)
+    try {
+      if (error && error.response) {
+        // Server responded with error (e.g., 401 for wrong credentials)
+        const status = error.response.status
+        const data = error.response.data
+        
+        if (status === 401) {
+          message = data?.message || 'Invalid username, password, or RFID.'
+        } else if (status === 404) {
+          message = 'User not found.'
+        } else if (status >= 500) {
+          message = 'Server error. Please try again later.'
+        } else {
+          message = data?.message || 'Invalid credentials. Please try again.'
+        }
+        console.error('Login error (server):', status, message)
+      } else if (error && error.request) {
+        // Request made but no response (network error)
+        message = 'Cannot connect to server. Please check your connection.'
+        console.error('Login error (network): No response received')
+      } else if (error && error.message) {
+        // Something else happened
+        message = error.message || 'An unexpected error occurred.'
+        console.error('Login error (unexpected):', error.message)
+      } else {
+        // Fallback for unknown error types
+        message = 'An unexpected error occurred. Please try again.'
+        console.error('Login error (unknown):', error)
+      }
+    } catch (parseError) {
+      // Safety net: if error parsing fails, use default message
+      console.error('Error parsing login error:', parseError)
+      message = 'Login failed. Please try again.'
     }
     
     errorMessage.value = message

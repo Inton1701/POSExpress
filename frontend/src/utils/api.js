@@ -39,11 +39,27 @@ api.interceptors.response.use(
   (error) => {
     // Handle 401 Unauthorized (token expired or invalid)
     if (error.response?.status === 401) {
-      auth.logout()
+      // Get current path - handle both browser and Electron environments
+      const currentPath = window.location.pathname || '/'
+      const isLoginPage = currentPath === '/' || currentPath === '/index.html' || currentPath.endsWith('/index.html')
       
-      // Redirect to login page
-      if (window.location.pathname !== '/') {
-        window.location.href = '/'
+      // Only logout and redirect if NOT on the login page
+      // Login page 401s are expected for wrong credentials and should be handled by the login form
+      if (!isLoginPage) {
+        auth.logout()
+        
+        // Use router-friendly navigation for Electron compatibility
+        // Avoid window.location.href which can cause white screen in Electron
+        try {
+          if (window.location.hash) {
+            // Hash-based routing (e.g., /#/)
+            window.location.hash = '#/'
+          } else {
+            window.location.replace('/')
+          }
+        } catch (e) {
+          console.error('Redirect error:', e)
+        }
       }
     }
     return Promise.reject(error)

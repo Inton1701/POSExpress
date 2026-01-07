@@ -1,4 +1,4 @@
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 const fs = require('fs').promises;
@@ -128,6 +128,7 @@ const checkForUpdates = async (req, res) => {
 const triggerUpdate = async (req, res) => {
     try {
         const scriptPath = path.join(__dirname, '../../update-system.sh');
+        const logPath = '/var/log/posexpress-update.log';
         
         // Check if update script exists
         try {
@@ -139,51 +140,157 @@ const triggerUpdate = async (req, res) => {
             });
         }
 
-        // Execute update script in background
+        // Determine the current user and environment
+        const currentUser = process.env.USER || process.env.USERNAME || 'unknown';
+        const isRoot = currentUser === 'root' || process.getuid?.() === 0;
+        
+        console.log(`[Update] Current user: ${currentUser}, isRoot: ${isRoot}`);
+        console.log(`[Update] Script path: ${scriptPath}`);
+
+        // Make script executable first
+        try {
+            await execPromise(`chmod +x "${scriptPath}"`);
+        } catch (chmodErr) {
+            console.log('[Update] chmod skipped (may be Windows):', chmodErr.message);
+        }
+
+        // Create/clear the log file first to ensure it exists and is writable
+        try {
+            // Try to create log file - this tests if we have write permission
+            if (isRoot) {
+                await execPromise(`touch "${logPath}" && chmod 666 "${logPath}"`);
+            } else {
+                // Try with sudo
+                await execPromise(`sudo touch "${logPath}" && sudo chmod 666 "${logPath}"`);
+            }
+        } catch (logErr) {
+            console.log('[Update] Could not create log file:', logErr.message);
+            // Continue anyway, script might handle it
+        }
+
+        // Write initial log entry
+        try {
+            const initialLog = `========================================\n[${new Date().toISOString()}] Update triggered from UI\nUser: ${currentUser}\nScript: ${scriptPath}\n========================================\n`;
+            await fs.writeFile(logPath, initialLog, { flag: 'w' }).catch(() => {});
+        } catch (e) {
+            console.log('[Update] Could not write initial log');
+        }
+
+        // Send response immediately so UI knows update started
         res.json({
             success: true,
             message: 'Automated update started. System will update and restart automatically.',
-            note: 'The application will restart in a few moments. Please wait...'
+            note: 'The application will restart in a few moments. Please wait...',
+            logPath: logPath
         });
 
-        // Execute after response is sent
-        setTimeout(async () => {
+        // Execute update script after response is sent
+        // Using spawn with detached: true for proper process detachment
+        setTimeout(() => {
             try {
-                // Make script executable
-                try {
-                    await execPromise(`chmod +x "${scriptPath}"`);
-                } catch (chmodErr) {
-                    console.log('chmod skipped:', chmodErr.message);
+                console.log('[Update] Starting update process...');
+                
+                // Prepare the command based on whether we need sudo
+                let updateProcess;
+                
+                if (isRoot) {
+                    // Running as root, execute directly
+                    console.log('[Update] Executing as root');
+                    updateProcess = spawn('/bin/bash', [scriptPath], {
+                        detached: true,
+                        stdio: ['ignore', 'pipe', 'pipe'],
+                        cwd: path.dirname(scriptPath)
+                    });
+                } else {
+                    // Need sudo - try multiple methods
+                    console.log('[Update] Executing with sudo');
+                    
+                    // Method 1: Try passwordless sudo with spawn
+                    updateProcess = spawn('sudo', ['-n', '/bin/bash', scriptPath], {
+                        detached: true,
+                        stdio: ['ignore', 'pipe', 'pipe'],
+                        cwd: path.dirname(scriptPath)
+                    });
                 }
-                
-                // Get the user who owns the project directory
-                let projectUser = 'pos-express'; // default
-                try {
-                    const { stdout } = await execPromise(`stat -c '%U' "${scriptPath}"`);
-                    projectUser = stdout.trim();
-                } catch (err) {
-                    console.log('Could not detect project user, using default: pos-express');
+
+                // Log stdout to file and console
+                if (updateProcess.stdout) {
+                    updateProcess.stdout.on('data', (data) => {
+                        const output = data.toString();
+                        console.log('[Update stdout]', output);
+                        // Append to log file
+                        fs.appendFile(logPath, output).catch(() => {});
+                    });
                 }
-                
-                // Run automated update script COMPLETELY DETACHED
-                // Use nohup to run it in background, completely independent of this process
-                console.log(`Starting detached automated update as user: ${projectUser}`);
-                const command = `nohup sudo SUDO_USER=${projectUser} /bin/bash "${scriptPath}" > /tmp/posexpress-update.log 2>&1 &`;
-                
-                exec(command, (error, stdout, stderr) => {
-                    if (error) {
-                        console.error('Failed to start update process:', error);
-                    } else {
-                        console.log('Update process started in background');
+
+                // Log stderr to file and console
+                if (updateProcess.stderr) {
+                    updateProcess.stderr.on('data', (data) => {
+                        const output = data.toString();
+                        console.error('[Update stderr]', output);
+                        // Append to log file
+                        fs.appendFile(logPath, `[ERROR] ${output}`).catch(() => {});
+                    });
+                }
+
+                // Handle process errors
+                updateProcess.on('error', async (err) => {
+                    const errorMsg = `[${new Date().toISOString()}] Failed to start update process: ${err.message}\n`;
+                    console.error('[Update]', errorMsg);
+                    await fs.appendFile(logPath, errorMsg).catch(() => {});
+                    
+                    // If passwordless sudo failed, try alternative method with exec
+                    if (err.message.includes('ENOENT') || err.message.includes('spawn')) {
+                        console.log('[Update] Trying alternative execution method...');
+                        
+                        // Fallback: use exec with shell
+                        const fallbackCmd = isRoot 
+                            ? `/bin/bash "${scriptPath}" >> "${logPath}" 2>&1`
+                            : `sudo /bin/bash "${scriptPath}" >> "${logPath}" 2>&1`;
+                        
+                        exec(fallbackCmd, { 
+                            cwd: path.dirname(scriptPath),
+                            timeout: 600000 // 10 minute timeout
+                        }, (execErr, stdout, stderr) => {
+                            if (execErr) {
+                                console.error('[Update fallback] Execution failed:', execErr);
+                                fs.appendFile(logPath, `\n[FALLBACK ERROR] ${execErr.message}\n`).catch(() => {});
+                            }
+                        });
                     }
                 });
-            } catch (err) {
-                console.error('Error triggering update:', err);
+
+                // Handle process exit
+                updateProcess.on('exit', (code, signal) => {
+                    const exitMsg = `[${new Date().toISOString()}] Update process exited with code ${code}, signal ${signal}\n`;
+                    console.log('[Update]', exitMsg);
+                    fs.appendFile(logPath, exitMsg).catch(() => {});
+                });
+
+                // Unref the process so it can continue after Node exits
+                updateProcess.unref();
+                
+                console.log('[Update] Update process spawned with PID:', updateProcess.pid);
+                fs.appendFile(logPath, `[${new Date().toISOString()}] Update process started with PID: ${updateProcess.pid}\n`).catch(() => {});
+
+            } catch (spawnErr) {
+                console.error('[Update] Spawn error:', spawnErr);
+                fs.appendFile(logPath, `[SPAWN ERROR] ${spawnErr.message}\n`).catch(() => {});
+                
+                // Last resort: use shell exec
+                console.log('[Update] Using shell exec as last resort...');
+                const shellCmd = `cd "${path.dirname(scriptPath)}" && sudo /bin/bash "${scriptPath}" >> "${logPath}" 2>&1 &`;
+                exec(shellCmd, (err) => {
+                    if (err) {
+                        console.error('[Update shell exec] Failed:', err);
+                        fs.appendFile(logPath, `[SHELL EXEC ERROR] ${err.message}\n`).catch(() => {});
+                    }
+                });
             }
-        }, 1000);
+        }, 500);
 
     } catch (error) {
-        console.error('Error triggering update:', error);
+        console.error('[Update] Error triggering update:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to trigger update',
@@ -504,6 +611,97 @@ const getUpdateLog = async (req, res) => {
     }
 };
 
+/**
+ * Check update system prerequisites (diagnostic endpoint)
+ */
+const checkUpdatePrerequisites = async (req, res) => {
+    try {
+        const scriptPath = path.join(__dirname, '../../update-system.sh');
+        const logPath = '/var/log/posexpress-update.log';
+        const currentUser = process.env.USER || process.env.USERNAME || 'unknown';
+        const isRoot = currentUser === 'root' || process.getuid?.() === 0;
+        
+        const checks = {
+            user: currentUser,
+            isRoot,
+            scriptPath,
+            logPath,
+            scriptExists: false,
+            scriptExecutable: false,
+            logWritable: false,
+            sudoConfigured: false,
+            bashPath: null
+        };
+        
+        // Check if script exists
+        try {
+            await fs.access(scriptPath);
+            checks.scriptExists = true;
+            
+            // Check if executable
+            const stats = await fs.stat(scriptPath);
+            checks.scriptExecutable = (stats.mode & 0o111) !== 0;
+        } catch (e) {
+            checks.scriptError = e.message;
+        }
+        
+        // Check if log is writable
+        try {
+            await fs.access(logPath, fs.constants.W_OK);
+            checks.logWritable = true;
+        } catch (e) {
+            // Try to create it
+            try {
+                await fs.writeFile(logPath, '', { flag: 'a' });
+                checks.logWritable = true;
+            } catch (e2) {
+                checks.logError = e2.message;
+            }
+        }
+        
+        // Check sudo configuration
+        if (!isRoot) {
+            try {
+                const { stdout, stderr } = await execPromise(`sudo -n -l 2>&1`);
+                checks.sudoConfigured = stdout.includes('update-system.sh') || stdout.includes('NOPASSWD');
+                checks.sudoOutput = stdout.substring(0, 500);
+            } catch (e) {
+                checks.sudoError = e.message;
+                checks.sudoConfigured = false;
+            }
+        } else {
+            checks.sudoConfigured = true; // Running as root
+        }
+        
+        // Find bash path
+        try {
+            const { stdout } = await execPromise('which bash');
+            checks.bashPath = stdout.trim();
+        } catch (e) {
+            checks.bashPath = '/bin/bash';
+        }
+        
+        // Overall status
+        checks.ready = checks.scriptExists && checks.scriptExecutable && (checks.sudoConfigured || isRoot);
+        
+        res.json({
+            success: true,
+            checks,
+            message: checks.ready 
+                ? 'Update system is properly configured' 
+                : 'Update system needs configuration. Run: sudo ./setup-update-permissions.sh'
+        });
+        
+    } catch (error) {
+        console.error('Error checking prerequisites:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check update prerequisites',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getCurrentVersion,
     checkForUpdates,
@@ -512,5 +710,6 @@ module.exports = {
     listBackups,
     revertUpdate,
     rebootSystem,
-    shutdownSystem
+    shutdownSystem,
+    checkUpdatePrerequisites
 };

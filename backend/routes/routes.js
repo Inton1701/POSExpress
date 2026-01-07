@@ -141,6 +141,7 @@ router.get("/settings", extractUserInfo, SettingsController.getAllSettings);
 // System/Update routes (All authenticated users)
 router.get("/system/version", SystemController.getCurrentVersion);
 router.get("/system/check-updates", extractUserInfo, SystemController.checkForUpdates);
+router.get("/system/update-prerequisites", extractUserInfo, SystemController.checkUpdatePrerequisites);
 router.post("/system/update", extractUserInfo, SystemController.triggerUpdate);
 router.get("/system/update-log", extractUserInfo, SystemController.getUpdateLog);
 router.get("/system/backups", extractUserInfo, SystemController.listBackups);

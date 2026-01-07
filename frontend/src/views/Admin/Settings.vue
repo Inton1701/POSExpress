@@ -797,6 +797,44 @@ const installUpdate = async () => {
   }
   
   try {
+    // First check prerequisites
+    addLog('Checking update system prerequisites...', 'info')
+    updateProgress.value = 5
+    
+    try {
+      const prereqResponse = await api.get('/system/update-prerequisites')
+      if (prereqResponse.data.success) {
+        const checks = prereqResponse.data.checks
+        
+        if (!checks.ready) {
+          addLog('⚠️ Update system needs configuration', 'warning')
+          
+          if (!checks.scriptExists) {
+            addLog('  ✗ Update script not found', 'error')
+          }
+          if (!checks.scriptExecutable) {
+            addLog('  ✗ Update script not executable', 'error')
+          }
+          if (!checks.sudoConfigured && !checks.isRoot) {
+            addLog('  ✗ Passwordless sudo not configured', 'error')
+            addLog('  → Run: sudo ./setup-update-permissions.sh', 'warning')
+          }
+          
+          addLog('Please run setup-update-permissions.sh first', 'error')
+          updateProgress.value = 0
+          isUpdating.value = false
+          return
+        }
+        
+        addLog('✓ Prerequisites check passed', 'success')
+        addLog(`  User: ${checks.user} (root: ${checks.isRoot})`, 'info')
+        addLog(`  Script: ${checks.scriptExists ? '✓' : '✗'}`, checks.scriptExists ? 'success' : 'error')
+        addLog(`  Sudo: ${checks.sudoConfigured ? '✓ configured' : '✗ needs setup'}`, checks.sudoConfigured ? 'success' : 'warning')
+      }
+    } catch (prereqError) {
+      addLog('Could not check prerequisites, continuing anyway...', 'warning')
+    }
+    
     addLog('Triggering automated update system...', 'info')
     updateProgress.value = 10
     
