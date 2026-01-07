@@ -1150,7 +1150,6 @@ ipcMain.handle('print-thermal-receipt', async (event, receiptData) => {
             height: 15, // Increased from 10 for better visibility
             includetext: true // Include text below barcode for reference
           })
-          })
           barcodeBase64 = `data:image/png;base64,${png.toString('base64')}`
           console.log('Barcode generated successfully')
         } catch (barcodeError) {

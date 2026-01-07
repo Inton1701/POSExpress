@@ -307,16 +307,37 @@ fi
 # Start/Restart All Services (After all builds complete)
 # ========================================
 echo "" | tee -a "$LOG_FILE"
-echo "Restarting all services after update..." | tee -a "$LOG_FILE"
+echo "Restarting all services after complete update..." | tee -a "$LOG_FILE"
 
-# Restart backend
-systemctl restart posexpress-backend 2>/dev/null || systemctl start posexpress-backend 2>/dev/null || true
-sleep 3
+# Stop any existing services first
+echo "Stopping existing services..." | tee -a "$LOG_FILE"
+systemctl stop posexpress-backend 2>/dev/null || true
+systemctl stop posexpress-frontend 2>/dev/null || true
+sleep 2
 
-# Restart frontend if AppImage was built
+# Start backend FIRST and wait for it to be ready
+echo "Starting backend service..." | tee -a "$LOG_FILE"
+systemctl start posexpress-backend
+sleep 5
+
+# Check backend is ready
+if systemctl is-active --quiet posexpress-backend; then
+    echo "Backend service started successfully" | tee -a "$LOG_FILE"
+else
+    echo "Warning: Backend service may not have started" | tee -a "$LOG_FILE"
+fi
+
+# Start frontend if AppImage was built
 if [ -n "$APPIMAGE" ]; then
-    systemctl restart posexpress-frontend 2>/dev/null || systemctl start posexpress-frontend 2>/dev/null || true
-    sleep 2
+    echo "Starting frontend service..." | tee -a "$LOG_FILE"
+    systemctl start posexpress-frontend
+    sleep 3
+    
+    if systemctl is-active --quiet posexpress-frontend; then
+        echo "Frontend service started successfully" | tee -a "$LOG_FILE"
+    else
+        echo "Warning: Frontend service may not have started" | tee -a "$LOG_FILE"
+    fi
 fi
 
 # ========================================

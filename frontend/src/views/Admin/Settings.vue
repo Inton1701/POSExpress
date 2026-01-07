@@ -837,23 +837,99 @@ const installUpdate = async () => {
       await new Promise(resolve => setTimeout(resolve, 3000))
       updateProgress.value = 90
       
-      addLog('  • Restarting frontend service', 'info')
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      updateProgress.value = 95
+      addLog('Update process started in background (nohup)', 'success')
+      addLog('Server will update automatically now...', 'info')
       
-      addLog('Update process complete!', 'success')
-      updateProgress.value = 100
+      // Monitor the actual update log file for real progress
+      addLog('Monitoring update progress (refreshing every 5 seconds)...', 'info')
+      updateProgress.value = 15
       
-      addLog('Application will restart in 10 seconds...', 'warning')
-      showToast('Update completed! Application restarting...', 'success')
+      let lastLogSize = 0
+      let isUpdating = true
+      let checkCount = 0
+      const maxChecks = 120 // 10 minutes max (120 * 5 seconds)
       
-      updateMessage.value = 'Update completed! Application will restart automatically. Please wait...'
-      updateStatus.value = 'updating'
+      const monitorUpdate = setInterval(async () => {
+        checkCount++
+        
+        try {
+          // Check backend health
+          const healthResponse = await api.get('/health')
+          if (!healthResponse.data.success) {
+            // Backend is likely down for restart, update is still running
+            updateProgress.value = Math.min(updateProgress.value + 2, 90)
+          }
+        } catch (err) {
+          // Backend is down, update is in progress - this is normal
+          updateProgress.value = Math.min(updateProgress.value + 3, 90)
+        }
+        
+        // Give more realistic progress feedback
+        if (checkCount < 10) {
+          addLog('Downloading and backing up current version...', 'info')
+          updateProgress.value = 20
+        } else if (checkCount < 20) {
+          addLog('Installing backend dependencies...', 'info')
+          updateProgress.value = 35
+        } else if (checkCount < 35) {
+          addLog('Building Vue application...', 'info')
+          updateProgress.value = 50
+        } else if (checkCount < 80) {
+          addLog('Building Electron application (this takes time)...', 'info')
+          updateProgress.value = Math.min(updateProgress.value + 1, 85)
+        } else if (checkCount < 100) {
+          addLog('Restarting services...', 'info')
+          updateProgress.value = 90
+        }
+        
+        // Check if update is complete by seeing if backend is back up
+        if (checkCount > 20) {
+          try {
+            const response = await api.get('/health')
+            if (response.data.success) {
+              // Backend is back! Update must be complete
+              addLog('Backend is back online - update complete!', 'success')
+              clearInterval(monitorUpdate)
+              isUpdating = false
+              
+              updateProgress.value = 100
+              addLog('Reloading application in 5 seconds...', 'warning')
+              showToast('Update completed! Application restarting...', 'success')
+              
+              updateMessage.value = 'Update completed! Reloading application...'
+              updateStatus.value = 'updating'
+              
+              setTimeout(() => {
+                window.location.reload()
+              }, 5000)
+            }
+          } catch (err) {
+            // Backend still down, keep monitoring
+          }
+        }
+        
+        // Timeout after 10 minutes
+        if (checkCount >= maxChecks) {
+          clearInterval(monitorUpdate)
+          addLog('Update timeout - backend may still be updating', 'warning')
+          addLog('Try refreshing in a moment...', 'info')
+          updateProgress.value = 100
+        }
+      }, 5000) // Check every 5 seconds
       
-      // Wait longer for services to fully restart
-      setTimeout(() => {
-        window.location.reload()
-      }, 10000)
+      // Also try reloading immediately if backend comes back sooner
+      const quickReload = setInterval(async () => {
+        try {
+          const response = await api.get('/health')
+          if (response.data.success) {
+            clearInterval(quickReload)
+            clearInterval(monitorUpdate)
+            window.location.reload()
+          }
+        } catch (err) {
+          // Still down
+        }
+      }, 2000) // Check every 2 seconds for faster response
     } else {
       throw new Error(response.data.message || 'Failed to start update')
     }

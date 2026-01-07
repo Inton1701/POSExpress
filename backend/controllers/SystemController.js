@@ -165,29 +165,17 @@ const triggerUpdate = async (req, res) => {
                     console.log('Could not detect project user, using default: pos-express');
                 }
                 
-                // Run automated update script with sudo
-                // Pass SUDO_USER explicitly so script detects correct user
-                console.log(`Starting automated update as user: ${projectUser}`);
-                const updateProcess = exec(`sudo SUDO_USER=${projectUser} /bin/bash "${scriptPath}" 2>&1`, {
-                    timeout: 600000, // 10 minute timeout
-                    maxBuffer: 1024 * 1024 * 10 // 10MB buffer
-                }, (error, stdout, stderr) => {
+                // Run automated update script COMPLETELY DETACHED
+                // Use nohup to run it in background, completely independent of this process
+                console.log(`Starting detached automated update as user: ${projectUser}`);
+                const command = `nohup sudo SUDO_USER=${projectUser} /bin/bash "${scriptPath}" > /tmp/posexpress-update.log 2>&1 &`;
+                
+                exec(command, (error, stdout, stderr) => {
                     if (error) {
-                        console.error('Update execution error:', error);
-                        console.error('Exit code:', error.code);
-                        console.error('stderr:', stderr);
-                        return;
+                        console.error('Failed to start update process:', error);
+                    } else {
+                        console.log('Update process started in background');
                     }
-                    console.log('Update output:', stdout);
-                    if (stderr) console.log('Update stderr:', stderr);
-                });
-                
-                updateProcess.stdout?.on('data', (data) => {
-                    console.log('Update:', data.toString());
-                });
-                
-                updateProcess.stderr?.on('data', (data) => {
-                    console.error('Update error:', data.toString());
                 });
             } catch (err) {
                 console.error('Error triggering update:', err);
