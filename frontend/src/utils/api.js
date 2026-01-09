@@ -43,9 +43,17 @@ api.interceptors.response.use(
       const currentPath = window.location.pathname || '/'
       const isLoginPage = currentPath === '/' || currentPath === '/index.html' || currentPath.endsWith('/index.html')
       
-      // Only logout and redirect if NOT on the login page
+      // Check if this is a verification endpoint - don't logout for these
+      const requestUrl = error.config?.url || ''
+      const isVerificationEndpoint = requestUrl.includes('/verify-password') || 
+                                     requestUrl.includes('/verify-rfid') || 
+                                     requestUrl.includes('/verify-admin') ||
+                                     requestUrl.includes('/customers/verify-password')
+      
+      // Only logout and redirect if NOT on the login page AND NOT a verification endpoint
       // Login page 401s are expected for wrong credentials and should be handled by the login form
-      if (!isLoginPage) {
+      // Verification endpoint 401s are expected for wrong credentials during verification
+      if (!isLoginPage && !isVerificationEndpoint) {
         auth.logout()
         
         // Use router-friendly navigation for Electron compatibility

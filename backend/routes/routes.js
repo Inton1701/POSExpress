@@ -17,6 +17,7 @@ const VariantController = require("../controllers/VariantController");
 const AddonController = require("../controllers/AddonController");
 const SettingsController = require("../controllers/SettingsController");
 const SystemController = require("../controllers/SystemController");
+const BackupController = require("../controllers/BackupController");
 const CustomerTransaction = require("../models/CustomerTransactions");
 
 // Health check route (public)
@@ -86,6 +87,7 @@ router.get("/transactions/session/:sessionId/details", extractUserInfo, Transact
 router.post("/transactions/session/start", extractUserInfo, TransactionController.startTransactionSession);
 router.post("/transactions/session/end", extractUserInfo, TransactionController.endTransactionSession);
 router.get("/transactions/session/status", extractUserInfo, TransactionController.getTransactionSessionStatus);
+router.post("/transactions/session/schedule", extractUserInfo, TransactionController.saveScheduleSettings);
 router.get("/transactions/:id", extractUserInfo, TransactionController.getTransaction);
 router.put("/transactions/:id", extractUserInfo, isCoAdminOrAdmin, TransactionController.updateTransaction);
 router.delete("/transactions/:id", extractUserInfo, isAdmin, TransactionController.deleteTransaction);
@@ -148,5 +150,13 @@ router.get("/system/backups", extractUserInfo, SystemController.listBackups);
 router.post("/system/revert", extractUserInfo, SystemController.revertUpdate);
 router.post("/system/reboot", extractUserInfo, isCoAdminOrAdmin, SystemController.rebootSystem);
 router.post("/system/shutdown", extractUserInfo, isCoAdminOrAdmin, SystemController.shutdownSystem);
+
+// Backup routes
+router.get("/backup/status", extractUserInfo, BackupController.checkStatus);
+router.get("/backup/folder-id", extractUserInfo, BackupController.getFolderId);
+router.post("/backup/folder-id", extractUserInfo, isCoAdminOrAdmin, BackupController.saveFolderId);
+router.post("/backup/manual", extractUserInfo, isCoAdminOrAdmin, BackupController.manualBackup);
+router.post("/backup/schedule", extractUserInfo, isCoAdminOrAdmin, BackupController.saveSchedule);
+router.get("/backup/history", extractUserInfo, BackupController.getHistory);
 
 module.exports = router;

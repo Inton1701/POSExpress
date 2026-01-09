@@ -37,7 +37,7 @@
     <!-- Main Content -->
     <main class="flex-1 container mx-auto p-4">
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div class="bg-white rounded-2xl shadow p-4">
           <p class="text-sm text-gray-600">Total Transactions</p>
           <p class="text-2xl font-bold">{{ filteredTransactions.length }}</p>
@@ -49,6 +49,10 @@
         <div class="bg-white rounded-2xl shadow p-4">
           <p class="text-sm text-gray-600">Cash-Out</p>
           <p class="text-2xl font-bold text-red-600">{{ cashOutCount }}</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow p-4">
+          <p class="text-sm text-gray-600">Balance Adjustment</p>
+          <p class="text-2xl font-bold text-orange-600">{{ balanceAdjustmentCount }}</p>
         </div>
         <div class="bg-white rounded-2xl shadow p-4">
           <p class="text-sm text-gray-600">Balance Inquiry</p>
@@ -93,6 +97,7 @@
               <option value="all">All Types</option>
               <option value="Cash-in">Cash-In</option>
               <option value="Cash-out">Cash-Out</option>
+              <option value="Balance Adjustment">Balance Adjustment</option>
               <option value="Balance inquiry">Balance Inquiry</option>
               <option value="Voided">Voided</option>
             </select>
@@ -188,7 +193,7 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] min-w-[100px]">
                   <button 
-                    v-if="transaction.transactionType !== 'Balance Inquiry' && transaction.status !== 'voided'"
+                    v-if="transaction.transactionType !== 'Balance Inquiry' && transaction.transactionType !== 'Balance Adjustment' && transaction.status !== 'voided'"
                     @click="openVoidModal(transaction)" 
                     class="text-red-500 hover:text-red-700"
                     title="Void"
@@ -688,6 +693,10 @@ const balanceInquiryCount = computed(() => {
   return filteredTransactions.value.filter(t => t.transactionType === 'Balance Inquiry').length
 })
 
+const balanceAdjustmentCount = computed(() => {
+  return filteredTransactions.value.filter(t => t.transactionType === 'Balance Adjustment').length
+})
+
 const formatDateTime = (dateString) => {
   const date = new Date(dateString)
   return date.toLocaleString('en-US', {
@@ -708,6 +717,12 @@ const formatAmount = (amount, type) => {
     return amount >= 0 ? `+${formatted}` : `-${formatted}`
   }
   
+  // For Balance Adjustment, show with proper sign
+  if (type === 'Balance Adjustment') {
+    const formatted = Math.abs(amount).toFixed(2)
+    return amount >= 0 ? `+${formatted}` : `-${formatted}`
+  }
+  
   // For other transaction types, manually add sign
   const formatted = `${Math.abs(amount).toFixed(2)}`
   if (type === 'Cash-in') return `+${formatted}`
@@ -718,6 +733,7 @@ const formatAmount = (amount, type) => {
 const getAmountClass = (type) => {
   if (type === 'Cash-in') return 'text-green-600'
   if (type === 'Cash-out') return 'text-red-600'
+  if (type === 'Balance Adjustment') return 'text-orange-600'
   if (type === 'Voided') return 'text-gray-600'
   return 'text-gray-600'
 }
@@ -728,6 +744,8 @@ const getTransactionTypeClass = (type) => {
       return 'bg-green-100 text-green-800'
     case 'Cash-out':
       return 'bg-red-100 text-red-800'
+    case 'Balance Adjustment':
+      return 'bg-orange-100 text-orange-800'
     case 'Balance inquiry':
       return 'bg-blue-100 text-blue-800'
     default:
@@ -940,6 +958,7 @@ const exportToExcel = () => {
   csvContent += `Total Transactions: ${filteredTransactions.value.length}\n`
   csvContent += `Cash-In: ${cashInCount.value}\n`
   csvContent += `Cash-Out: ${cashOutCount.value}\n`
+  csvContent += `Balance Adjustment: ${balanceAdjustmentCount.value}\n`
   csvContent += `Balance Inquiry: ${balanceInquiryCount.value}\n\n`
   csvContent += 'Date & Time,Transaction ID,Username,Amount,Transaction Type,Current Balance\n'
   
@@ -1027,6 +1046,10 @@ const exportToPDF = () => {
           color: #ef4444;
           font-weight: bold;
         }
+        .type-adjustment {
+          color: #f97316;
+          font-weight: bold;
+        }
         .type-balance {
           color: #3b82f6;
           font-weight: bold;
@@ -1043,6 +1066,7 @@ const exportToPDF = () => {
         <p><strong>Total Transactions:</strong> ${filteredTransactions.value.length}</p>
         <p><strong>Cash-In:</strong> ${cashInCount.value}</p>
         <p><strong>Cash-Out:</strong> ${cashOutCount.value}</p>
+        <p><strong>Balance Adjustment:</strong> ${balanceAdjustmentCount.value}</p>
         <p><strong>Balance Inquiry:</strong> ${balanceInquiryCount.value}</p>
       </div>
       <table>
@@ -1062,7 +1086,7 @@ const exportToPDF = () => {
               <td>${formatDateTime(transaction.createdAt)}</td>
               <td>${transaction.transactionId || 'N/A'}</td>
               <td>${transaction.customerUsername || 'N/A'}</td>
-              <td class="${transaction.transactionType === 'Cash-in' ? 'type-cash-in' : transaction.transactionType === 'Cash-out' ? 'type-cash-out' : 'type-balance'}">${formatAmount(transaction.amount, transaction.transactionType)}</td>
+              <td class="${transaction.transactionType === 'Cash-in' ? 'type-cash-in' : transaction.transactionType === 'Cash-out' ? 'type-cash-out' : transaction.transactionType === 'Balance Adjustment' ? 'type-adjustment' : 'type-balance'}">${formatAmount(transaction.amount, transaction.transactionType)}</td>
               <td>${transaction.transactionType}</td>
               <td>${(transaction.balanceAfter || 0).toFixed(2)}</td>
             </tr>

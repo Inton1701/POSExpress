@@ -5,9 +5,17 @@ const cors = require('cors');
 const errorHandler = require("./middleware/ErrorHandler");
 const connectDB = require("./config/DbConfig");
 const routes = require("./routes/routes");
+const { startScheduler } = require("./utils/sessionScheduler");
+const { startBackupScheduler } = require("./utils/backupScheduler");
 
 // Connect to database
 connectDB();
+
+// Start session scheduler for automatic session management
+startScheduler();
+
+// Start backup scheduler for automatic backups
+startBackupScheduler();
 
 // CORS Configuration - Allow all origins for development and production
 app.use(cors({

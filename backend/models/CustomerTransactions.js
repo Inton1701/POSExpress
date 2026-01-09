@@ -21,7 +21,7 @@ const customerTransactionSchema = new mongoose.Schema({
     },
     transactionType: {
         type: String,
-        enum: ["Cash-in","Balance Inquiry", "Purchased", "Voided","Cash-out", "Refund"],
+        enum: ["Cash-in","Balance Inquiry", "Balance Adjustment", "Purchased", "Voided","Cash-out", "Refund"],
     },
     balanceBefore: {
         type: Number,

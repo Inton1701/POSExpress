@@ -854,6 +854,7 @@ const transaction = {
   startTransactionSession: asyncHandler(async (req, res) => {
     try {
       const { employee, storeId } = req.body;
+      const Store = require('../models/Store');
 
       // Check if there's already an active session for this store
       const query = storeId ? { isActive: true, storeId } : { isActive: true };
@@ -875,6 +876,21 @@ const transaction = {
         endedAt: null,
         storeId: storeId || null
       });
+
+      // Switch store to manual mode when manually starting a session
+      let store;
+      if (storeId) {
+        store = await Store.findById(storeId);
+      } else {
+        store = await Store.findOne();
+      }
+      
+      if (store && store.sessionMode === 'scheduled') {
+        store.sessionMode = 'manual';
+        store.updatedAt = new Date();
+        await store.save();
+        console.log(`[Manual Start] Switched store ${store._id} to manual mode`);
+      }
 
       res.status(200).json({
         success: true,
@@ -967,6 +983,7 @@ const transaction = {
   getTransactionSessionStatus: asyncHandler(async (req, res) => {
     try {
       const { storeId } = req.query;
+      const Store = require('../models/Store');
       
       let query = {};
       if (storeId) {
@@ -986,14 +1003,163 @@ const transaction = {
       if (!session) {
         session = await TransactionSession.findOne().sort({ createdAt: -1 });
       }
+
+      // Get schedule settings from store
+      let store;
+      if (storeId) {
+        store = await Store.findById(storeId);
+      } else {
+        store = await Store.findOne();
+      }
+      
+      // Merge session and store schedule settings
+      const response = {
+        isActive: session?.isActive || false,
+        startedAt: session?.startedAt,
+        startedBy: session?.startedBy,
+        endedAt: session?.endedAt,
+        endedBy: session?.endedBy,
+        sessionMode: store?.sessionMode || 'manual',
+        scheduleStartTime: store?.scheduleStartTime || null,
+        scheduleEndTime: store?.scheduleEndTime || null
+      };
       
       res.status(200).json({
         success: true,
-        session: session || { isActive: false }
+        session: response
       });
     } catch (error) {
       console.error('Get session status error:', error);
       res.status(500).json({ success: false, message: 'Failed to get session status', error: error.message });
+    }
+  }),
+
+  // Save schedule settings for transaction session
+  saveScheduleSettings: asyncHandler(async (req, res) => {
+    try {
+      const { sessionMode, scheduleStartTime, scheduleEndTime, storeId } = req.body;
+      const Store = require('../models/Store');
+
+      // Validate required fields
+      if (!sessionMode || !['manual', 'scheduled'].includes(sessionMode)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid session mode. Must be "manual" or "scheduled"' 
+        });
+      }
+
+      // If scheduled mode, validate times
+      if (sessionMode === 'scheduled') {
+        if (!scheduleStartTime || !scheduleEndTime) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Start and end times are required for scheduled mode' 
+          });
+        }
+
+        // Validate time format (HH:MM)
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+        if (!timeRegex.test(scheduleStartTime) || !timeRegex.test(scheduleEndTime)) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Invalid time format. Use HH:MM (24-hour format)' 
+          });
+        }
+      }
+
+      // Find the store or use default store
+      let store;
+      if (storeId) {
+        store = await Store.findById(storeId);
+      } else {
+        // Get default store (first store in database)
+        store = await Store.findOne();
+      }
+
+      if (!store) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Store not found' 
+        });
+      }
+
+      // Update store with schedule settings
+      store.sessionMode = sessionMode;
+      // Keep the schedule times even in manual mode, so they're preserved when switching back
+      if (sessionMode === 'scheduled') {
+        store.scheduleStartTime = scheduleStartTime;
+        store.scheduleEndTime = scheduleEndTime;
+      }
+      // Don't set to null when switching to manual - keep the last values
+      store.updatedAt = new Date();
+      await store.save();
+
+      // If scheduled mode is enabled, check if we should start a session now
+      if (sessionMode === 'scheduled' && scheduleStartTime && scheduleEndTime) {
+        const now = new Date();
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
+        console.log(`[Schedule Settings] Current time: ${currentTime}`);
+        console.log(`[Schedule Settings] Schedule: ${scheduleStartTime} - ${scheduleEndTime}`);
+        
+        // Check if current time is within the scheduled range
+        const [currentHour, currentMin] = currentTime.split(':').map(Number);
+        const [startHour, startMin] = scheduleStartTime.split(':').map(Number);
+        const [endHour, endMin] = scheduleEndTime.split(':').map(Number);
+        
+        const currentMinutes = currentHour * 60 + currentMin;
+        const startMinutes = startHour * 60 + startMin;
+        const endMinutes = endHour * 60 + endMin;
+        
+        console.log(`[Schedule Settings] Minutes - Current: ${currentMinutes}, Start: ${startMinutes}, End: ${endMinutes}`);
+        
+        const isWithinSchedule = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+        
+        console.log(`[Schedule Settings] Is within schedule: ${isWithinSchedule}`);
+        
+        // Check if there's already an active session
+        const activeSession = await TransactionSession.findOne({
+          storeId: store._id,
+          isActive: true
+        });
+        
+        console.log(`[Schedule Settings] Active session exists: ${!!activeSession}`);
+        
+        // If within schedule and no active session, start one
+        if (isWithinSchedule && !activeSession) {
+          console.log(`[Schedule Settings] Current time ${currentTime} is within schedule (${scheduleStartTime}-${scheduleEndTime}). Auto-starting session.`);
+          const newSession = await TransactionSession.create({
+            storeId: store._id,
+            startedBy: 'Auto-Scheduled',
+            startedAt: new Date(),
+            isActive: true
+          });
+          console.log(`[Schedule Settings] Session created successfully:`, newSession._id);
+        } else {
+          if (!isWithinSchedule) {
+            console.log(`[Schedule Settings] Not within schedule - session will start at ${scheduleStartTime}`);
+          }
+          if (activeSession) {
+            console.log(`[Schedule Settings] Session already active - skipping auto-start`);
+          }
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: sessionMode === 'scheduled' 
+          ? `Schedule settings saved! Sessions will automatically start at ${scheduleStartTime} and end at ${scheduleEndTime} every day.`
+          : 'Schedule settings saved successfully. Manual mode enabled.',
+        store: {
+          _id: store._id,
+          sessionMode: store.sessionMode,
+          scheduleStartTime: store.scheduleStartTime,
+          scheduleEndTime: store.scheduleEndTime
+        }
+      });
+    } catch (error) {
+      console.error('Save schedule settings error:', error);
+      res.status(500).json({ success: false, message: 'Failed to save schedule settings', error: error.message });
     }
   }),
 

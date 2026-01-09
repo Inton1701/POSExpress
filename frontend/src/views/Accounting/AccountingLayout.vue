@@ -13,11 +13,11 @@
           </button>
           <!-- Popover Menu -->
           <div v-if="isMenuOpen" class="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-300 shadow-lg z-50">
-            <button @click="openImportModal" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
+            <button @click="requestVerificationFor('import')" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
               <font-awesome-icon icon="upload" />
               <span>Import Customers</span>
             </button>
-            <button @click="exportCustomers" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
+            <button @click="requestVerificationFor('export')" class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-700">
               <font-awesome-icon icon="download" />
               <span>Export Customers</span>
             </button>
@@ -113,6 +113,13 @@
                 Withdraw
               </button>
               <button 
+                @click="openAdjustBalanceModal()" 
+                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 text-xs"
+              >
+                <font-awesome-icon icon="balance-scale" />
+                Adjust Balance
+              </button>
+              <button 
                 @click="requestRFIDConfirmation('editProfile')" 
                 class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 text-xs"
               >
@@ -126,15 +133,14 @@
                 <font-awesome-icon icon="list" />
                 Transactions
               </button>
+              <button
+                @click="requestRFIDConfirmation('viewBalance')"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 text-xs"
+              >
+                <font-awesome-icon icon="eye" />
+                View Balance
+              </button>
             </div>
-            
-            <button
-              @click="requestRFIDConfirmation('viewBalance')"
-              class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 text-xs mb-2"
-            >
-              <font-awesome-icon icon="eye" />
-              View Balance
-            </button>
 
             <button 
               @click="clearCustomer" 
@@ -156,13 +162,29 @@
         <div class="bg-white rounded-lg shadow-lg p-4">
           <div class="flex justify-between items-center mb-3">
             <h2 class="text-xl font-bold">All Customers</h2>
-            <button 
-              @click="openAddCustomerModal" 
-              class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-2 text-sm"
-            >
-              <font-awesome-icon icon="plus" />
-              Add Customer
-            </button>
+            <div class="flex gap-2">
+              <button 
+                @click="requestVerificationFor('import')" 
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-2 text-xs"
+              >
+                <font-awesome-icon icon="file-import" />
+                Import
+              </button>
+              <button 
+                @click="requestVerificationFor('export')" 
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-2 text-xs"
+              >
+                <font-awesome-icon icon="file-export" />
+                Export
+              </button>
+              <button 
+                @click="openAddCustomerModal" 
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-2 text-sm"
+              >
+                <font-awesome-icon icon="plus" />
+                Add Customer
+              </button>
+            </div>
           </div>
 
           <!-- Search Bar -->
@@ -277,6 +299,87 @@
       <div class="flex gap-4">
         <button @click="isCashInModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
         <button @click="requestRFIDConfirmation('confirmCashIn')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-2xl">Add Funds</button>
+      </div>
+    </Modal>
+
+    <Modal :is-open="isAdjustBalanceModalOpen" title="Adjust Balance" @close="isAdjustBalanceModalOpen = false">
+      <div class="py-4">
+        <p class="text-center text-gray-700 mb-4 font-semibold">
+          Step 2 of 3: Enter new balance amount
+        </p>
+      </div>
+      <div class="mb-4 text-center">
+        <span class="block text-gray-700 font-bold mb-2">Current Balance:</span>
+        <span class="text-2xl font-bold text-green-600">₱{{ selectedCustomer?.balance.toFixed(2) }}</span>
+      </div>
+      <p class="mb-4">Enter new balance amount:</p>
+      <input 
+        v-model="adjustBalanceAmount" 
+        type="number" 
+        step="0.01"
+        placeholder="Enter new balance" 
+        class="w-full p-3 rounded-xl border border-gray-300 mb-4" 
+      />
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+        <p class="text-sm text-yellow-800">
+          <strong>Note:</strong> After entering the amount, you'll need to verify the customer's identity (Step 3).
+        </p>
+      </div>
+      <div class="flex gap-4">
+        <button @click="isAdjustBalanceModalOpen = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+        <button @click="startAdjustBalanceVerification" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-2xl">Continue</button>
+      </div>
+    </Modal>
+
+    <!-- Accounting Verification Modal for Adjust Balance -->
+    <Modal :is-open="isAccountingVerificationModalOpen" title="Accounting Verification Required" @close="cancelAccountingVerification">
+      <div class="py-4">
+        <p class="text-center text-gray-700 mb-4 font-semibold">
+          Step 1 of 3: Verify your identity as Accounting staff
+        </p>
+        
+        <!-- RFID Scan Option -->
+        <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 class="font-bold text-blue-800 mb-2">Scan Your RFID</h3>
+          <input 
+            ref="accountingRfidInput"
+            v-model="accountingVerificationForm.rfid" 
+            type="text" 
+            placeholder="Scan your RFID card..."
+            class="w-full p-3 rounded-lg border border-gray-300"
+            @keyup.enter="verifyAccountingAndProceed"
+          />
+        </div>
+
+        <div class="text-center text-gray-500 mb-4">OR</div>
+
+        <!-- Password Option -->
+        <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h3 class="font-bold text-gray-800 mb-2">Enter Your Password</h3>
+          <div class="relative">
+            <input 
+              v-model="accountingVerificationForm.password" 
+              :type="showAccountingPassword ? 'text' : 'password'"
+              placeholder="Enter your password"
+              class="w-full p-3 rounded-lg border border-gray-300"
+              @keyup.enter="verifyAccountingAndProceed"
+            />
+            <button
+              type="button"
+              @click="showAccountingPassword = !showAccountingPassword"
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              <font-awesome-icon :icon="showAccountingPassword ? 'eye-slash' : 'eye'" />
+            </button>
+          </div>
+        </div>
+
+        <p v-if="accountingVerificationError" class="text-red-600 text-sm text-center mb-4">{{ accountingVerificationError }}</p>
+
+        <div class="flex gap-4">
+          <button @click="cancelAccountingVerification" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+          <button @click="verifyAccountingAndProceed" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-2xl">Verify</button>
+        </div>
       </div>
     </Modal>
 
@@ -598,14 +701,14 @@
     </Modal>
 
     <!-- RFID Confirmation Modal -->
-    <Modal :is-open="isRFIDConfirmModalOpen" title="RFID Confirmation Required" @close="cancelRFIDConfirmation">
+    <Modal :is-open="isRFIDConfirmModalOpen" :title="pendingAction === 'confirmAdjustBalance' ? 'Step 3 of 3: Customer Verification' : 'RFID Confirmation Required'" @close="cancelRFIDConfirmation">
       <div class="space-y-4">
         <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
           <div class="flex items-center gap-3 mb-3">
             <font-awesome-icon icon="shield-alt" class="text-yellow-600 text-2xl" />
             <h3 class="text-lg font-bold text-yellow-800">Security Verification</h3>
           </div>
-          <p class="text-gray-700 mb-2">For security purposes, please verify the customer's identity:</p>
+          <p class="text-gray-700 mb-2">{{ pendingAction === 'confirmAdjustBalance' ? 'Final step: Verify customer identity to confirm balance adjustment' : 'For security purposes, please verify the customer\'s identity:' }}</p>
           <p class="font-bold text-lg text-gray-800">{{ getActionTitle(pendingAction) }}</p>
         </div>
         
@@ -773,12 +876,22 @@
         
         <div>
           <label class="block text-sm font-semibold mb-2">RFID <span class="text-gray-500 text-xs">(Optional)</span></label>
-          <input 
-            v-model="profileForm.rfid" 
-            type="text" 
-            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            placeholder="Scan or enter RFID"
-          />
+          <div class="flex gap-2">
+            <input 
+              v-model="profileForm.rfid" 
+              :type="showRfidField ? 'text' : 'password'"
+              class="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              :placeholder="showRfidField ? 'Scan or enter RFID' : '••••••••••'"
+              :disabled="!showRfidField"
+            />
+            <button
+              type="button"
+              @click="toggleRfidVisibility"
+              class="bg-gray-200 hover:bg-gray-300 px-4 rounded-lg"
+            >
+              <font-awesome-icon :icon="showRfidField ? 'eye-slash' : 'eye'" />
+            </button>
+          </div>
         </div>
         
         <div>
@@ -869,6 +982,49 @@
       </div>
     </Modal>
 
+    <!-- RFID Verification Modal for Profile -->
+    <Modal :is-open="rfidVerificationModal" title="Verify Your Identity" @close="rfidVerificationModal = false">
+      <div class="py-4">
+        <p class="text-center text-gray-700 mb-4 font-semibold">
+          Enter your password or scan your RFID to view/edit RFID field
+        </p>
+        
+        <!-- RFID Scan Option -->
+        <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 class="font-bold text-blue-800 mb-2">Scan Your RFID</h3>
+          <input 
+            ref="rfidVerificationRfidInput"
+            v-model="rfidVerificationInput.rfid" 
+            type="text" 
+            placeholder="Scan your RFID card..."
+            class="w-full p-3 rounded-lg border border-gray-300"
+            @keyup.enter="verifyRfidAccess"
+          />
+        </div>
+
+        <div class="text-center text-gray-500 mb-4">OR</div>
+
+        <!-- Password Option -->
+        <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h3 class="font-bold text-gray-800 mb-2">Enter Your Password</h3>
+          <input 
+            v-model="rfidVerificationInput.password" 
+            type="password"
+            placeholder="Enter your password"
+            class="w-full p-3 rounded-lg border border-gray-300"
+            @keyup.enter="verifyRfidAccess"
+          />
+        </div>
+
+        <p v-if="rfidVerificationError" class="text-red-600 text-sm text-center mb-4">{{ rfidVerificationError }}</p>
+
+        <div class="flex gap-4">
+          <button @click="rfidVerificationModal = false" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+          <button @click="verifyRfidAccess" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-2xl">Verify</button>
+        </div>
+      </div>
+    </Modal>
+
     <!-- Print Confirmation Modal -->
     <Modal :is-open="isPrintConfirmModalOpen" title="Print Receipt" @close="cancelPrint">
       <div class="text-center py-4">
@@ -924,6 +1080,58 @@
           </svg>
           Print Receipt
         </button>
+      </div>
+    </Modal>
+
+    <!-- Verification Modal for Import/Export -->
+    <Modal :is-open="isVerificationModalOpen" title="Verification Required" @close="cancelVerification">
+      <div class="py-4">
+        <p class="text-center text-gray-700 mb-4">
+          Please verify your identity to {{ verificationAction === 'import' ? 'import' : 'export' }} customers
+        </p>
+        
+        <!-- RFID Scan Option -->
+        <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 class="font-bold text-blue-800 mb-2">Scan Your RFID</h3>
+          <input 
+            ref="verificationRfidInput"
+            v-model="verificationForm.rfid" 
+            type="text" 
+            placeholder="Scan your RFID card..."
+            class="w-full p-3 rounded-lg border border-gray-300"
+            @keyup.enter="verifyAndProceed"
+          />
+        </div>
+
+        <div class="text-center text-gray-500 mb-4">OR</div>
+
+        <!-- Password Option -->
+        <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h3 class="font-bold text-gray-800 mb-2">Enter Your Password</h3>
+          <div class="relative">
+            <input 
+              v-model="verificationForm.password" 
+              :type="showVerificationPassword ? 'text' : 'password'"
+              placeholder="Enter your password"
+              class="w-full p-3 rounded-lg border border-gray-300"
+              @keyup.enter="verifyAndProceed"
+            />
+            <button
+              type="button"
+              @click="showVerificationPassword = !showVerificationPassword"
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              <font-awesome-icon :icon="showVerificationPassword ? 'eye-slash' : 'eye'" />
+            </button>
+          </div>
+        </div>
+
+        <p v-if="verificationError" class="text-red-600 text-sm text-center mb-4">{{ verificationError }}</p>
+
+        <div class="flex gap-4">
+          <button @click="cancelVerification" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-2xl">Cancel</button>
+          <button @click="verifyAndProceed" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-2xl">Verify</button>
+        </div>
       </div>
     </Modal>
 
@@ -1178,6 +1386,14 @@ const showEditPassword = ref(false)
 const showEditConfirmPassword = ref(false)
 const lastTransaction = ref(null)
 const availablePrinters = ref([])
+const isAccountingVerificationModalOpen = ref(false)
+const accountingVerificationForm = ref({
+  rfid: '',
+  password: ''
+})
+const showAccountingPassword = ref(false)
+const accountingVerificationError = ref('')
+const accountingRfidInput = ref(null)
 const selectedPrinter = ref(null)
 const isRefreshingPrinters = ref(false)
 const isPrintConfirmModalOpen = ref(false)
@@ -1214,6 +1430,24 @@ const profileForm = ref({
 const showCurrentPassword = ref(false)
 const showNewPassword = ref(false)
 const showConfirmPassword = ref(false)
+const showRfidField = ref(false)
+const rfidVerificationModal = ref(false)
+const rfidVerificationInput = ref({
+  password: '',
+  rfid: ''
+})
+const rfidVerificationError = ref('')
+const isAdjustBalanceModalOpen = ref(false)
+const adjustBalanceAmount = ref('')
+const isVerificationModalOpen = ref(false)
+const verificationAction = ref('')
+const verificationForm = ref({
+  password: '',
+  rfid: ''
+})
+const verificationRfidInput = ref(null)
+const showVerificationPassword = ref(false)
+const verificationError = ref('')
 
 const toastRef = ref(null)
 
@@ -1350,7 +1584,8 @@ const confirmStatusChange = async () => {
       }
     }
   } catch (error) {
-    showToast('Failed to update customer status', 'error')
+    console.error('Error updating customer status:', error)
+    showToast(error.response?.data?.message || 'Failed to update customer status', 'error')
   } finally {
     isStatusModalOpen.value = false
     customerToChangeStatus.value = null
@@ -1364,7 +1599,8 @@ const fetchCustomers = async () => {
       customers.value = response.data.customers
     }
   } catch (error) {
-    showToast('Failed to fetch customers', 'error')
+    console.error('Error fetching customers:', error)
+    showToast(error.response?.data?.message || 'Failed to fetch customers', 'error')
   }
 }
 
@@ -1415,7 +1651,8 @@ const selectCustomerById = async (customerId) => {
       selectedCustomer.value = response.data.customer
     }
   } catch (error) {
-    showToast('Failed to fetch customer', 'error')
+    console.error('Error fetching customer:', error)
+    showToast(error.response?.data?.message || 'Failed to fetch customer', 'error')
   }
 }
 
@@ -1512,6 +1749,9 @@ const proceedWithAction = async () => {
     case 'cashOut':
       openCashOutModal()
       break
+    case 'adjustBalance':
+      openAdjustBalanceModal()
+      break
     case 'editProfile':
       openEditCustomerModal()
       break
@@ -1524,6 +1764,10 @@ const proceedWithAction = async () => {
     case 'confirmCashOut':
       await processCashOut()
       break
+    case 'confirmAdjustBalance':
+      // Customer verified, now process the adjustment
+      await processAdjustBalance()
+      break
     case 'confirmEditProfile':
       await saveCustomer()
       break
@@ -1535,9 +1779,226 @@ const proceedWithAction = async () => {
   pendingAction.value = ''
 }
 
+const openAdjustBalanceModal = () => {
+  // First verify accounting user
+  isAccountingVerificationModalOpen.value = true
+  nextTick(() => {
+    if (accountingRfidInput.value) {
+      accountingRfidInput.value.focus()
+    }
+  })
+}
+
+const startAdjustBalanceVerification = () => {
+  // Validate balance amount first
+  const newBalance = parseFloat(adjustBalanceAmount.value)
+  if (isNaN(newBalance) || newBalance < 0) {
+    showToast('Please enter a valid balance amount', 'warning')
+    return
+  }
+  
+  // Close adjust balance modal and request CUSTOMER verification
+  isAdjustBalanceModalOpen.value = false
+  requestRFIDConfirmation('confirmAdjustBalance')
+}
+
+const verifyAccountingAndProceed = async () => {
+  const { rfid, password } = accountingVerificationForm.value
+  
+  // Must provide either RFID or password
+  if (!rfid.trim() && !password) {
+    accountingVerificationError.value = 'Please scan your RFID or enter your password'
+    return
+  }
+
+  try {
+    // Get current user info
+    const currentUser = auth.getUser()
+    
+    if (!currentUser || !currentUser._id) {
+      accountingVerificationError.value = 'User information not found. Please login again.'
+      return
+    }
+
+    let verifyResponse
+    
+    // Verify using the appropriate endpoint based on input type
+    if (rfid.trim()) {
+      // Verify RFID
+      try {
+        verifyResponse = await api.post('/users/verify-rfid', {
+          userId: currentUser._id,
+          rfid: rfid.trim()
+        })
+      } catch (error) {
+        // Handle 401 without triggering global logout
+        if (error.response?.status === 401) {
+          accountingVerificationError.value = 'Invalid RFID. Please try again.'
+          accountingVerificationForm.value.rfid = ''
+          return
+        }
+        throw error
+      }
+    } else if (password) {
+      // Verify password
+      try {
+        verifyResponse = await api.post('/users/verify-password', {
+          username: currentUser.username,
+          password: password
+        })
+      } catch (error) {
+        // Handle 401 without triggering global logout
+        if (error.response?.status === 401) {
+          accountingVerificationError.value = 'Invalid password. Please try again.'
+          accountingVerificationForm.value.password = ''
+          return
+        }
+        throw error
+      }
+    }
+
+    if (verifyResponse?.data?.success || verifyResponse?.data?.verified) {
+      // Accounting verified, close modal and show adjust balance modal
+      isAccountingVerificationModalOpen.value = false
+      accountingVerificationForm.value.rfid = ''
+      accountingVerificationForm.value.password = ''
+      accountingVerificationError.value = ''
+      showAccountingPassword.value = false
+      
+      // Now show the adjust balance modal to enter amount
+      adjustBalanceAmount.value = selectedCustomer.value?.balance || 0
+      isAdjustBalanceModalOpen.value = true
+    } else {
+      accountingVerificationError.value = verifyResponse?.data?.message || 'Invalid credentials. Please try again.'
+      accountingVerificationForm.value.password = ''
+      accountingVerificationForm.value.rfid = ''
+    }
+  } catch (error) {
+    accountingVerificationError.value = error.response?.data?.message || 'Verification failed'
+    accountingVerificationForm.value.password = ''
+    accountingVerificationForm.value.rfid = ''
+  }
+}
+
+const cancelAccountingVerification = () => {
+  isAccountingVerificationModalOpen.value = false
+  accountingVerificationForm.value.rfid = ''
+  accountingVerificationForm.value.password = ''
+  accountingVerificationError.value = ''
+  showAccountingPassword.value = false
+}
+
+const processAdjustBalance = async () => {
+  const newBalance = parseFloat(adjustBalanceAmount.value)
+  if (isNaN(newBalance) || newBalance < 0) {
+    showToast('Please enter a valid balance amount', 'warning')
+    return
+  }
+
+  const oldBalance = selectedCustomer.value.balance
+  const adjustment = newBalance - oldBalance
+
+  try {
+    const response = await api.put(`/customers/${selectedCustomer.value._id}`, {
+      balance: newBalance
+    })
+
+    if (response.data.success) {
+      selectedCustomer.value.balance = newBalance
+      
+      // Log the adjustment with balanceBefore and balanceAfter
+      await api.post('/customer-transactions', {
+        rfid: selectedCustomer.value.rfid,
+        username: selectedCustomer.value.username,
+        amount: adjustment,
+        transactionType: 'Balance Adjustment',
+        balanceBefore: oldBalance,
+        balanceAfter: newBalance
+      })
+      
+      showToast(`Balance adjusted from ₱${oldBalance.toFixed(2)} to ₱${newBalance.toFixed(2)}`, 'success')
+      isAdjustBalanceModalOpen.value = false
+      isCashOutModalOpen.value = false
+      await fetchCustomers()
+    }
+  } catch (error) {
+    console.error('Error adjusting balance:', error)
+    showToast(error.response?.data?.message || 'Failed to adjust balance', 'error')
+  }
+}
+
+const requestVerificationFor = (action) => {
+  isMenuOpen.value = false // Close the menu
+  verificationAction.value = action
+  verificationForm.value = {
+    password: '',
+    rfid: ''
+  }
+  verificationError.value = ''
+  isVerificationModalOpen.value = true
+  nextTick(() => {
+    if (verificationRfidInput.value) {
+      verificationRfidInput.value.focus()
+    }
+  })
+}
+
+const verifyAndProceed = async () => {
+  if (!verificationForm.value.password && !verificationForm.value.rfid) {
+    verificationError.value = 'Please enter your password or scan your RFID'
+    return
+  }
+
+  try {
+    if (verificationForm.value.password) {
+      const response = await api.post('/users/verify-password', {
+        userId: currentUser.value._id,
+        password: verificationForm.value.password
+      })
+      
+      if (!response.data.success) {
+        verificationError.value = 'Invalid password'
+        return
+      }
+    } else if (verificationForm.value.rfid) {
+      const response = await api.post('/users/verify-rfid', {
+        userId: currentUser.value._id,
+        rfid: verificationForm.value.rfid
+      })
+      
+      if (!response.data.success) {
+        verificationError.value = 'Invalid RFID. Please use your own RFID card.'
+        return
+      }
+    }
+
+    // Verification successful, proceed with the action
+    isVerificationModalOpen.value = false
+    if (verificationAction.value === 'import') {
+      openImportModal()
+    } else if (verificationAction.value === 'export') {
+      exportCustomers()
+    }
+  } catch (error) {
+    console.error('Verification error:', error)
+    verificationError.value = error.response?.data?.message || 'Verification failed'
+  }
+}
+
+const cancelVerification = () => {
+  isVerificationModalOpen.value = false
+  verificationForm.value = {
+    password: '',
+    rfid: ''
+  }
+  verificationError.value = ''
+  verificationAction.value = ''
+}
+
 const getActionTitle = (action) => {
   const titles = {
     'cashOut': 'Withdraw - Remove Funds',
+    'adjustBalance': 'Adjust Customer Balance',
     'editProfile': 'Edit Customer Profile',
     'viewTransactions': 'View Transaction History',
     'confirmCashIn': 'Cash In - Add Funds',
@@ -1626,7 +2087,8 @@ const processCashIn = async () => {
       // If printMode is 'off', do nothing
     }
   } catch (error) {
-    showToast('Failed to update balance', 'error')
+    console.error('Error updating balance (cash in):', error)
+    showToast(error.response?.data?.message || 'Failed to update balance', 'error')
   }
 }
 
@@ -1686,7 +2148,8 @@ const processCashOut = async () => {
       // If printMode is 'off', do nothing
     }
   } catch (error) {
-    showToast('Failed to update balance', 'error')
+    console.error('Error updating balance (cash out):', error)
+    showToast(error.response?.data?.message || 'Failed to update balance', 'error')
   }
 }
 
@@ -1898,7 +2361,98 @@ const openProfileModal = () => {
     }
   }
   
+  // Reset RFID visibility
+  showRfidField.value = false
+  
   isProfileModalOpen.value = true
+}
+
+const toggleRfidVisibility = () => {
+  if (!showRfidField.value) {
+    // Open verification modal
+    rfidVerificationModal.value = true
+    rfidVerificationInput.value = {
+      password: '',
+      rfid: ''
+    }
+    rfidVerificationError.value = ''
+  } else {
+    // Hide RFID field
+    showRfidField.value = false
+  }
+}
+
+const verifyRfidAccess = async () => {
+  const { rfid, password } = rfidVerificationInput.value
+  
+  if (!rfid.trim() && !password) {
+    rfidVerificationError.value = 'Please enter your password or scan your RFID'
+    return
+  }
+
+  try {
+    const currentUser = auth.getUser()
+    
+    if (!currentUser || !currentUser._id) {
+      rfidVerificationError.value = 'User information not found'
+      return
+    }
+
+    let verifyResponse
+    
+    if (rfid.trim()) {
+      // Verify RFID
+      try {
+        verifyResponse = await api.post('/users/verify-rfid', {
+          userId: currentUser._id,
+          rfid: rfid.trim()
+        })
+      } catch (error) {
+        // Handle 401 without triggering global logout
+        if (error.response?.status === 401) {
+          rfidVerificationError.value = 'Invalid RFID'
+          rfidVerificationInput.value.rfid = ''
+          return
+        }
+        throw error
+      }
+    } else if (password) {
+      // Verify password  
+      try {
+        verifyResponse = await api.post('/users/verify-password', {
+          username: currentUser.username,
+          password: password
+        })
+      } catch (error) {
+        // Handle 401 without triggering global logout
+        if (error.response?.status === 401) {
+          rfidVerificationError.value = 'Invalid password'
+          rfidVerificationInput.value.password = ''
+          return
+        }
+        throw error
+      }
+    }
+
+    if (verifyResponse?.data?.success || verifyResponse?.data?.verified) {
+      // Verification successful, show RFID field
+      showRfidField.value = true
+      rfidVerificationModal.value = false
+      rfidVerificationInput.value = {
+        password: '',
+        rfid: ''
+      }
+      rfidVerificationError.value = ''
+    } else {
+      rfidVerificationError.value = 'Invalid credentials'
+      rfidVerificationInput.value.password = ''
+      rfidVerificationInput.value.rfid = ''
+    }
+  } catch (error) {
+    rfidVerificationError.value = error.response?.data?.message || 'Verification failed'
+    rfidVerificationInput.value.password = ''
+    rfidVerificationInput.value.rfid = ''
+  }
 }
 
 const saveProfile = async () => {
@@ -1967,11 +2521,8 @@ const saveProfile = async () => {
       profileForm.value.confirmPassword = ''
     }
   } catch (error) {
-    if (error.response?.status === 400) {
-      showToast(error.response.data.message || 'Invalid current password', 'error')
-    } else {
-      showToast('Failed to update profile', 'error')
-    }
+    console.error('Error updating profile:', error)
+    showToast(error.response?.data?.message || 'Failed to update profile', 'error')
   }
 }
 
@@ -2013,7 +2564,8 @@ const saveSettings = async () => {
       isSettingsModalOpen.value = false
     }
   } catch (error) {
-    showToast('Failed to save settings', 'error')
+    console.error('Error saving settings:', error)
+    showToast(error.response?.data?.message || 'Failed to save settings', 'error')
   }
 }
 

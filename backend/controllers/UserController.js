@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Customer = require("../models/Customer");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -80,7 +81,6 @@ const user = {
             }
             
             // Check in Customer collection
-            const Customer = require("../models/Customer");
             const existingCustomerWithUsername = await Customer.findOne({ username });
             if (existingCustomerWithUsername) {
                 return res.status(400).json({ success: false, message: "Username already exists (used by a customer)" });
@@ -221,7 +221,6 @@ const user = {
                 }
                 
                 // Check in Customer collection
-                const Customer = require("../models/Customer");
                 const existingCustomerWithUsername = await Customer.findOne({ username: req.body.username });
                 if (existingCustomerWithUsername) {
                     return res.status(400).json({ success: false, message: "Username already exists (used by a customer)" });
@@ -278,12 +277,33 @@ const user = {
             user.updatedAt = Date.now();
             await user.save();
 
+            // Populate store information
+            await user.populate('store', 'storeName address contact');
+
             // Remove password from response
             const userResponse = user.toObject();
             delete userResponse.password;
 
             res.status(200).json({ success: true, user: userResponse, message: 'User updated successfully' });
         } catch (error) {
+            console.error('Error updating user:', error);
+            
+            // Handle specific errors
+            if (error.name === 'ValidationError') {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Validation error: ' + Object.values(error.errors).map(e => e.message).join(', ') 
+                });
+            }
+            
+            if (error.code === 11000) {
+                const field = Object.keys(error.keyPattern)[0];
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `${field.charAt(0).toUpperCase() + field.slice(1)} already exists` 
+                });
+            }
+            
             res.status(500).json({ success: false, message: 'Failed to update user', error: error.message });
         }
     }),

@@ -13,11 +13,14 @@
 
     <!-- Transaction Session Control -->
     <div class="bg-white rounded-2xl shadow p-6 mb-6">
-      <div class="flex justify-between items-center">
-        <div>
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex-1">
           <h3 class="font-bold text-lg mb-2">Transaction Session Control</h3>
           <p class="text-sm text-gray-600">
             {{ sessionStatus.isActive ? 'Session is currently active' : 'Session is currently inactive' }}
+            <span v-if="sessionStatus.sessionMode === 'scheduled'" class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+              Scheduled Mode
+            </span>
           </p>
           <p v-if="sessionStatus.isActive && sessionStatus.startedAt" class="text-xs text-gray-500 mt-1">
             Started: {{ formatDateTime(sessionStatus.startedAt) }}
@@ -26,8 +29,18 @@
           <p v-if="!sessionStatus.isActive" class="text-xs text-orange-600 mt-1">
             No active session - Sales data will not be displayed
           </p>
+          <p v-if="sessionStatus.sessionMode === 'scheduled' && sessionStatus.scheduleStartTime && sessionStatus.scheduleEndTime" class="text-xs text-blue-600 mt-1">
+            Schedule: Auto-start at {{ formatTimeTo12Hour(sessionStatus.scheduleStartTime) }} | Auto-end at {{ formatTimeTo12Hour(sessionStatus.scheduleEndTime) }}
+          </p>
         </div>
         <div class="flex gap-3">
+          <button 
+            @click="openScheduleModal"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition"
+          >
+            <font-awesome-icon icon="clock" class="mr-2" />
+            Schedule Settings
+          </button>
           <button 
             v-if="!sessionStatus.isActive"
             @click="openStartSessionModal"
@@ -35,7 +48,7 @@
             class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <font-awesome-icon icon="play" class="mr-2" />
-            Start Transaction Session
+            Start Session
           </button>
           <button 
             v-else
@@ -44,7 +57,7 @@
             class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <font-awesome-icon icon="stop" class="mr-2" />
-            End Transaction Session
+            End Session
           </button>
         </div>
       </div>
@@ -471,6 +484,133 @@
       </div>
     </div>
 
+    <!-- Schedule Settings Modal -->
+    <div v-if="isScheduleModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold mb-4">Session Schedule Settings</h3>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold mb-2">Session Mode</label>
+            <div class="space-y-2">
+              <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="{ 'border-blue-500 bg-blue-50': scheduleForm.sessionMode === 'manual' }">
+                <input type="radio" v-model="scheduleForm.sessionMode" value="manual" class="mr-3" />
+                <div>
+                  <div class="font-semibold">Manual Mode</div>
+                  <div class="text-sm text-gray-600">Start and end sessions manually</div>
+                </div>
+              </label>
+              
+              <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="{ 'border-blue-500 bg-blue-50': scheduleForm.sessionMode === 'scheduled' }">
+                <input type="radio" v-model="scheduleForm.sessionMode" value="scheduled" class="mr-3" />
+                <div>
+                  <div class="font-semibold">Scheduled Mode</div>
+                  <div class="text-sm text-gray-600">Automatically start and end sessions at specified times</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div v-if="scheduleForm.sessionMode === 'scheduled'" class="space-y-4">
+            <!-- Warning message when session is active -->
+            <div v-if="sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled'" class="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <p class="text-sm text-orange-800">
+                <strong>Note:</strong> Session is currently active. You must end the session first before modifying schedule times.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2">Auto-Start Time</label>
+              <div class="flex gap-2">
+                <select 
+                  v-model="scheduleForm.startHour" 
+                  class="p-3 border rounded-lg"
+                  :disabled="sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled'"
+                  :class="{ 'bg-gray-100 cursor-not-allowed': sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled' }"
+                >
+                  <option v-for="h in 12" :key="h" :value="h">{{ h }}</option>
+                </select>
+                <span class="flex items-center">:</span>
+                <select 
+                  v-model="scheduleForm.startMinute" 
+                  class="p-3 border rounded-lg"
+                  :disabled="sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled'"
+                  :class="{ 'bg-gray-100 cursor-not-allowed': sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled' }"
+                >
+                  <option v-for="m in 60" :key="m-1" :value="String(m-1).padStart(2, '0')">{{ String(m-1).padStart(2, '0') }}</option>
+                </select>
+                <select 
+                  v-model="scheduleForm.startAMPM" 
+                  class="p-3 border rounded-lg"
+                  :disabled="sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled'"
+                  :class="{ 'bg-gray-100 cursor-not-allowed': sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled' }"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Session will automatically start at this time every day</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2">Auto-End Time</label>
+              <div class="flex gap-2">
+                <select 
+                  v-model="scheduleForm.endHour" 
+                  class="p-3 border rounded-lg"
+                  :disabled="sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled'"
+                  :class="{ 'bg-gray-100 cursor-not-allowed': sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled' }"
+                >
+                  <option v-for="h in 12" :key="h" :value="h">{{ h }}</option>
+                </select>
+                <span class="flex items-center">:</span>
+                <select 
+                  v-model="scheduleForm.endMinute" 
+                  class="p-3 border rounded-lg"
+                  :disabled="sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled'"
+                  :class="{ 'bg-gray-100 cursor-not-allowed': sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled' }"
+                >
+                  <option v-for="m in 60" :key="m-1" :value="String(m-1).padStart(2, '0')">{{ String(m-1).padStart(2, '0') }}</option>
+                </select>
+                <select 
+                  v-model="scheduleForm.endAMPM" 
+                  class="p-3 border rounded-lg"
+                  :disabled="sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled'"
+                  :class="{ 'bg-gray-100 cursor-not-allowed': sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled' }"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Session will automatically end at this time every day</p>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p class="text-sm text-yellow-800">
+                <strong>Note:</strong> The system will check every minute and automatically start/end sessions based on these times. Make sure the times are set correctly.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 justify-end mt-6">
+          <button 
+            @click="closeScheduleModal"
+            class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg"
+          >
+            Cancel
+          </button>
+          <button 
+            @click="saveScheduleSettings"
+            :disabled="loading || (sessionStatus.isActive && sessionStatus.sessionMode === 'scheduled' && scheduleForm.sessionMode === 'scheduled')"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notification -->
     <Toast ref="toastRef" />
   </div>
@@ -482,10 +622,10 @@ import { api } from '@/utils/api'
 import { auth } from '@/utils/auth'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faPlay, faStop, faPrint, faTimes } from '@fortawesome/free-solid-svg-icons'
+import { faPlay, faStop, faPrint, faTimes, faClock } from '@fortawesome/free-solid-svg-icons'
 import Toast from '../../components/Toast.vue'
 
-library.add(faPlay, faStop, faPrint, faTimes)
+library.add(faPlay, faStop, faPrint, faTimes, faClock)
 
 const loading = ref(false)
 const sessionStatus = ref({ isActive: false })
@@ -494,6 +634,16 @@ const showEndSessionModal = ref(false)
 const hasActiveSession = ref(false)
 const activeTab = ref('sales')
 const toastRef = ref(null)
+const isScheduleModalOpen = ref(false)
+const scheduleForm = ref({
+  sessionMode: 'manual',
+  startHour: 8,
+  startMinute: '00',
+  startAMPM: 'AM',
+  endHour: 6,
+  endMinute: '00',
+  endAMPM: 'PM'
+})
 
 const showToast = (message, type = 'success') => {
   if (toastRef.value) {
@@ -551,6 +701,28 @@ const paginatedSalesHistory = computed(() => {
 
 const formatNumber = (value) => {
   return (value || 0).toFixed(2)
+}
+
+const formatTimeTo12Hour = (time24) => {
+  if (!time24) return ''
+  const [hours, minutes] = time24.split(':')
+  const hour = parseInt(hours)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const hour12 = hour % 12 || 12
+  return `${hour12}:${minutes} ${ampm}`
+}
+
+const formatTimeTo24Hour = (time12, ampm) => {
+  let hour = parseInt(time12.split(':')[0])
+  const minutes = time12.split(':')[1]
+  
+  if (ampm === 'PM' && hour !== 12) {
+    hour += 12
+  } else if (ampm === 'AM' && hour === 12) {
+    hour = 0
+  }
+  
+  return `${String(hour).padStart(2, '0')}:${minutes}`
 }
 
 const formatDateTime = (date) => {
@@ -1046,6 +1218,88 @@ const endSession = async () => {
   } catch (error) {
     console.error('Error ending session:', error)
     showToast(error.response?.data?.message || 'Failed to end transaction session', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+const openScheduleModal = () => {
+  // Load current schedule settings and convert to 12-hour format
+  const startTime = sessionStatus.value.scheduleStartTime || '08:00'
+  const endTime = sessionStatus.value.scheduleEndTime || '18:00'
+  
+  const [startHours, startMinutes] = startTime.split(':')
+  const startHour24 = parseInt(startHours)
+  const startAMPM = startHour24 >= 12 ? 'PM' : 'AM'
+  const startHour12 = startHour24 % 12 || 12
+  
+  const [endHours, endMinutes] = endTime.split(':')
+  const endHour24 = parseInt(endHours)
+  const endAMPM = endHour24 >= 12 ? 'PM' : 'AM'
+  const endHour12 = endHour24 % 12 || 12
+  
+  scheduleForm.value = {
+    sessionMode: sessionStatus.value.sessionMode || 'manual',
+    startHour: startHour12,
+    startMinute: startMinutes,
+    startAMPM: startAMPM,
+    endHour: endHour12,
+    endMinute: endMinutes,
+    endAMPM: endAMPM
+  }
+  isScheduleModalOpen.value = true
+}
+
+const closeScheduleModal = () => {
+  isScheduleModalOpen.value = false
+}
+
+const saveScheduleSettings = async () => {
+  // Validate and convert times if in scheduled mode
+  let scheduleStartTime = null
+  let scheduleEndTime = null
+  
+  if (scheduleForm.value.sessionMode === 'scheduled') {
+    // Convert 12-hour to 24-hour format
+    scheduleStartTime = formatTimeTo24Hour(
+      `${scheduleForm.value.startHour}:${scheduleForm.value.startMinute}`,
+      scheduleForm.value.startAMPM
+    )
+    scheduleEndTime = formatTimeTo24Hour(
+      `${scheduleForm.value.endHour}:${scheduleForm.value.endMinute}`,
+      scheduleForm.value.endAMPM
+    )
+    
+    // Validate that end time is after start time
+    const startMinutes = scheduleStartTime.split(':').reduce((h, m) => h * 60 + parseInt(m))
+    const endMinutes = scheduleEndTime.split(':').reduce((h, m) => h * 60 + parseInt(m))
+    
+    if (endMinutes <= startMinutes) {
+      showToast('End time must be after start time', 'error')
+      return
+    }
+  }
+
+  loading.value = true
+  try {
+    const user = auth.getUser() || {}
+    const storeId = user.store?._id || user.store
+    
+    const response = await api.post('/transactions/session/schedule', {
+      sessionMode: scheduleForm.value.sessionMode,
+      scheduleStartTime,
+      scheduleEndTime,
+      storeId
+    })
+    
+    if (response.data.success) {
+      showToast('Schedule settings saved successfully!', 'success')
+      closeScheduleModal()
+      await fetchSessionStatus()
+    }
+  } catch (error) {
+    console.error('Error saving schedule settings:', error)
+    showToast(error.response?.data?.message || 'Failed to save schedule settings', 'error')
   } finally {
     loading.value = false
   }

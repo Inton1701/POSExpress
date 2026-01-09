@@ -209,23 +209,30 @@ const customer = {
     // Log a customer transaction
     logTransaction: asyncHandler(async (req, res) => {
         try {
-            const { rfid, username, amount, transactionType } = req.body;
+            const { rfid, username, amount, transactionType, balanceBefore: reqBalanceBefore, balanceAfter: reqBalanceAfter } = req.body;
             if (!rfid || !username || transactionType === undefined) {
                 return res.status(400).json({ success: false, message: "Missing required fields" });
             }
-            // Fetch customer to get current balance
-            const customer = await Customer.findOne({ rfid });
-            let balanceBefore = undefined;
-            let balanceAfter = undefined;
-            if (customer) {
-                balanceBefore = customer.balance;
-                // For cash-in/cash-out, estimate balanceAfter
-                if (transactionType === "Cash-in") {
-                    balanceAfter = balanceBefore + (typeof amount === "number" ? amount : 0);
-                } else if (transactionType === "Cash-out") {
-                    balanceAfter = balanceBefore - (typeof amount === "number" ? amount : 0);
-                } else {
-                    balanceAfter = balanceBefore;
+            
+            // Use provided balanceBefore/balanceAfter if available, otherwise fetch and calculate
+            let balanceBefore = reqBalanceBefore;
+            let balanceAfter = reqBalanceAfter;
+            
+            if (balanceBefore === undefined || balanceAfter === undefined) {
+                // Fetch customer to get current balance
+                const customer = await Customer.findOne({ rfid });
+                if (customer) {
+                    balanceBefore = balanceBefore !== undefined ? balanceBefore : customer.balance;
+                    // For cash-in/cash-out, estimate balanceAfter if not provided
+                    if (balanceAfter === undefined) {
+                        if (transactionType === "Cash-in") {
+                            balanceAfter = balanceBefore + (typeof amount === "number" ? amount : 0);
+                        } else if (transactionType === "Cash-out") {
+                            balanceAfter = balanceBefore - (typeof amount === "number" ? amount : 0);
+                        } else {
+                            balanceAfter = balanceBefore;
+                        }
+                    }
                 }
             }
 

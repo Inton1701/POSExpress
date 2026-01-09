@@ -20,4 +20,4 @@ dist-electron/
 # System files
 .DS_Store
 thumbs.db
-
+service_account.json

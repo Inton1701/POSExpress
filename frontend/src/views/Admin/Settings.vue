@@ -22,6 +22,14 @@
           VAT Rate
         </button>
         <button 
+          @click="activeTab = 'backup'"
+          :class="activeTab === 'backup' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
+          class="px-6 py-2 rounded-lg font-bold transition"
+        >
+          <font-awesome-icon icon="cloud-upload-alt" class="mr-2" />
+          Google Drive Backup
+        </button>
+        <button 
           @click="activeTab = 'updates'"
           :class="activeTab === 'updates' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
           class="px-6 py-2 rounded-lg font-bold transition"
@@ -234,6 +242,314 @@
               <span class="text-sm text-gray-600">
                 ({{ currentVatConfig.type === 'percent' ? 'Percentage' : 'Fixed Amount' }})
               </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Google Drive Backup Tab -->
+      <div v-if="activeTab === 'backup'">
+        <h3 class="text-xl font-bold mb-4">Google Drive Backup</h3>
+        
+        <div class="max-w-4xl space-y-6">
+          <!-- Google Drive Folder Configuration -->
+          <div class="bg-white rounded-lg border p-6">
+            <h4 class="text-lg font-bold mb-3">Google Drive Configuration</h4>
+            <p class="text-sm text-gray-600 mb-4">
+              Configure a Shared Drive folder for backups.
+              <a href="https://drive.google.com" target="_blank" class="text-blue-600 hover:underline">
+                Open Google Drive
+              </a>
+            </p>
+            
+            <div class="bg-red-50 border border-red-300 rounded p-3 mb-4 text-sm">
+              <p class="font-semibold text-red-800 mb-1">⚠️ Important Requirement:</p>
+              <p class="text-gray-700">Service accounts <strong>cannot upload</strong> to regular "My Drive" folders. You <strong>must use a Shared Drive</strong> (Team Drive).</p>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-4 text-sm">
+              <p class="font-semibold mb-2">📁 How to Set Up Shared Drive:</p>
+              
+              <ol class="list-decimal ml-5 space-y-2 text-gray-700 text-xs">
+                <li><strong>Create a Shared Drive:</strong>
+                  <ul class="list-disc ml-5 mt-1">
+                    <li>In Google Drive, click <strong>"Shared drives"</strong> in the left sidebar</li>
+                    <li>Click <strong>"+ New"</strong> button</li>
+                    <li>Name it (e.g., "POS Backups")</li>
+                  </ul>
+                </li>
+                <li><strong>Add Service Account as Member:</strong>
+                  <ul class="list-disc ml-5 mt-1">
+                    <li>Right-click the shared drive → <strong>"Manage members"</strong></li>
+                    <li>Click "Add members"</li>
+                    <li>Paste this email:
+                      <div class="bg-white p-1 rounded mt-1 break-all">
+                        <code class="text-xs">posexpress-123@dynamic-art-483816-t8.iam.gserviceaccount.com</code>
+                      </div>
+                    </li>
+                    <li>Set role to <strong>"Manager"</strong> or <strong>"Content manager"</strong></li>
+                    <li>Click "Send"</li>
+                  </ul>
+                </li>
+                <li><strong>Create a Folder (Optional):</strong>
+                  <ul class="list-disc ml-5 mt-1">
+                    <li>Inside the Shared Drive, create a folder for backups</li>
+                    <li>Or use the Shared Drive root folder directly</li>
+                  </ul>
+                </li>
+                <li><strong>Get Folder ID:</strong>
+                  <ul class="list-disc ml-5 mt-1">
+                    <li>Open the folder (or Shared Drive root)</li>
+                    <li>Look at the URL: <code class="bg-white px-1">drive.google.com/drive/folders/<strong>FOLDER_ID</strong></code></li>
+                    <li>Copy the folder ID and paste below</li>
+                  </ul>
+                </li>
+              </ol>
+            </div>
+            
+            <div class="bg-gray-50 border border-gray-200 rounded p-3 mb-4 text-xs text-gray-600">
+              <p class="font-semibold mb-1">💡 Don't have Shared Drives?</p>
+              <p>Shared Drives are available with Google Workspace (Business/Enterprise). If you only have a personal Gmail account, you'll need to upgrade to Google Workspace or use OAuth2 authentication instead.</p>
+            </div>
+            
+            
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-bold mb-2">Shared Drive Folder ID</label>
+                <input 
+                  v-model="driveFolderId"
+                  type="text"
+                  placeholder="1AbCdEfGhIjKlMnOpQrStUvWxYz"
+                  class="w-full p-3 border rounded-lg font-mono"
+                />
+                <p class="text-xs text-gray-500 mt-1">This must be a folder ID from a Shared Drive (not "My Drive")</p>
+              </div>
+              
+              <button 
+                @click="saveDriveFolderId"
+                :disabled="isLoading || !driveFolderId"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <font-awesome-icon icon="save" class="mr-2" />
+                Save Folder ID
+              </button>
+            </div>
+          </div>
+
+          <!-- Backup Status -->
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-lg font-bold text-gray-800 mb-1">Backup Status</h4>
+                <p class="text-sm text-gray-600">
+                  Last backup: {{ lastBackupTime || 'Never' }}
+                </p>
+              </div>
+              <div class="text-right">
+                <div class="flex items-center gap-2">
+                  <span :class="backupStatus === 'connected' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'" 
+                        class="px-3 py-1 rounded-full text-xs font-semibold">
+                    {{ backupStatus === 'connected' ? '✓ Configured' : 'Not Configured' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual Backup -->
+          <div class="bg-white rounded-lg border p-6">
+            <h4 class="text-lg font-bold mb-3">Manual Backup</h4>
+            <p class="text-sm text-gray-600 mb-4">
+              Create an immediate backup of selected data to Google Drive (CSV + JSON formats)
+            </p>
+            
+            <div class="space-y-3">
+              <div class="flex items-center gap-3">
+                <input 
+                  type="checkbox" 
+                  id="includeProducts" 
+                  v-model="backupOptions.products"
+                  class="w-4 h-4"
+                />
+                <label for="includeProducts" class="text-sm font-medium">
+                  Products, Variants & Stock History
+                  <span class="text-xs text-gray-500 ml-2">(Includes all product-related data)</span>
+                </label>
+              </div>
+              <div class="flex items-center gap-3">
+                <input 
+                  type="checkbox" 
+                  id="includeAddons" 
+                  v-model="backupOptions.addons"
+                  class="w-4 h-4"
+                />
+                <label for="includeAddons" class="text-sm font-medium">Add-ons</label>
+              </div>
+              <div class="flex items-center gap-3">
+                <input 
+                  type="checkbox" 
+                  id="includeTransactions" 
+                  v-model="backupOptions.transactions"
+                  class="w-4 h-4"
+                />
+                <label for="includeTransactions" class="text-sm font-medium">Transactions & Sales History</label>
+              </div>
+              <div class="flex items-center gap-3">
+                <input 
+                  type="checkbox" 
+                  id="includeCustomers" 
+                  v-model="backupOptions.customers"
+                  class="w-4 h-4"
+                />
+                <label for="includeCustomers" class="text-sm font-medium">Customers (All RFID Accounts)</label>
+              </div>
+              <div class="flex items-center gap-3">
+                <input 
+                  type="checkbox" 
+                  id="includeUsers" 
+                  v-model="backupOptions.users"
+                  class="w-4 h-4"
+                />
+                <label for="includeUsers" class="text-sm font-medium">Store Users & Staff</label>
+              </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-gray-700">
+              <p class="font-semibold mb-1">📦 Backup Contents:</p>
+              <ul class="text-xs space-y-1 ml-4">
+                <li>• Store information (always included)</li>
+                <li>• CSV files for easy viewing/editing</li>
+                <li>• JSON files for data restore/import</li>
+              </ul>
+            </div>
+            
+            <button 
+              @click="performManualBackup"
+              :disabled="isBackingUp || backupStatus !== 'connected'"
+              class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed w-full"
+            >
+              <font-awesome-icon :icon="isBackingUp ? 'spinner' : 'cloud-upload-alt'" :spin="isBackingUp" class="mr-2" />
+              {{ isBackingUp ? 'Backing up...' : 'Backup Now' }}
+            </button>
+            
+            <div v-if="backupProgress > 0 && isBackingUp" class="mt-4">
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-green-600 h-2 rounded-full transition-all" :style="{ width: backupProgress + '%' }"></div>
+              </div>
+              <p class="text-xs text-gray-600 mt-1">{{ backupProgress }}% complete</p>
+            </div>
+          </div>
+
+          <!-- Scheduled Backup -->
+          <div class="bg-white rounded-lg border p-6">
+            <h4 class="text-lg font-bold mb-3">Scheduled Automatic Backup</h4>
+            <p class="text-sm text-gray-600 mb-4">
+              Automatically backup data to Google Drive at scheduled times
+            </p>
+            
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <input 
+                  type="checkbox" 
+                  id="enableScheduledBackup" 
+                  v-model="scheduledBackup.enabled"
+                  :disabled="backupStatus !== 'connected'"
+                  class="w-4 h-4"
+                />
+                <label for="enableScheduledBackup" class="text-sm font-bold">Enable Scheduled Backup</label>
+              </div>
+              
+              <div v-if="scheduledBackup.enabled" class="space-y-4 pl-7">
+                <div>
+                  <label class="block text-sm font-semibold mb-2">Backup Frequency</label>
+                  <select 
+                    v-model="scheduledBackup.frequency"
+                    class="w-full md:w-64 p-3 border rounded-lg"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                
+                <div v-if="scheduledBackup.frequency === 'daily'">
+                  <label class="block text-sm font-semibold mb-2">Backup Time</label>
+                  <div class="flex gap-2">
+                    <select v-model="scheduledBackup.hour" class="p-3 border rounded-lg">
+                      <option v-for="h in 12" :key="h" :value="h">{{ h }}</option>
+                    </select>
+                    <span class="flex items-center">:</span>
+                    <select v-model="scheduledBackup.minute" class="p-3 border rounded-lg">
+                      <option v-for="m in 60" :key="m-1" :value="String(m-1).padStart(2, '0')">{{ String(m-1).padStart(2, '0') }}</option>
+                    </select>
+                    <select v-model="scheduledBackup.ampm" class="p-3 border rounded-lg">
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div v-if="scheduledBackup.frequency === 'weekly'">
+                  <label class="block text-sm font-semibold mb-2">Day of Week</label>
+                  <select v-model="scheduledBackup.dayOfWeek" class="w-full md:w-64 p-3 border rounded-lg">
+                    <option value="0">Sunday</option>
+                    <option value="1">Monday</option>
+                    <option value="2">Tuesday</option>
+                    <option value="3">Wednesday</option>
+                    <option value="4">Thursday</option>
+                    <option value="5">Friday</option>
+                    <option value="6">Saturday</option>
+                  </select>
+                </div>
+                
+                <div v-if="scheduledBackup.frequency === 'monthly'">
+                  <label class="block text-sm font-semibold mb-2">Day of Month</label>
+                  <select v-model="scheduledBackup.dayOfMonth" class="w-full md:w-64 p-3 border rounded-lg">
+                    <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
+                  </select>
+                </div>
+              </div>
+              
+              <button 
+                @click="saveScheduledBackup"
+                :disabled="isLoading || !scheduledBackup.enabled || backupStatus !== 'connected'"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <font-awesome-icon icon="save" class="mr-2" />
+                Save Schedule
+              </button>
+            </div>
+          </div>
+
+          <!-- Backup History -->
+          <div class="bg-white rounded-lg border p-6">
+            <h4 class="text-lg font-bold mb-3">Recent Backups</h4>
+            <div v-if="backupHistory.length === 0" class="text-center py-8 text-gray-500">
+              No backups found
+            </div>
+            <div v-else class="space-y-2">
+              <div 
+                v-for="backup in backupHistory" 
+                :key="backup._id"
+                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              >
+                <div>
+                  <p class="font-semibold text-sm">{{ formatDate(backup.createdAt) }}</p>
+                  <p class="text-xs text-gray-600">{{ backup.type }} - {{ backup.fileSize }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span :class="backup.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" 
+                        class="px-2 py-1 rounded text-xs font-semibold">
+                    {{ backup.status }}
+                  </span>
+                  <button 
+                    @click="downloadBackup(backup)"
+                    class="text-blue-600 hover:text-blue-800"
+                  >
+                    <font-awesome-icon icon="download" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -541,6 +857,31 @@ const isReverting = ref(false)
 const showUpdateLogs = ref(false)
 const updateLogs = ref([])
 const updateProgress = ref(0)
+
+// Google Drive Backup variables
+const backupStatus = ref('not_connected')
+const lastBackupTime = ref(null)
+const isConnectingDrive = ref(false)
+const isBackingUp = ref(false)
+const backupProgress = ref(0)
+const backupHistory = ref([])
+const driveFolderId = ref('')
+const backupOptions = ref({
+  products: true,
+  addons: true,
+  transactions: true,
+  customers: true,
+  users: true
+})
+const scheduledBackup = ref({
+  enabled: false,
+  frequency: 'daily',
+  hour: 2,
+  minute: '00',
+  ampm: 'AM',
+  dayOfWeek: '0',
+  dayOfMonth: 1
+})
 
 const profileForm = ref({
   username: '',
@@ -1082,9 +1423,225 @@ const revertToBackup = async (backup) => {
   }
 }
 
+// Google Drive Backup Functions
+const loadDriveFolderId = async () => {
+  try {
+    const user = auth.getUser() || {}
+    const storeId = user.store?._id || user.store
+    
+    if (!storeId) return
+    
+    const response = await api.get(`/backup/folder-id?storeId=${storeId}`)
+    if (response.data.success) {
+      driveFolderId.value = response.data.folderId || ''
+    }
+  } catch (error) {
+    console.error('Error loading folder ID:', error)
+  }
+}
+
+const saveDriveFolderId = async () => {
+  if (!driveFolderId.value) {
+    showToast('Please enter a folder ID', 'error')
+    return
+  }
+
+  try {
+    const user = auth.getUser() || {}
+    const storeId = user.store?._id || user.store
+
+    const response = await api.post('/backup/folder-id', {
+      storeId,
+      folderId: driveFolderId.value
+    })
+
+    if (response.data.success) {
+      showToast('Google Drive folder ID saved successfully!', 'success')
+      checkDriveConnection()
+    }
+  } catch (error) {
+    console.error('Error saving folder ID:', error)
+    showToast(error.response?.data?.message || 'Failed to save folder ID', 'error')
+  }
+}
+
+const performManualBackup = async () => {
+  if (backupStatus.value !== 'connected') {
+    showToast('Please connect to Google Drive first', 'error')
+    return
+  }
+
+  isBackingUp.value = true
+  backupProgress.value = 0
+
+  try {
+    const user = auth.getUser() || {}
+    const storeId = user.store?._id || user.store
+
+    // Increase timeout for backup (5 minutes)
+    const response = await api.post('/backup/manual', {
+      storeId,
+      options: backupOptions.value
+    }, {
+      timeout: 300000 // 5 minutes for large backups
+    })
+
+    if (response.data.success) {
+      backupProgress.value = 100
+      lastBackupTime.value = new Date().toLocaleString()
+      showToast(`Backup completed! ${response.data.files?.length || 0} files uploaded`, 'success')
+      loadBackupHistory()
+    }
+  } catch (error) {
+    console.error('Error performing backup:', error)
+    if (error.code === 'ECONNABORTED') {
+      showToast('Backup is taking longer than expected. Please check Google Drive in a few minutes.', 'warning')
+    } else {
+      showToast(error.response?.data?.message || 'Failed to perform backup', 'error')
+    }
+  } finally {
+    isBackingUp.value = false
+    setTimeout(() => {
+      backupProgress.value = 0
+    }, 2000)
+  }
+}
+
+const saveScheduledBackup = async () => {
+  if (!scheduledBackup.value.enabled) {
+    showToast('Please enable scheduled backup first', 'error')
+    return
+  }
+
+  isLoading.value = true
+  try {
+    const user = auth.getUser() || {}
+    const storeId = user.store?._id || user.store
+
+    // Convert time to 24-hour format
+    let hour24 = parseInt(scheduledBackup.value.hour)
+    if (scheduledBackup.value.ampm === 'PM' && hour24 !== 12) {
+      hour24 += 12
+    } else if (scheduledBackup.value.ampm === 'AM' && hour24 === 12) {
+      hour24 = 0
+    }
+
+    const response = await api.post('/backup/schedule', {
+      storeId,
+      schedule: {
+        enabled: scheduledBackup.value.enabled,
+        frequency: scheduledBackup.value.frequency,
+        time: `${String(hour24).padStart(2, '0')}:${scheduledBackup.value.minute}`,
+        dayOfWeek: scheduledBackup.value.dayOfWeek,
+        dayOfMonth: scheduledBackup.value.dayOfMonth,
+        options: backupOptions.value
+      }
+    })
+
+    if (response.data.success) {
+      showToast('Scheduled backup saved successfully!', 'success')
+    }
+  } catch (error) {
+    console.error('Error saving scheduled backup:', error)
+    showToast(error.response?.data?.message || 'Failed to save schedule', 'error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const loadBackupHistory = async () => {
+  try {
+    const user = auth.getUser() || {}
+    const storeId = user.store?._id || user.store
+
+    const response = await api.get(`/backup/history?storeId=${storeId}`)
+    if (response.data.success) {
+      backupHistory.value = response.data.backups || []
+      if (response.data.lastBackup) {
+        lastBackupTime.value = new Date(response.data.lastBackup).toLocaleString()
+      }
+    }
+  } catch (error) {
+    console.error('Error loading backup history:', error)
+  }
+}
+
+const downloadBackup = async (backup) => {
+  try {
+    window.open(backup.downloadUrl, '_blank')
+  } catch (error) {
+    showToast('Failed to download backup', 'error')
+  }
+}
+
+const loadScheduledBackup = async () => {
+  try {
+    const user = auth.getUser() || {}
+    const storeId = user.store?._id || user.store
+    
+    if (!storeId) return
+    
+    const response = await api.get(`/stores/${storeId}`)
+    if (response.data.success && response.data.store.backupSchedule) {
+      const schedule = response.data.store.backupSchedule
+      
+      scheduledBackup.value.enabled = schedule.enabled || false
+      scheduledBackup.value.frequency = schedule.frequency || 'daily'
+      scheduledBackup.value.dayOfWeek = schedule.dayOfWeek || '0'
+      scheduledBackup.value.dayOfMonth = schedule.dayOfMonth || 1
+      
+      // Parse time (format: "HH:MM")
+      if (schedule.time) {
+        const [hours, minutes] = schedule.time.split(':')
+        let hour24 = parseInt(hours)
+        
+        if (hour24 >= 12) {
+          scheduledBackup.value.ampm = 'PM'
+          scheduledBackup.value.hour = hour24 === 12 ? 12 : hour24 - 12
+        } else {
+          scheduledBackup.value.ampm = 'AM'
+          scheduledBackup.value.hour = hour24 === 0 ? 12 : hour24
+        }
+        scheduledBackup.value.minute = minutes
+      }
+      
+      // Load options
+      if (schedule.options) {
+        backupOptions.value.products = schedule.options.products !== undefined ? schedule.options.products : true
+        backupOptions.value.addons = schedule.options.addons !== undefined ? schedule.options.addons : true
+        backupOptions.value.transactions = schedule.options.transactions !== undefined ? schedule.options.transactions : true
+        backupOptions.value.customers = schedule.options.customers !== undefined ? schedule.options.customers : true
+        backupOptions.value.users = schedule.options.users !== undefined ? schedule.options.users : true
+      }
+    }
+  } catch (error) {
+    console.error('Error loading scheduled backup:', error)
+  }
+}
+
+const checkDriveConnection = async () => {
+  try {
+    const user = auth.getUser() || {}
+    const storeId = user.store?._id || user.store
+    
+    if (!storeId) return
+    
+    const response = await api.get(`/backup/status?storeId=${storeId}`)
+    if (response.data.success && response.data.connected) {
+      backupStatus.value = 'connected'
+      loadBackupHistory()
+    }
+  } catch (error) {
+    console.error('Error checking drive connection:', error)
+  }
+}
+
 onMounted(async () => {
   fetchCurrentUser()
   fetchVATRate()
+  loadDriveFolderId()
+  loadScheduledBackup()
+  checkDriveConnection()
   
   // Load last update check time
   const lastCheck = localStorage.getItem('lastUpdateCheck')

@@ -41,6 +41,19 @@ const transactionSessionSchema = new mongoose.Schema(
         type: Number,
         default: 0
       }
+    },
+    sessionMode: {
+      type: String,
+      enum: ['manual', 'scheduled'],
+      default: 'manual'
+    },
+    scheduleStartTime: {
+      type: String, // Format: "HH:MM" (24-hour format)
+      default: null
+    },
+    scheduleEndTime: {
+      type: String, // Format: "HH:MM" (24-hour format)
+      default: null
     }
   },
   { timestamps: true }
