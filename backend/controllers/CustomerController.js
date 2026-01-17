@@ -20,9 +20,9 @@ const customer = {
         try {
             const { rfid, username, password, fullName, birthday, balance } = req.body;
 
-            // Validate required fields
-            if (!rfid || !username || !password || !fullName || !birthday) {
-                return res.status(400).json({ success: false, message: "RFID, username, password, full name, and birthday are required" });
+            // Validate required fields (birthday is now optional)
+            if (!rfid || !username || !password || !fullName) {
+                return res.status(400).json({ success: false, message: "RFID, username, password, and full name are required" });
             }
 
             // GLOBAL USERNAME CHECK: Check if username exists in Customers OR Users
@@ -51,14 +51,20 @@ const customer = {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            const createdCustomer = await Customer.create({
+            const customerData = {
                 rfid,
                 username,
                 password: hashedPassword,
                 fullName,
-                birthday,
-                balance
-            });
+                balance: balance || 0
+            };
+            
+            // Only add birthday if provided
+            if (birthday) {
+                customerData.birthday = birthday;
+            }
+
+            const createdCustomer = await Customer.create(customerData);
 
             res.status(201).json({ success: true, customer: createdCustomer });
         } catch (error) {

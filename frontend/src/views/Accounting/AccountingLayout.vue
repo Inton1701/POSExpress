@@ -47,7 +47,7 @@
       <h1 class="text-2xl font-bold mb-4">Customer Management</h1>
       
       <!-- Two Column Layout -->
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-[400px_1fr] gap-4">
         <!-- Left Column: Customer Management -->
         <div class="bg-white rounded-lg shadow-lg p-4">
           <h2 class="text-xl font-bold mb-4">Manage Customer</h2>
@@ -188,19 +188,66 @@
           </div>
 
           <!-- Search Bar -->
-          <div class="mb-3">
+          <div class="mb-3 flex gap-3 items-center">
             <input 
               v-model="customerSearchQuery" 
               type="text" 
               placeholder="Search by name, username..." 
-              class="w-full p-2 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+              class="flex-1 p-2 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
             />
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-gray-600 whitespace-nowrap">Per page:</label>
+              <select v-model="customerItemsPerPage" @change="customerCurrentPage = 1" class="text-sm border rounded px-2 py-1">
+                <option :value="10">10</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+            </div>
+            <div v-if="filteredCustomers.length > 0" class="flex gap-1 items-center">
+              <button 
+                @click="customerCurrentPage = 1" 
+                :disabled="customerCurrentPage === 1"
+                class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="First"
+              >
+                ««
+              </button>
+              <button 
+                @click="customerCurrentPage--" 
+                :disabled="customerCurrentPage === 1"
+                class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Previous"
+              >
+                «
+              </button>
+              <span class="px-3 py-1 text-xs bg-green-500 text-white rounded whitespace-nowrap">
+                {{ customerCurrentPage }} / {{ customerTotalPages }}
+              </span>
+              <button 
+                @click="customerCurrentPage++" 
+                :disabled="customerCurrentPage >= customerTotalPages"
+                class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Next"
+              >
+                »
+              </button>
+              <button 
+                @click="customerCurrentPage = customerTotalPages" 
+                :disabled="customerCurrentPage >= customerTotalPages"
+                class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Last"
+              >
+                »»
+              </button>
+            </div>
           </div>
 
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-50">
                 <tr>
+                  <th class="py-2 px-3 border-b text-center w-16">#</th>
                   <th @click="sortTable('fullName')" class="py-2 px-3 border-b text-left cursor-pointer hover:bg-gray-100">
                     <div class="flex items-center gap-1">
                       Full Name
@@ -249,10 +296,11 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="filteredCustomers.length === 0">
-                  <td colspan="4" class="py-4 text-center text-gray-500 text-sm">No customers found</td>
+                <tr v-if="paginatedCustomers.length === 0">
+                  <td colspan="6" class="py-4 text-center text-gray-500 text-sm">No customers found</td>
                 </tr>
-                <tr v-else v-for="customer in filteredCustomers" :key="customer._id" class="border-t hover:bg-gray-50">
+                <tr v-else v-for="(customer, index) in paginatedCustomers" :key="customer._id" class="border-t hover:bg-gray-50">
+                  <td class="py-2 px-3 text-center text-gray-500">{{ (customerCurrentPage - 1) * customerItemsPerPage + index + 1 }}</td>
                   <td class="py-2 px-3">{{ customer.fullName }}</td>
                   <td class="py-2 px-3">{{ customer.username }}</td>
                   <td class="py-2 px-3">{{ formatDate(customer.birthday) }}</td>
@@ -268,13 +316,13 @@
                   <td class="py-2 px-3 text-center sticky right-0 bg-white shadow-[-2px_0_4px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[120px]">
                     <button 
                       @click="selectCustomerById(customer._id)" 
-                      class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                      class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-xs"
                     >
                       Select
                     </button>
                     <button 
                       @click="deleteCustomer(customer._id)" 
-                      class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs ml-1"
+                      class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-xs ml-1"
                     >
                       Delete
                     </button>
@@ -282,6 +330,46 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+          
+          <!-- Customer Pagination Controls -->
+          <div v-if="filteredCustomers.length > 0" class="flex justify-between items-center mt-4 pt-4 border-t">
+            <p class="text-sm text-gray-600">
+              Showing {{ ((customerCurrentPage - 1) * customerItemsPerPage) + 1 }} - {{ Math.min(customerCurrentPage * customerItemsPerPage, filteredCustomers.length) }} of {{ filteredCustomers.length }} customers
+            </p>
+            <div class="flex gap-2">
+              <button 
+                @click="customerCurrentPage = 1" 
+                :disabled="customerCurrentPage === 1"
+                class="px-3 py-1 text-sm rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                First
+              </button>
+              <button 
+                @click="customerCurrentPage--" 
+                :disabled="customerCurrentPage === 1"
+                class="px-3 py-1 text-sm rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span class="px-4 py-1 text-sm bg-green-500 text-white rounded">
+                {{ customerCurrentPage }} / {{ customerTotalPages }}
+              </span>
+              <button 
+                @click="customerCurrentPage++" 
+                :disabled="customerCurrentPage >= customerTotalPages"
+                class="px-3 py-1 text-sm rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+              <button 
+                @click="customerCurrentPage = customerTotalPages" 
+                :disabled="customerCurrentPage >= customerTotalPages"
+                class="px-3 py-1 text-sm rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Last
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1140,28 +1228,135 @@
       <div class="space-y-4">
         <!-- File Upload Section -->
         <div>
-          <label class="block text-sm font-semibold mb-2">Upload CSV File</label>
+          <label class="block text-sm font-semibold mb-2">Upload CSV or Excel File</label>
           <input 
             type="file" 
             ref="fileInput"
-            accept=".csv"
+            accept=".csv,.xlsx,.xls"
             @change="handleFileSelect"
             class="w-full p-2 border rounded-lg text-sm"
           />
-          <p class="text-xs text-gray-500 mt-1">
-            Required columns: fullName, birthdate | Optional: rfid, balance
-          </p>
+          <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-xs font-semibold text-blue-700 mb-1">Supported Formats:</p>
+            <p class="text-xs text-blue-600">CSV (.csv), Excel (.xlsx, .xls)</p>
+            <p class="text-xs font-semibold text-blue-700 mt-2 mb-1">Column Options:</p>
+            <ul class="text-xs text-blue-600 space-y-1">
+              <li>• <strong>Name:</strong> Use "fullName" OR "first_name" + "last_name" (+ optional "middle_name")</li>
+              <li>• <strong>Birthdate:</strong> Optional - "birthdate" or "birthday" (if missing, random numbers used for credentials)</li>
+              <li>• <strong>Balance:</strong> Optional - defaults to 0 if not provided</li>
+              <li>• <strong>RFID:</strong> Optional - auto-generated if not provided</li>
+            </ul>
+          </div>
         </div>
 
         <!-- Sample File Download -->
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
           <button 
-            @click="downloadSampleFile" 
+            @click="downloadSampleFile('csv')" 
             class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"
           >
             <font-awesome-icon icon="file-download" />
-            Download Sample File
+            Sample CSV
           </button>
+          <button 
+            @click="downloadSampleFile('xlsx')" 
+            class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"
+          >
+            <font-awesome-icon icon="file-download" />
+            Sample Excel
+          </button>
+        </div>
+
+        <!-- Header Mapping Section (shown when file is uploaded and columns need mapping) -->
+        <div v-if="availableFileColumns.length > 0" class="space-y-3">
+          <div class="bg-gray-50 border border-gray-300 rounded-lg p-3">
+            <p class="text-xs font-semibold text-gray-700 mb-2">
+              <font-awesome-icon icon="columns" class="mr-1" />
+              Detected Columns: {{ availableFileColumns.join(', ') }}
+            </p>
+          </div>
+
+          <div v-if="!importValidation.valid || importValidation.message.includes('not detected')" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800 mb-1">
+              <font-awesome-icon icon="info-circle" class="mr-1" />
+              <strong>Column Mapping</strong>
+            </p>
+            <p class="text-xs text-blue-700">
+              Map your file columns to the system fields below. Columns that match automatically are pre-selected. Unmapped columns will be ignored.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <!-- RFID Mapping -->
+            <div class="flex items-center gap-2">
+              <label class="w-24 text-xs font-semibold text-gray-700">RFID:</label>
+              <select v-model="headerMapping.rfid" @change="revalidateWithMapping" class="flex-1 p-2 border rounded text-xs">
+                <option value="">-- Auto or Skip --</option>
+                <option v-for="col in availableFileColumns" :key="col" :value="col">{{ col }}</option>
+              </select>
+            </div>
+
+            <!-- Full Name Mapping -->
+            <div class="flex items-center gap-2">
+              <label class="w-24 text-xs font-semibold text-gray-700">Full Name:</label>
+              <select v-model="headerMapping.fullName" @change="revalidateWithMapping" class="flex-1 p-2 border rounded text-xs">
+                <option value="">-- Auto or Skip --</option>
+                <option v-for="col in availableFileColumns" :key="col" :value="col">{{ col }}</option>
+              </select>
+            </div>
+
+            <!-- First Name Mapping -->
+            <div class="flex items-center gap-2">
+              <label class="w-24 text-xs font-semibold text-gray-700">First Name:</label>
+              <select v-model="headerMapping.firstName" @change="revalidateWithMapping" class="flex-1 p-2 border rounded text-xs">
+                <option value="">-- Auto or Skip --</option>
+                <option v-for="col in availableFileColumns" :key="col" :value="col">{{ col }}</option>
+              </select>
+            </div>
+
+            <!-- Last Name Mapping -->
+            <div class="flex items-center gap-2">
+              <label class="w-24 text-xs font-semibold text-gray-700">Last Name:</label>
+              <select v-model="headerMapping.lastName" @change="revalidateWithMapping" class="flex-1 p-2 border rounded text-xs">
+                <option value="">-- Auto or Skip --</option>
+                <option v-for="col in availableFileColumns" :key="col" :value="col">{{ col }}</option>
+              </select>
+            </div>
+
+            <!-- Middle Name Mapping -->
+            <div class="flex items-center gap-2">
+              <label class="w-24 text-xs font-semibold text-gray-700">Middle Name:</label>
+              <select v-model="headerMapping.middleName" @change="revalidateWithMapping" class="flex-1 p-2 border rounded text-xs">
+                <option value="">-- Auto or Skip --</option>
+                <option v-for="col in availableFileColumns" :key="col" :value="col">{{ col }}</option>
+              </select>
+            </div>
+
+            <!-- Birthdate Mapping -->
+            <div class="flex items-center gap-2">
+              <label class="w-24 text-xs font-semibold text-gray-700">Birthdate:</label>
+              <select v-model="headerMapping.birthdate" @change="revalidateWithMapping" class="flex-1 p-2 border rounded text-xs">
+                <option value="">-- Auto or Skip --</option>
+                <option v-for="col in availableFileColumns" :key="col" :value="col">{{ col }}</option>
+              </select>
+            </div>
+
+            <!-- Balance Mapping -->
+            <div class="flex items-center gap-2">
+              <label class="w-24 text-xs font-semibold text-gray-700">Balance:</label>
+              <select v-model="headerMapping.balance" @change="revalidateWithMapping" class="flex-1 p-2 border rounded text-xs">
+                <option value="">-- Auto or Skip --</option>
+                <option v-for="col in availableFileColumns" :key="col" :value="col">{{ col }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+            <p class="text-xs text-yellow-800">
+              <font-awesome-icon icon="exclamation-triangle" class="mr-1" />
+              <strong>Required:</strong> Either "Full Name" OR both "First Name" + "Last Name" must be mapped.
+            </p>
+          </div>
         </div>
 
         <!-- Validation Status -->
@@ -1175,36 +1370,97 @@
         </div>
 
         <!-- Preview Table -->
-        <div v-if="importPreview.length > 0" class="max-h-64 overflow-auto">
-          <h3 class="text-sm font-semibold mb-2">Preview (First 5 rows)</h3>
-          <table class="w-full text-xs">
-            <thead class="bg-gray-100 sticky top-0">
-              <tr>
-                <th class="py-2 px-2 text-left">Full Name</th>
-                <th class="py-2 px-2 text-left">Username (Auto)</th>
-                <th class="py-2 px-2 text-left">Password (Auto)</th>
-                <th class="py-2 px-2 text-left">Birthdate</th>
-                <th class="py-2 px-2 text-left">RFID</th>
-                <th class="py-2 px-2 text-right">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(row, index) in importPreview.slice(0, 5)" :key="index" class="border-t">
-                <td class="py-1 px-2">{{ row.fullName }}</td>
-                <td class="py-1 px-2">{{ row.username }}</td>
-                <td class="py-1 px-2">{{ row.password }}</td>
-                <td class="py-1 px-2">{{ row.birthdate }}</td>
-                <td class="py-1 px-2">{{ row.rfid || '-' }}</td>
-                <td class="py-1 px-2 text-right">{{ row.balance }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="text-xs text-gray-500 mt-2">Total rows to import: {{ importPreview.length }}</p>
+        <div v-if="importPreview.length > 0">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-semibold">Preview ({{ importPreview.length }} total)</h3>
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-gray-600">Per page:</label>
+              <select v-model="importPreviewPerPage" @change="importPreviewPage = 1" class="text-xs border rounded px-2 py-1">
+                <option :value="10">10</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+            </div>
+          </div>
+          <div class="max-h-64 overflow-auto">
+            <table class="w-full text-xs">
+              <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                  <th class="py-2 px-2 text-left w-8">#</th>
+                  <th class="py-2 px-2 text-left">Full Name</th>
+                  <th class="py-2 px-2 text-left">Username (Auto)</th>
+                  <th class="py-2 px-2 text-left">Password (Auto)</th>
+                  <th class="py-2 px-2 text-left">Birthdate</th>
+                  <th class="py-2 px-2 text-left">RFID</th>
+                  <th class="py-2 px-2 text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, index) in paginatedImportPreview" :key="index" class="border-t hover:bg-gray-50">
+                  <td class="py-1 px-2 text-gray-500">{{ (importPreviewPage - 1) * importPreviewPerPage + index + 1 }}</td>
+                  <td class="py-1 px-2">{{ row.fullName }}</td>
+                  <td class="py-1 px-2">{{ row.username }}</td>
+                  <td class="py-1 px-2">{{ row.password }}</td>
+                  <td class="py-1 px-2">{{ row.birthdate || '-' }}</td>
+                  <td class="py-1 px-2">{{ row.rfid || '-' }}</td>
+                  <td class="py-1 px-2 text-right">{{ row.balance }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination Controls -->
+          <div class="flex justify-between items-center mt-3 pt-3 border-t">
+            <p class="text-xs text-gray-500">
+              Showing {{ ((importPreviewPage - 1) * importPreviewPerPage) + 1 }} - {{ Math.min(importPreviewPage * importPreviewPerPage, importPreview.length) }} of {{ importPreview.length }}
+            </p>
+            <div class="flex gap-1">
+              <button 
+                @click="importPreviewPage = 1" 
+                :disabled="importPreviewPage === 1"
+                class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                First
+              </button>
+              <button 
+                @click="importPreviewPage--" 
+                :disabled="importPreviewPage === 1"
+                class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <span class="px-3 py-1 text-xs bg-blue-500 text-white rounded">
+                {{ importPreviewPage }} / {{ importPreviewTotalPages }}
+              </span>
+              <button 
+                @click="importPreviewPage++" 
+                :disabled="importPreviewPage >= importPreviewTotalPages"
+                class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+              <button 
+                @click="importPreviewPage = importPreviewTotalPages" 
+                :disabled="importPreviewPage >= importPreviewTotalPages"
+                class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Last
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Import Progress -->
         <div v-if="importProgress.importing" class="p-3 bg-blue-50 border border-blue-300 rounded-lg">
-          <p class="text-sm font-semibold text-blue-700">Importing customers...</p>
+          <div class="flex justify-between items-center mb-2">
+            <p class="text-sm font-semibold text-blue-700">Importing customers...</p>
+            <button 
+              @click="cancelImport"
+              class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded"
+            >
+              Cancel Import
+            </button>
+          </div>
           <p class="text-xs text-blue-600 mt-1">{{ importProgress.current }} / {{ importProgress.total }}</p>
           <div class="w-full bg-blue-200 rounded-full h-2 mt-2">
             <div class="bg-blue-600 h-2 rounded-full transition-all" :style="{ width: (importProgress.current / importProgress.total * 100) + '%' }"></div>
@@ -1213,10 +1469,17 @@
 
         <!-- Import Results -->
         <div v-if="importResults.completed" class="space-y-2">
-          <div class="p-3 bg-green-50 border border-green-300 rounded-lg">
-            <p class="text-sm font-semibold text-green-700">Import Completed!</p>
-            <p class="text-xs text-green-600 mt-1">Successfully imported: {{ importResults.success }}</p>
+          <div class="p-3 rounded-lg" :class="importCancelled ? 'bg-yellow-50 border border-yellow-300' : 'bg-green-50 border border-green-300'">
+            <p class="text-sm font-semibold" :class="importCancelled ? 'text-yellow-700' : 'text-green-700'">
+              {{ importCancelled ? 'Import Cancelled' : 'Import Completed!' }}
+            </p>
+            <p class="text-xs mt-1" :class="importCancelled ? 'text-yellow-600' : 'text-green-600'">
+              Successfully imported: {{ importResults.success }}
+            </p>
             <p v-if="importResults.failed > 0" class="text-xs text-red-600">Failed: {{ importResults.failed }}</p>
+            <p v-if="importCancelled && importedCustomerIds.length > 0" class="text-xs text-yellow-700 mt-2">
+              {{ importedCustomerIds.length }} customer(s) were imported before cancellation.
+            </p>
           </div>
           <div v-if="importResults.errors.length > 0" class="max-h-32 overflow-auto">
             <p class="text-xs font-semibold text-red-700 mb-1">Errors:</p>
@@ -1224,6 +1487,15 @@
               <li v-for="(error, index) in importResults.errors" :key="index">• {{ error }}</li>
             </ul>
           </div>
+          <!-- Rollback Button -->
+          <button 
+            v-if="importCancelled && importedCustomerIds.length > 0"
+            @click="rollbackImport"
+            class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg text-sm"
+          >
+            <font-awesome-icon icon="undo" class="mr-2" />
+            Rollback (Delete {{ importedCustomerIds.length }} Imported Customers)
+          </button>
         </div>
       </div>
 
@@ -1330,7 +1602,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '../../components/Modal.vue'
 import Toast from '../../components/Toast.vue'
@@ -1338,6 +1610,7 @@ import { api } from '@/utils/api'
 import { auth } from '@/utils/auth'
 import { printThermalReceipt, getAvailablePrinters } from '../../utils/printReceipt.js'
 import Papa from 'papaparse'
+import * as XLSX from 'xlsx'
 
 const router = useRouter()
 
@@ -1376,6 +1649,8 @@ const isBalanceModalOpen = ref(false)
 const customerSearchQuery = ref('')
 const sortColumn = ref('')
 const sortDirection = ref('asc')
+const customerCurrentPage = ref(1)
+const customerItemsPerPage = ref(10)
 const isStatusModalOpen = ref(false)
 const customerToChangeStatus = ref(null)
 const passwordVerifyForm = ref({
@@ -1410,8 +1685,15 @@ const isImportModalOpen = ref(false)
 const fileInput = ref(null)
 const importValidation = ref({ checked: false, valid: false, message: '', errors: [] })
 const importPreview = ref([])
+const importPreviewPage = ref(1)
+const importPreviewPerPage = ref(10)
 const importProgress = ref({ importing: false, current: 0, total: 0 })
 const importResults = ref({ completed: false, success: 0, failed: 0, errors: [] })
+const importCancelled = ref(false)
+const importedCustomerIds = ref([])
+const headerMapping = ref({})
+const availableFileColumns = ref([])
+const rawImportData = ref(null)
 const isPrintingReceipt = ref(false)
 const currentUser = ref(null)
 const deleteVerifyForm = ref({
@@ -1494,6 +1776,17 @@ const filteredCustomers = computed(() => {
   })
 })
 
+// Customer pagination
+const customerTotalPages = computed(() => {
+  return Math.ceil(filteredCustomers.value.length / customerItemsPerPage.value) || 1
+})
+
+const paginatedCustomers = computed(() => {
+  const start = (customerCurrentPage.value - 1) * customerItemsPerPage.value
+  const end = start + customerItemsPerPage.value
+  return filteredCustomers.value.slice(start, end)
+})
+
 const sortedTransactions = computed(() => {
   if (!transactions.value || transactions.value.length === 0) return []
   
@@ -1541,6 +1834,17 @@ const paginatedTransactions = computed(() => {
   return sortedTransactions.value.slice(start, end)
 })
 
+// Import preview pagination
+const importPreviewTotalPages = computed(() => {
+  return Math.ceil(importPreview.value.length / importPreviewPerPage.value) || 1
+})
+
+const paginatedImportPreview = computed(() => {
+  const start = (importPreviewPage.value - 1) * importPreviewPerPage.value
+  const end = start + importPreviewPerPage.value
+  return importPreview.value.slice(start, end)
+})
+
 const sortTable = (column) => {
   if (sortColumn.value === column) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
@@ -1548,7 +1852,13 @@ const sortTable = (column) => {
     sortColumn.value = column
     sortDirection.value = 'asc'
   }
+  customerCurrentPage.value = 1
 }
+
+// Watch for search changes and reset page
+watch(customerSearchQuery, () => {
+  customerCurrentPage.value = 1
+})
 
 const sortTransactions = (column) => {
   if (transactionSortColumn.value === column) {
@@ -2615,8 +2925,13 @@ const refocusRFIDInput = () => {
 }
 
 const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  if (isNaN(date.getTime())) return 'N/A'
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${month}-${day}-${year}`
 }
 
 const formatDateTime = (dateString) => {
@@ -2840,27 +3155,45 @@ const exportCustomerTransactionsPDF = () => {
 
 // Auto-generation functions
 const generateUsername = (fullName, birthdate) => {
-  try {
-    const date = new Date(birthdate)
-    const day = date.getDate()
-    const cleanName = fullName.trim().replace(/\s+/g, '').toLowerCase()
-    return `${cleanName}${day}`
-  } catch (error) {
-    return fullName.trim().replace(/\s+/g, '').toLowerCase()
+  const cleanName = fullName.trim().replace(/\s+/g, '').toLowerCase()
+  
+  if (birthdate) {
+    try {
+      const date = new Date(birthdate)
+      if (!isNaN(date.getTime())) {
+        const day = date.getDate()
+        return `${cleanName}${day}`
+      }
+    } catch (error) {
+      // Fall through to random number
+    }
   }
+  
+  // Generate random 2-digit number if no valid birthdate
+  const randomNum = Math.floor(Math.random() * 90) + 10 // 10-99
+  return `${cleanName}${randomNum}`
 }
 
 const generatePassword = (fullName, birthdate) => {
-  try {
-    const date = new Date(birthdate)
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const year = String(date.getFullYear()).slice(-2)
-    const cleanName = fullName.trim().replace(/\s+/g, '').toLowerCase()
-    return `${cleanName}${month}${day}${year}`
-  } catch (error) {
-    return fullName.trim().replace(/\s+/g, '').toLowerCase()
+  const cleanName = fullName.trim().replace(/\s+/g, '').toLowerCase()
+  
+  if (birthdate) {
+    try {
+      const date = new Date(birthdate)
+      if (!isNaN(date.getTime())) {
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const year = String(date.getFullYear()).slice(-2)
+        return `${cleanName}${month}${day}${year}`
+      }
+    } catch (error) {
+      // Fall through to random number
+    }
   }
+  
+  // Generate random 2-digit number if no valid birthdate
+  const randomNum = Math.floor(Math.random() * 90) + 10 // 10-99
+  return `${cleanName}${randomNum}`
 }
 
 // Import/Export functions
@@ -2868,15 +3201,37 @@ const openImportModal = () => {
   isImportModalOpen.value = true
   importValidation.value = { checked: false, valid: false, message: '', errors: [] }
   importPreview.value = []
+  importPreviewPage.value = 1
   importProgress.value = { importing: false, current: 0, total: 0 }
   importResults.value = { completed: false, success: 0, failed: 0, errors: [] }
+  importCancelled.value = false
+  importedCustomerIds.value = []
+  availableFileColumns.value = []
+  headerMapping.value = {}
+  rawImportData.value = null
 }
 
 const closeImportModal = () => {
   isImportModalOpen.value = false
+  
+  // Reset all import state
+  importValidation.value = { checked: false, valid: false, message: '', errors: [] }
+  importPreview.value = []
+  importPreviewPage.value = 1
+  importProgress.value = { importing: false, current: 0, total: 0 }
+  importResults.value = { completed: false, success: 0, failed: 0, errors: [] }
+  importCancelled.value = false
+  importedCustomerIds.value = []
+  availableFileColumns.value = []
+  headerMapping.value = {}
+  rawImportData.value = null
+  
+  // Reset file input
   if (fileInput.value) {
     fileInput.value.value = ''
   }
+  
+  // Refresh customers if import was successful
   if (importResults.value.completed && importResults.value.success > 0) {
     fetchCustomers()
   }
@@ -2886,25 +3241,170 @@ const handleFileSelect = (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    complete: (results) => {
-      validateAndPreviewImport(results.data)
-    },
-    error: (error) => {
-      showToast('Failed to parse CSV file', 'error')
-      importValidation.value = {
-        checked: true,
-        valid: false,
-        message: 'Error parsing CSV file',
-        errors: [error.message]
+  const fileName = file.name.toLowerCase()
+  const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls')
+
+  if (isExcel) {
+    // Handle Excel file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = e.target.result
+        const workbook = XLSX.read(data, { type: 'array' })
+        const firstSheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[firstSheetName]
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+        processImportData(jsonData)
+      } catch (error) {
+        showToast('Failed to parse Excel file', 'error')
+        importValidation.value = {
+          checked: true,
+          valid: false,
+          message: 'Error parsing Excel file',
+          errors: [error.message]
+        }
       }
     }
-  })
+    reader.readAsArrayBuffer(file)
+  } else {
+    // Handle CSV file
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        processImportData(results.data)
+      },
+      error: (error) => {
+        showToast('Failed to parse CSV file', 'error')
+        importValidation.value = {
+          checked: true,
+          valid: false,
+          message: 'Error parsing CSV file',
+          errors: [error.message]
+        }
+      }
+    })
+  }
 }
 
-const validateAndPreviewImport = async (data) => {
+// Process import data and check if header mapping is needed
+const processImportData = (data) => {
+  if (!data || data.length === 0) {
+    importValidation.value = {
+      checked: true,
+      valid: false,
+      message: 'File is empty',
+      errors: ['No data found in the file']
+    }
+    return
+  }
+
+  rawImportData.value = data
+  const firstRow = data[0]
+  availableFileColumns.value = Object.keys(firstRow)
+  
+  // Try to auto-detect headers
+  const headerMappings = {
+    fullName: ['fullName', 'full_name', 'fullname', 'name'],
+    firstName: ['firstName', 'first_name', 'firstname', 'fname', 'givenname', 'given_name'],
+    lastName: ['lastName', 'last_name', 'lastname', 'lname', 'surname', 'familyname', 'family_name'],
+    middleName: ['middleName', 'middle_name', 'middlename', 'mname', 'middleinitial', 'middle_initial', 'mi'],
+    birthdate: ['birthdate', 'birthday', 'birth_date', 'dob', 'dateofbirth', 'date_of_birth', 'bday'],
+    rfid: ['rfid', 'rfid_code', 'rfidcode', 'card', 'cardnumber', 'card_number', 'id'],
+    balance: ['balance', 'initial_balance', 'initialbalance', 'amount', 'credits']
+  }
+  
+  // Auto-detect headers
+  const detectedHeaders = {}
+  for (const [field, possibleNames] of Object.entries(headerMappings)) {
+    detectedHeaders[field] = findHeader(firstRow, possibleNames)
+  }
+  
+  // Check if we have fullName or name components
+  const hasFullName = detectedHeaders.fullName !== null
+  const hasNameComponents = detectedHeaders.firstName !== null && detectedHeaders.lastName !== null
+  
+  // Initialize header mapping with auto-detected values
+  headerMapping.value = {
+    rfid: detectedHeaders.rfid || '',
+    fullName: detectedHeaders.fullName || '',
+    firstName: detectedHeaders.firstName || '',
+    lastName: detectedHeaders.lastName || '',
+    middleName: detectedHeaders.middleName || '',
+    birthdate: detectedHeaders.birthdate || '',
+    balance: detectedHeaders.balance || ''
+  }
+  
+  // If no name fields detected, show validation error and let user map
+  if (!hasFullName && !hasNameComponents) {
+    importValidation.value = {
+      checked: true,
+      valid: false,
+      message: 'Name columns not detected. Please map your file columns below.',
+      errors: []
+    }
+  } else {
+    // Auto-detected successfully, proceed with validation
+    validateAndPreviewImport(data, detectedHeaders)
+  }
+}
+
+// Revalidate with current mapping
+const revalidateWithMapping = () => {
+  const hasFullName = headerMapping.value.fullName !== ''
+  const hasNameComponents = headerMapping.value.firstName !== '' && headerMapping.value.lastName !== ''
+  
+  if (!hasFullName && !hasNameComponents) {
+    importValidation.value = {
+      checked: true,
+      valid: false,
+      message: 'Please map either Full Name OR both First Name and Last Name',
+      errors: []
+    }
+    return
+  }
+  
+  // Convert user mapping to detected headers format
+  const userDetectedHeaders = {
+    rfid: headerMapping.value.rfid || null,
+    fullName: headerMapping.value.fullName || null,
+    firstName: headerMapping.value.firstName || null,
+    lastName: headerMapping.value.lastName || null,
+    middleName: headerMapping.value.middleName || null,
+    birthdate: headerMapping.value.birthdate || null,
+    balance: headerMapping.value.balance || null
+  }
+  
+  validateAndPreviewImport(rawImportData.value, userDetectedHeaders)
+}
+
+// Helper function to normalize header names for comparison
+const normalizeHeader = (header) => {
+  return header.toString().toLowerCase().trim().replace(/[\s_-]+/g, '')
+}
+
+// Helper function to get middle initial from middle name
+const getMiddleInitial = (middleName) => {
+  if (!middleName || typeof middleName !== 'string') return ''
+  const trimmed = middleName.trim()
+  return trimmed.length > 0 ? trimmed.charAt(0).toUpperCase() + '.' : ''
+}
+
+// Helper function to find header key case-insensitively
+const findHeader = (row, possibleNames) => {
+  const rowKeys = Object.keys(row)
+  for (const key of rowKeys) {
+    const normalizedKey = normalizeHeader(key)
+    for (const name of possibleNames) {
+      if (normalizedKey === normalizeHeader(name)) {
+        return key
+      }
+    }
+  }
+  return null
+}
+
+const validateAndPreviewImport = async (data, detectedHeaders = null) => {
   const errors = []
   const preview = []
 
@@ -2913,26 +3413,53 @@ const validateAndPreviewImport = async (data) => {
     importValidation.value = {
       checked: true,
       valid: false,
-      message: 'CSV file is empty',
+      message: 'File is empty',
       errors: ['No data found in the file']
     }
     return
   }
 
-  // Check required headers
+  // Detect available headers from first row
   const firstRow = data[0]
-  const requiredHeaders = ['fullName', 'birthdate']
-  const missingHeaders = requiredHeaders.filter(header => !(header in firstRow))
-
-  if (missingHeaders.length > 0) {
+  const headers = Object.keys(firstRow)
+  
+  // If detectedHeaders not provided, auto-detect them
+  if (!detectedHeaders) {
+    // Define possible header names for each field (case-insensitive matching)
+    const headerMappings = {
+      fullName: ['fullName', 'full_name', 'fullname', 'name'],
+      firstName: ['firstName', 'first_name', 'firstname', 'fname', 'givenname', 'given_name'],
+      lastName: ['lastName', 'last_name', 'lastname', 'lname', 'surname', 'familyname', 'family_name'],
+      middleName: ['middleName', 'middle_name', 'middlename', 'mname', 'middleinitial', 'middle_initial', 'mi'],
+      birthdate: ['birthdate', 'birthday', 'birth_date', 'dob', 'dateofbirth', 'date_of_birth', 'bday'],
+      rfid: ['rfid', 'rfid_code', 'rfidcode', 'card', 'cardnumber', 'card_number', 'id'],
+      balance: ['balance', 'initial_balance', 'initialbalance', 'amount', 'credits']
+    }
+    
+    // Find actual header keys in the data
+    detectedHeaders = {}
+    for (const [field, possibleNames] of Object.entries(headerMappings)) {
+      detectedHeaders[field] = findHeader(firstRow, possibleNames)
+    }
+  }
+  
+  // Check if we have fullName or the name components (first_name + last_name)
+  const hasFullName = detectedHeaders.fullName !== null
+  const hasNameComponents = detectedHeaders.firstName !== null && detectedHeaders.lastName !== null
+  
+  if (!hasFullName && !hasNameComponents) {
     importValidation.value = {
       checked: true,
       valid: false,
-      message: 'Missing required columns',
-      errors: [`Required columns: ${missingHeaders.join(', ')}`]
+      message: 'Missing required name columns',
+      errors: ['File must contain either "fullName" column OR "first_name" and "last_name" columns']
     }
     return
   }
+  
+  // Check if birthdate header exists
+  const hasBirthdate = detectedHeaders.birthdate !== null
+  const hasBalance = detectedHeaders.balance !== null
 
   // Get existing customers to check for conflicts
   const existingUsernames = new Set(customers.value.map(c => c.username.toLowerCase()))
@@ -2946,28 +3473,64 @@ const validateAndPreviewImport = async (data) => {
   data.forEach((row, index) => {
     const rowNum = index + 2 // +2 because index starts at 0 and row 1 is header
 
+    // Build fullName from components or use existing fullName
+    let fullName = ''
+    
+    if (hasFullName && row[detectedHeaders.fullName]) {
+      fullName = String(row[detectedHeaders.fullName]).trim()
+    } else if (hasNameComponents) {
+      const firstName = row[detectedHeaders.firstName] ? String(row[detectedHeaders.firstName]).trim() : ''
+      const lastName = row[detectedHeaders.lastName] ? String(row[detectedHeaders.lastName]).trim() : ''
+      const middleName = detectedHeaders.middleName && row[detectedHeaders.middleName] 
+        ? String(row[detectedHeaders.middleName]).trim() 
+        : ''
+      
+      // Convert middle name to middle initial
+      const middleInitial = getMiddleInitial(middleName)
+      
+      // Build full name: firstName middleInitial lastName
+      const nameParts = [firstName, middleInitial, lastName].filter(part => part.length > 0)
+      fullName = nameParts.join(' ')
+    }
+    
     // Validate fullName
-    if (!row.fullName || row.fullName.trim() === '') {
-      errors.push(`Row ${rowNum}: Full Name is required`)
+    if (!fullName || fullName.length === 0) {
+      errors.push(`Row ${rowNum}: Full Name is required (or first_name and last_name)`)
       return
     }
 
-    // Validate birthdate
-    if (!row.birthdate || row.birthdate.trim() === '') {
-      errors.push(`Row ${rowNum}: Birthdate is required`)
-      return
+    // Handle birthdate (now optional)
+    let birthdate = null
+    if (hasBirthdate && row[detectedHeaders.birthdate]) {
+      const birthdateValue = row[detectedHeaders.birthdate]
+      // Handle different date formats including Excel serial numbers
+      if (typeof birthdateValue === 'number') {
+        // Excel serial date number
+        const excelDate = new Date((birthdateValue - 25569) * 86400 * 1000)
+        if (!isNaN(excelDate.getTime())) {
+          birthdate = excelDate.toISOString().split('T')[0]
+        }
+      } else {
+        const parsedDate = new Date(birthdateValue)
+        if (!isNaN(parsedDate.getTime())) {
+          birthdate = parsedDate.toISOString().split('T')[0]
+        }
+      }
     }
 
-    const birthdate = new Date(row.birthdate)
-    if (isNaN(birthdate.getTime())) {
-      errors.push(`Row ${rowNum}: Invalid birthdate format (use YYYY-MM-DD)`)
-      return
-    }
-
-    // Generate username and password
-    const username = generateUsername(row.fullName, row.birthdate)
-    const password = generatePassword(row.fullName, row.birthdate)
-    const rfid = row.rfid?.trim() || ''
+    // Generate username and password (now handles null birthdate)
+    const username = generateUsername(fullName, birthdate)
+    const password = generatePassword(fullName, birthdate)
+    
+    // Get RFID if available
+    const rfid = detectedHeaders.rfid && row[detectedHeaders.rfid] 
+      ? String(row[detectedHeaders.rfid]).trim() 
+      : ''
+    
+    // Get balance if available, default to 0
+    const balance = hasBalance && row[detectedHeaders.balance] !== undefined && row[detectedHeaders.balance] !== ''
+      ? parseFloat(row[detectedHeaders.balance]) || 0
+      : 0
 
     // Check if username already exists in database
     if (existingUsernames.has(username.toLowerCase())) {
@@ -2999,16 +3562,24 @@ const validateAndPreviewImport = async (data) => {
       importRFIDs.add(rfid.toLowerCase())
     }
 
-    // Prepare preview data
+    // Prepare preview data (only fields needed by the system)
     preview.push({
-      fullName: row.fullName.trim(),
+      fullName: fullName,
       username: username,
       password: password,
-      birthdate: row.birthdate,
+      birthdate: birthdate,
       rfid: rfid,
-      balance: parseFloat(row.balance) || 0
+      balance: balance
     })
   })
+
+  // Build info message about detected headers
+  const detectedInfo = []
+  if (hasFullName) detectedInfo.push('fullName')
+  if (hasNameComponents) detectedInfo.push('first_name + last_name' + (detectedHeaders.middleName ? ' + middle_name' : ''))
+  if (hasBirthdate) detectedInfo.push('birthdate')
+  if (hasBalance) detectedInfo.push('balance')
+  if (detectedHeaders.rfid) detectedInfo.push('rfid')
 
   if (errors.length > 0) {
     importValidation.value = {
@@ -3022,7 +3593,7 @@ const validateAndPreviewImport = async (data) => {
     importValidation.value = {
       checked: true,
       valid: true,
-      message: `File validated successfully! ${preview.length} customers ready to import.`,
+      message: `File validated successfully! ${preview.length} customers ready to import. Detected columns: ${detectedInfo.join(', ')}`,
       errors: []
     }
     importPreview.value = preview
@@ -3032,6 +3603,8 @@ const validateAndPreviewImport = async (data) => {
 const processImport = async () => {
   if (importPreview.value.length === 0) return
 
+  importCancelled.value = false
+  importedCustomerIds.value = []
   importProgress.value = {
     importing: true,
     current: 0,
@@ -3046,21 +3619,38 @@ const processImport = async () => {
   }
 
   for (const customer of importPreview.value) {
+    // Check if import was cancelled
+    if (importCancelled.value) {
+      importResults.value.errors.push('Import cancelled by user')
+      break
+    }
+
     try {
       // Generate a unique RFID if not provided
       const rfid = customer.rfid || `AUTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       
-      const response = await api.post('/customers', {
+      // Build customer data, only include birthday if available
+      const customerData = {
         rfid: rfid,
         fullName: customer.fullName,
         username: customer.username,
         password: customer.password,
-        birthday: customer.birthdate,
         balance: customer.balance
-      })
+      }
+      
+      // Only add birthday if it exists
+      if (customer.birthdate) {
+        customerData.birthday = customer.birthdate
+      }
+      
+      const response = await api.post('/customers', customerData)
 
       if (response.data.success) {
         importResults.value.success++
+        // Track imported customer ID for potential rollback
+        if (response.data.customer?._id) {
+          importedCustomerIds.value.push(response.data.customer._id)
+        }
       } else {
         importResults.value.failed++
         importResults.value.errors.push(`${customer.fullName}: ${response.data.message}`)
@@ -3077,7 +3667,10 @@ const processImport = async () => {
   importProgress.value.importing = false
   importResults.value.completed = true
 
-  if (importResults.value.success > 0) {
+  // If cancelled, offer to rollback
+  if (importCancelled.value && importedCustomerIds.value.length > 0) {
+    showToast(`Import cancelled. ${importedCustomerIds.value.length} customer(s) were imported before cancellation.`, 'warning')
+  } else if (importResults.value.success > 0) {
     showToast(`Successfully imported ${importResults.value.success} customer(s)`, 'success')
     await fetchCustomers()
   }
@@ -3085,6 +3678,32 @@ const processImport = async () => {
   if (importResults.value.failed > 0) {
     showToast(`${importResults.value.failed} customer(s) failed to import`, 'error')
   }
+}
+
+const cancelImport = () => {
+  importCancelled.value = true
+  showToast('Cancelling import...', 'info')
+}
+
+const rollbackImport = async () => {
+  if (importedCustomerIds.value.length === 0) return
+
+  const confirmRollback = confirm(`Are you sure you want to delete the ${importedCustomerIds.value.length} customer(s) that were imported?`)
+  if (!confirmRollback) return
+
+  let deletedCount = 0
+  for (const customerId of importedCustomerIds.value) {
+    try {
+      await api.delete(`/customers/${customerId}`)
+      deletedCount++
+    } catch (error) {
+      console.error('Failed to delete customer:', error)
+    }
+  }
+
+  showToast(`Rolled back ${deletedCount} customer(s)`, 'success')
+  importedCustomerIds.value = []
+  await fetchCustomers()
 }
 
 const exportCustomers = () => {
@@ -3120,8 +3739,9 @@ const exportCustomers = () => {
   showToast(`Exported ${customers.value.length} customers`, 'success')
 }
 
-const downloadSampleFile = () => {
-  const sampleData = [
+const downloadSampleFile = (format = 'csv') => {
+  // Sample data with fullName format
+  const sampleDataFullName = [
     {
       rfid: 'RFID123456',
       fullName: 'Juan Dela Cruz',
@@ -3142,18 +3762,63 @@ const downloadSampleFile = () => {
     }
   ]
 
-  const csv = Papa.unparse(sampleData)
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute('download', 'customer_import_sample.csv')
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  // Sample data with first_name, last_name, middle_name format
+  const sampleDataNameParts = [
+    {
+      rfid: 'RFID123456',
+      first_name: 'Juan',
+      middle_name: 'Dela',
+      last_name: 'Cruz',
+      birthdate: '1990-05-15',
+      balance: 100
+    },
+    {
+      rfid: 'RFID789012',
+      first_name: 'Maria',
+      middle_name: 'Reyes',
+      last_name: 'Santos',
+      birthdate: '1985-12-25',
+      balance: 500
+    },
+    {
+      rfid: '',
+      first_name: 'Pedro',
+      middle_name: '',
+      last_name: 'Reyes',
+      birthdate: '',
+      balance: 0
+    }
+  ]
 
-  showToast('Sample file downloaded', 'success')
+  if (format === 'xlsx') {
+    // Create Excel workbook with two sheets
+    const workbook = XLSX.utils.book_new()
+    
+    // Sheet 1: fullName format
+    const ws1 = XLSX.utils.json_to_sheet(sampleDataFullName)
+    XLSX.utils.book_append_sheet(workbook, ws1, 'Using fullName')
+    
+    // Sheet 2: first_name, last_name format
+    const ws2 = XLSX.utils.json_to_sheet(sampleDataNameParts)
+    XLSX.utils.book_append_sheet(workbook, ws2, 'Using name parts')
+    
+    // Download Excel file
+    XLSX.writeFile(workbook, 'customer_import_sample.xlsx')
+  } else {
+    // CSV format - use fullName format for simplicity
+    const csv = Papa.unparse(sampleDataFullName)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'customer_import_sample.csv')
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  showToast(`Sample ${format.toUpperCase()} file downloaded`, 'success')
 }
 
 onMounted(async () => {

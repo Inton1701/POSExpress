@@ -24,7 +24,7 @@ NC='\033[0m' # No Color
 # Function to print status
 print_status() {
     echo -e "${BLUE}→${NC} $1"
-}
+}D
 
 print_success() {
     echo -e "${GREEN}✓${NC} $1"
